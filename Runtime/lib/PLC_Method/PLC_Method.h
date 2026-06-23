@@ -1,0 +1,10 @@
+//
+// Created by HP on 2022/8/1.
+//
+
+#ifndef RUNTIME_TEST_PLC_METHOD_H
+#define RUNTIME_TEST_PLC_METHOD_H
+
+
+
+#endif //RUNTIME_TEST_PLC_METHOD_H
