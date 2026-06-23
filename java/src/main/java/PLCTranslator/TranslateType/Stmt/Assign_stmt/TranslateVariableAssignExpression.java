@@ -7,8 +7,6 @@ import antlr4.PLCSTPARSERParser;
 
 import java.util.ArrayList;
 
-import static PLCTargetFileOutPut.TargetFileOutput.writeTarget;
-
 /**
  * 翻译PLCSt的变量赋值语句
  */
@@ -20,9 +18,11 @@ public class TranslateVariableAssignExpression {
         PLCVariable varExpression = (PLCVariable) PLCTranslatorNew.properties.get(ctx.expression()).get(0);
 
         if(varSymbol.getSort() != PLCModifierEnum.Sort.FC) {
-            writeTarget("\n\t\t" + varSymbol.getName() + " = " + varSymbol.getAssignVar()+ ";");
+            // 使用 CodeGenerator 生成赋值
+            PLCTranslatorNew.codeGen.emitAssign(varSymbol.getName(), varSymbol.getAssignVar());
         }else{
-            writeTarget("\n\t\t" + "*this->returnValue = "+varExpression.getAssignVar()+";");
+            // 函数返回值赋值
+            PLCTranslatorNew.codeGen.emitFuncReturnAssign(varExpression.getAssignVar());
         }
         return null;
 

@@ -54,9 +54,17 @@ import java.util.ArrayList;
 public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<ArrayList<String>> {
     //树节点信息
     static public ParseTreeProperty<ArrayList<PLCSymbol>> properties = new ParseTreeProperty<>();
+    //代码生成器（OOP 或 Flat）
+    static public CodeGenerator codeGen;
 
     public PLCTranslatorNew(ParseTreeProperty<ArrayList<PLCSymbol>> properties) {
         PLCTranslatorNew.properties = properties;
+        PLCTranslatorNew.codeGen = new OOPCodeGenerator(); // 默认 OOP
+    }
+
+    public PLCTranslatorNew(ParseTreeProperty<ArrayList<PLCSymbol>> properties, CodeGenerator codeGenerator) {
+        PLCTranslatorNew.properties = properties;
+        PLCTranslatorNew.codeGen = codeGenerator;
     }
 
     /**

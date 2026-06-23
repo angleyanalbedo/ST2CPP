@@ -9,8 +9,6 @@ import antlr4.PLCSTPARSERParser;
 import java.util.ArrayList;
 import java.util.Objects;
 
-import static PLCTargetFileOutPut.TargetFileOutput.writeTarget;
-
 public class TranslateFor_stmt {
     packageFactory pFactory = new packageFactory();
     public ArrayList<String> translateNode(PLCSTPARSERParser.For_stmtContext ctx, PLCTranslatorNew translatorNew){
@@ -19,28 +17,24 @@ public class TranslateFor_stmt {
         String conVar = controlVariable.getName();
         PLCVariable varExpression1 = (PLCVariable) PLCTranslatorNew.properties.get(ctx.expression(0)).get(0);
 
-        writeTarget("\n\tfor( *"+conVar+"="+
-                varExpression1.getAssignVar() +";");
         //***********************************************翻译循环条件*****************************************************
         PLCVariable varExpression2 = (PLCVariable) PLCTranslatorNew.properties.get(ctx.expression(1)).get(0);
 
-        writeTarget("*" + conVar+"<="+
-                varExpression2.getAssignVar()+";");
-
         //**********************************************
+        String stepVar = null;
         if(ctx.by_list()!=null){
             PLCVariable varStepSize = (PLCVariable) PLCTranslatorNew.properties.get(ctx.by_list()).get(0);
-            writeTarget( "*" + conVar + " = *"+ conVar + "+" +
-                    varStepSize.getAssignVar()+"){");
-        }else{
-            writeTarget(conVar+" = "+conVar+" + (*new INT(1))){");
+            stepVar = varStepSize.getAssignVar();
         }
+
+        // 使用 CodeGenerator 生成 for 循环
+        PLCTranslatorNew.codeGen.emitForBegin(conVar, varExpression1.getAssignVar(),
+                varExpression2.getAssignVar(), stepVar);
 
         //翻译for循环体内操作
         translatorNew.visit(ctx.stmt_list());
 
-//        System.out.println("}");
-        writeTarget("\n\t}");
+        PLCTranslatorNew.codeGen.emitForEnd();
         return null;
     }
 }

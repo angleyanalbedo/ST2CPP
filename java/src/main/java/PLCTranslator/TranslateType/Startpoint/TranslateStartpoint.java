@@ -15,12 +15,8 @@ public class TranslateStartpoint {
     public static ArrayList<String> funcInitSentences = new ArrayList<>();
 
     public ArrayList<String> translateNode(PLCSTPARSERParser.StartpointContext ctx, PLCTranslatorNew translatorNew){
-        //引入相应的库函数
-        writeTarget("#include <iostream>"
-                +"\n#include \"PLC.h\""
-                +"\nusing namespace PLC;"
-                +"\nusing namespace std;"
-                );
+        // 使用 CodeGenerator 生成头文件（OOP 或 Flat）
+        PLCTranslatorNew.codeGen.emitHeader();
         translatorNew.visitChildren(ctx);
         return null;
     }

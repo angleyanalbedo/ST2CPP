@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <cstring>
 #include <cstdio>
+#include <cmath>
 #include <chrono>
 #include <thread>
 #include <functional>
@@ -192,9 +193,10 @@ inline BYTE ROR(BYTE val, INT n) {
 
 constexpr size_t PROCESS_IMAGE_SIZE = 65536;  // 64 KB
 
-struct ProcessImage {
-    uint8_t inputs[PROCESS_IMAGE_SIZE];
-    uint8_t outputs[PROCESS_IMAGE_SIZE];
+// 缓存行对齐，避免 false sharing
+struct alignas(64) ProcessImage {
+    alignas(64) uint8_t inputs[PROCESS_IMAGE_SIZE];
+    alignas(64) uint8_t outputs[PROCESS_IMAGE_SIZE];
 
     void clearInputs()  { memset(inputs, 0, PROCESS_IMAGE_SIZE); }
     void clearOutputs() { memset(outputs, 0, PROCESS_IMAGE_SIZE); }
@@ -527,19 +529,9 @@ inline LINT  ABS(LINT x)   { return x < 0 ? -x : x; }
 inline REAL  ABS(REAL x)   { return x < 0 ? -x : x; }
 inline LREAL ABS(LREAL x)  { return x < 0 ? -x : x; }
 
-// SQRT（Newton 法，避免引入 <cmath>）
-inline REAL SQRT(REAL x) {
-    if (x <= 0.0f) return 0.0f;
-    double r = x;
-    for (int i = 0; i < 20; i++) r = (r + x / r) / 2.0;
-    return (REAL)r;
-}
-inline LREAL SQRT(LREAL x) {
-    if (x <= 0.0) return 0.0;
-    double r = x;
-    for (int i = 0; i < 30; i++) r = (r + x / r) / 2.0;
-    return r;
-}
+// SQRT — 使用硬件 FPU 指令（编译器自动内联为 sqrtss/sqrtsd）
+inline REAL  SQRT(REAL x)  { return (REAL)std::sqrt((double)x); }
+inline LREAL SQRT(LREAL x) { return std::sqrt(x); }
 
 // 幂运算（整数指数）
 inline REAL  EXPT(REAL base, DINT exp) {
@@ -550,22 +542,11 @@ inline REAL  EXPT(REAL base, DINT exp) {
     return neg ? 1.0f / result : result;
 }
 
-// LN / LOG（简化实现，精度够用即可）
-inline REAL LN(REAL x) {
-    if (x <= 0.0f) return 0.0f;
-    // 利用 ln(x) ≈ 2 * atanh((x-1)/(x+1)) 的级数
-    double a = (x - 1.0) / (x + 1.0);
-    double a2 = a * a;
-    double sum = a;
-    double term = a;
-    for (int i = 1; i < 20; i++) {
-        term *= a2;
-        sum += term / (2 * i + 1);
-    }
-    return (REAL)(2.0 * sum);
-}
-
-inline REAL LOG(REAL x) { return LN(x) / 2.302585092994046f; }  // ln(10)
+// LN / LOG — 使用硬件 FPU 指令
+inline REAL  LN(REAL x)   { return (REAL)std::log((double)x); }
+inline LREAL LN(LREAL x)  { return std::log(x); }
+inline REAL  LOG(REAL x)  { return (REAL)std::log10((double)x); }
+inline LREAL LOG(LREAL x) { return std::log10(x); }
 
 // MIN / MAX
 template<typename T> inline T MIN(T a, T b) { return a < b ? a : b; }
@@ -1012,7 +993,8 @@ template<typename T>
 inline T& plc_deref(T* ptr, const char* varName = "") {
     if (!ptr) {
         fprintf(stderr, "NULL pointer dereference: %s\n", varName);
-        static T dummy{};
+        // thread_local 避免多线程数据竞争
+        thread_local T dummy{};
         return dummy;
     }
     return *ptr;

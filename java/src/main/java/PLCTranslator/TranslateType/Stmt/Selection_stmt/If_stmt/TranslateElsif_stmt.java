@@ -6,20 +6,16 @@ import antlr4.PLCSTPARSERParser;
 
 import java.util.ArrayList;
 
-import static PLCTargetFileOutPut.TargetFileOutput.writeTarget;
-
 /**
  * 翻译else if语句
  */
 public class TranslateElsif_stmt {
     public ArrayList<String> translateNode(PLCSTPARSERParser.Elsif_stmtContext ctx, PLCTranslatorNew translatorNew){
         PLCVariable varExpression = (PLCVariable) PLCTranslatorNew.properties.get(ctx.expression()).get(0);
-//        System.out.println("else if("+ varExpression.getAssignVar() +"){");
-        writeTarget("\nelse if("+ varExpression.getAssignVar() +"){");
+        // 使用 CodeGenerator 生成 else if
+        PLCTranslatorNew.codeGen.emitElseIf(varExpression.getAssignVar());
         translatorNew.visit(ctx.stmt_list());
-
-//        System.out.println("}");
-        writeTarget("\n}");
+        PLCTranslatorNew.codeGen.emitIfEnd();
         return null;
     }
 }

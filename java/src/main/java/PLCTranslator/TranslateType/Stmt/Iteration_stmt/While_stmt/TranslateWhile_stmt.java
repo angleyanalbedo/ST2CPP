@@ -6,8 +6,6 @@ import antlr4.PLCSTPARSERParser;
 
 import java.util.ArrayList;
 
-import static PLCTargetFileOutPut.TargetFileOutput.writeTarget;
-
 /**
  * 翻译while循环
  */
@@ -17,11 +15,10 @@ public class TranslateWhile_stmt {
         //翻译while循环语句
         PLCVariable varExpression = (PLCVariable) PLCTranslatorNew.properties.get(ctx.expression()).get(0);
 
-        writeTarget("\nwhile("+ varExpression.getAssignVar()+
-                "){");
+        // 使用 CodeGenerator 生成 while
+        PLCTranslatorNew.codeGen.emitWhileBegin(varExpression.getAssignVar());
         translatorNew.visit(ctx.stmt_list());
-
-        writeTarget("\n}");
+        PLCTranslatorNew.codeGen.emitWhileEnd();
         return null;
     }
 }

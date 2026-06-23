@@ -6,8 +6,6 @@ import antlr4.PLCSTPARSERParser;
 
 import java.util.ArrayList;
 
-import static PLCTargetFileOutPut.TargetFileOutput.writeTarget;
-
 /**
  * 翻译if选择语句
  */
@@ -16,11 +14,11 @@ public class TranslateIf_stmt {
 
         PLCVariable varExpression = (PLCVariable) PLCTranslatorNew.properties.get(ctx.expression()).get(0);
 
-//        System.out.print("if("+varExpression.getAssignVar()+"){");
-        writeTarget("if("+varExpression.getAssignVar()+"){");
+        // 使用 CodeGenerator 生成 if
+        PLCTranslatorNew.codeGen.emitIfBegin(varExpression.getAssignVar());
         translatorNew.visit(ctx.stmt_list());
-//        System.out.println("}");
-        writeTarget("\n}");
+        PLCTranslatorNew.codeGen.emitIfEnd();
+
         //翻译else if语句
         for (PLCSTPARSERParser.Elsif_stmtContext elsif_stmtContext : ctx.elsif_stmt()) {
             translatorNew.visit(elsif_stmtContext);

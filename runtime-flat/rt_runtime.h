@@ -91,14 +91,21 @@ enum class ScanPhase : uint8_t {
 // GVL: 全局变量表（跨 POU 共享）
 // ═══════════════════════════════════════════════════════
 
-struct GVL {
-    uint8_t memory[GVL_SIZE];
+// 缓存行对齐的全局变量表
+struct alignas(64) GVL {
+    alignas(64) uint8_t memory[GVL_SIZE];
 
     // RETAIN 区域标记：偏移 [retainStart, retainEnd) 在暖启动时保留
     size_t retainStart = 0;
     size_t retainEnd   = 0;
 
-    void clear() { memset(memory, 0, GVL_SIZE); }
+    // 高水位标记：记录最大写入位置，O(1) usedBytes()
+    size_t highWaterMark = 0;
+
+    void clear() {
+        memset(memory, 0, GVL_SIZE);
+        highWaterMark = 0;
+    }
 
     // 暖启动清零：只清零非 RETAIN 区域
     void clearNonRetain() {
@@ -108,6 +115,8 @@ struct GVL {
         if (retainEnd < GVL_SIZE) {
             memset(memory + retainEnd, 0, GVL_SIZE - retainEnd);
         }
+        // 重算 highWaterMark（保守：保留 RETAIN 区域的大小）
+        highWaterMark = retainEnd;
     }
 
     // 设置 RETAIN 区域范围（编译器在 Memory Layout Pass 中计算）
@@ -126,6 +135,9 @@ struct GVL {
     template<typename T>
     void write(size_t offset, T val) {
         memcpy(memory + offset, &val, sizeof(T));
+        // 更新高水位标记
+        size_t end = offset + sizeof(T);
+        if (end > highWaterMark) highWaterMark = end;
     }
 
     template<typename T>
@@ -138,13 +150,9 @@ struct GVL {
         return reinterpret_cast<const T*>(memory + offset);
     }
 
-    // 使用量统计
+    // 使用量统计 — O(1) 查询
     size_t usedBytes() const {
-        // 简单启发：从后往前找第一个非零字节
-        for (size_t i = GVL_SIZE; i > 0; i--) {
-            if (memory[i - 1] != 0) return i;
-        }
-        return 0;
+        return highWaterMark;
     }
 };
 
@@ -597,16 +605,23 @@ public:
 
         if (systemState != SystemState::RUN) return;
 
+#ifdef ENABLE_DIAG
         auto scanStart = std::chrono::steady_clock::now();
+#endif
 
         // ═══ Phase 1: Read Inputs ═══
         currentPhase = ScanPhase::READ_INPUTS;
         syncInputs();
 
-        // 更新系统时间
+        // 更新系统时间（仅诊断模式下精确计时）
+#ifdef ENABLE_DIAG
         auto nowWall = std::chrono::steady_clock::now();
         systemTime = std::chrono::duration_cast<std::chrono::microseconds>(
             nowWall - runStartWall_).count();
+#else
+        // 非诊断模式：用 tick 计数代替精确时间
+        systemTime = totalTicks * baseCycleTime;
+#endif
 
         // 检查事件触发（输入更新后才能检测）
         checkEvents();
@@ -620,7 +635,9 @@ public:
 
             if (!shouldRun(task)) continue;
 
+#ifdef ENABLE_DIAG
             auto execStart = std::chrono::steady_clock::now();
+#endif
             task.state = TaskState::RUNNING;
 
             // 执行挂载的 POU 函数
@@ -637,22 +654,25 @@ public:
             task.cycleCount++;
             task.lastRunTime = systemTime;
 
+#ifdef ENABLE_DIAG
             auto execEnd = std::chrono::steady_clock::now();
             task.lastExecTime = std::chrono::duration_cast<std::chrono::microseconds>(
                 execEnd - execStart).count();
             if (task.lastExecTime > task.maxExecTime) {
                 task.maxExecTime = task.lastExecTime;
             }
+#endif
 
-            // 看门狗检查
+            // 看门狗检查（诊断模式下用时间，非诊断模式下用 tick 计数）
             if (watchdog.check(task, idx)) {
                 task.state = TaskState::OVERRUN;
                 task.overrunCount++;
                 diag.totalOverruns++;
+#ifdef ENABLE_DIAG
                 fprintf(stderr, "[Watchdog] Task '%s' overrun: %lld us (limit: %lld us)\n",
                         task.name, (long long)task.lastExecTime,
                         (long long)(task.watchdogLimit > 0 ? task.watchdogLimit : watchdog.defaultLimit));
-
+#endif
                 // 严重超时 → 进入 ERROR
                 if (task.overrunCount >= MAX_CONSECUTIVE_OVERRUNS) {
                     errorMgr.report(ErrorCode::WATCHDOG_TIMEOUT, 0, 0,
@@ -662,6 +682,7 @@ public:
                 }
             } else {
                 task.state = TaskState::READY;
+                task.overrunCount = 0;  // 正则运行时重置计数
             }
 
             // 检查致命错误
@@ -678,10 +699,12 @@ public:
         // ═══ Phase 4: Housekeeping ═══
         currentPhase = ScanPhase::HOUSEKEEPING;
 
+#ifdef ENABLE_DIAG
         auto scanEnd = std::chrono::steady_clock::now();
         TIME scanTime = std::chrono::duration_cast<std::chrono::microseconds>(
             scanEnd - scanStart).count();
         diag.recordScan(scanTime);
+#endif
 
         totalTicks++;
         currentPhase = ScanPhase::IDLE;
