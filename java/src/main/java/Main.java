@@ -18,6 +18,7 @@ import staticCheckVisitor.PLCVisitor;
 import staticCheckVisitor.factory.Factory;
 import staticCheckVisitor.register.Registrant;
 
+import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 
@@ -45,6 +46,13 @@ public class Main {
                     if (i + 1 < args.length) outputFile = args[++i];
                     break;
             }
+        }
+
+        // 自动创建输出目录
+        File outputFileObj = new File(outputFile);
+        File outputDir = outputFileObj.getParentFile();
+        if (outputDir != null && !outputDir.exists()) {
+            outputDir.mkdirs();
         }
 
         // 选择代码生成器
@@ -76,6 +84,9 @@ public class Main {
         PLCVisitor plcVisitor = new PLCVisitor(property);
 
         plcVisitor.visit(parseTree);
+
+        // 设置输出文件路径
+        PLCTargetFileOutPut.TargetFileOutput.setOutputPath(outputFile);
 
         // 使用选择的后端创建翻译器
         PLCTranslatorNew translatorNew = new PLCTranslatorNew(property, codeGen);
