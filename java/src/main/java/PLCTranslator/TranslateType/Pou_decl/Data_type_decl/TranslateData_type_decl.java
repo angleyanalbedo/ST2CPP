@@ -5,11 +5,15 @@ import PLCSymbolAndScope.PLCSymbols.PLCVariable;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
 
-import java.util.ArrayList;
-
 public class TranslateData_type_decl {
-    public ArrayList<String> translateNode(PLCSTPARSERParser.Data_type_declContext ctx, PLCTranslatorNew translatorNew){
-        translatorNew.visitChildren(ctx);
-        return null;
+    public String translateNode(PLCSTPARSERParser.Data_type_declContext ctx, PLCTranslatorNew translatorNew){
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < ctx.getChildCount(); i++) {
+            String result = translatorNew.visit(ctx.getChild(i));
+            if (result != null) {
+                sb.append(result);
+            }
+        }
+        return sb.toString();
     }
 }

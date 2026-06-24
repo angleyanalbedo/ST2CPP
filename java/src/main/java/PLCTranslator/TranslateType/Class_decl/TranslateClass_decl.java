@@ -7,8 +7,6 @@ import antlr4.PLCSTPARSERParser;
 
 import java.util.ArrayList;
 
-import static PLCTargetFileOutPut.TargetFileOutput.writeTarget;
-
 public class TranslateClass_decl {
 
     //存储类内变量指针语句，将其信息输出到method中
@@ -19,11 +17,13 @@ public class TranslateClass_decl {
 
     packageFactory pFactory = new packageFactory();
 
-    public ArrayList<String> translateNode(PLCSTPARSERParser.Class_declContext ctx, PLCTranslatorNew translatorNew){
+    public String translateNode(PLCSTPARSERParser.Class_declContext ctx, PLCTranslatorNew translatorNew){
+        StringBuilder sb = new StringBuilder();
         //*******************************************************翻译类中函数类********************************************
         for (PLCSTPARSERParser.Method_declContext method_declContext : ctx.method_decl()) {
             //翻译函数体
-            translatorNew.visit(method_declContext);
+            String result = translatorNew.visit(method_declContext);
+            sb.append(result);
         }
         //*****************************************************翻译类中变量声明********************************************
         PLCClassDeclSymbol classDeclSymbol = (PLCClassDeclSymbol) PLCTranslatorNew.properties.get(ctx).get(0);
@@ -31,17 +31,17 @@ public class TranslateClass_decl {
         packageCreateClassVariable(classDeclSymbol);
 
         //*****************************************************翻译类的声明***********************************************
-        writeTarget("\nclass " +classDeclSymbol.getName()+" : public CLASS{");
-        writeTarget("\npublic:");
-        writeTarget("\n\t"+classDeclSymbol.getName()
+        sb.append("\nclass " +classDeclSymbol.getName()+" : public CLASS{");
+        sb.append("\npublic:");
+        sb.append("\n\t"+classDeclSymbol.getName()
                 +"(int instanceId, PLC::varMap *vMap) : CLASS(instanceId, vMap) {");
         for (String conSentence : this.conSentences) {
-            writeTarget("\n\t\t"+conSentence);
+            sb.append("\n\t\t"+conSentence);
         }
-        writeTarget("\n\t}");
-        writeTarget("\n};");
+        sb.append("\n\t}");
+        sb.append("\n};");
 
-        return null;
+        return sb.toString();
     }
 
     /**

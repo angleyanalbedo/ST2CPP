@@ -4,13 +4,13 @@ import PLCTranslator.TranslateType.packageFactory;
 
 import java.util.List;
 
-import static PLCTargetFileOutPut.TargetFileOutput.writeTarget;
-
 /**
  * OOP 后端 — 生成 PLC_Value 风格的 C++ 代码
  *
  * 使用旧版运行时 PLC.h，变量是堆上的对象，支持在线调试。
  * 从现有 TranslateXxx 的 writeTarget() 调用中提取。
+ *
+ * 所有 emit 方法返回代码字符串（不再直接写文件）。
  */
 public class OOPCodeGenerator implements CodeGenerator {
 
@@ -19,219 +19,221 @@ public class OOPCodeGenerator implements CodeGenerator {
     // ═══ 文件头尾 ═══
 
     @Override
-    public void emitHeader() {
-        writeTarget("#include <iostream>"
+    public String emitHeader() {
+        return "#include <iostream>"
                 + "\n#include \"PLC.h\""
                 + "\nusing namespace PLC;"
                 + "\nusing namespace std;"
-        );
+        ;
     }
 
     @Override
-    public void emitFooter() {
-        // OOP 模式下由 Main.java 调用 closeWriter()
+    public String emitFooter() {
+        return ""; // OOP 模式下由 Main.java 调用 closeWriter()
     }
 
 
     // ═══ 变量声明 ═══
 
     @Override
-    public void emitVarDecl(String name, String typeName, String assignVar) {
-        writeTarget("\n\t\tauto* " + name + " = new " + typeName + "(" + assignVar + ");");
+    public String emitVarDecl(String name, String typeName, String assignVar) {
+        return "\n\t\tauto* " + name + " = new " + typeName + "(" + assignVar + ");";
     }
 
     @Override
-    public void emitGlobalVarDecl(String name, String typeName, String assignVar, String varSection) {
-        writeTarget("\n\t" + factory.packagePROGVarDeclSentences(name, typeName, assignVar));
+    public String emitGlobalVarDecl(String name, String typeName, String assignVar, String varSection) {
+        return "\n\t" + factory.packagePROGVarDeclSentences(name, typeName, assignVar);
     }
 
     @Override
-    public void emitProgVarDecl(String name, String typeName, String assignVar) {
-        writeTarget("\n\t" + factory.packagePROGVarDeclSentences(name, typeName, assignVar));
+    public String emitProgVarDecl(String name, String typeName, String assignVar) {
+        return "\n\t" + factory.packagePROGVarDeclSentences(name, typeName, assignVar);
     }
 
 
     // ═══ 赋值 ═══
 
     @Override
-    public void emitAssign(String varName, String exprAssignVar) {
-        writeTarget("\n\t\t" + varName + " = " + exprAssignVar + ";");
+    public String emitAssign(String varName, String exprAssignVar) {
+        return "\n\t\t" + varName + " = " + exprAssignVar + ";";
     }
 
     @Override
-    public void emitFuncReturnAssign(String exprAssignVar) {
-        writeTarget("\n\t\t" + "*this->returnValue = " + exprAssignVar + ";");
+    public String emitFuncReturnAssign(String exprAssignVar) {
+        return "\n\t\t" + "*this->returnValue = " + exprAssignVar + ";";
     }
 
 
     // ═══ 控制流 ═══
 
     @Override
-    public void emitIfBegin(String condAssignVar) {
-        writeTarget("\n\t\tif(" + condAssignVar + "){");
+    public String emitIfBegin(String condAssignVar) {
+        return "\n\t\tif(" + condAssignVar + "){";
     }
 
     @Override
-    public void emitElseIf(String condAssignVar) {
-        writeTarget("\n\t\t}else if(" + condAssignVar + "){");
+    public String emitElseIf(String condAssignVar) {
+        return "\n\t\t}else if(" + condAssignVar + "){";
     }
 
     @Override
-    public void emitElse() {
-        writeTarget("\n\t\t}else{");
+    public String emitElse() {
+        return "\n\t\t}else{";
     }
 
     @Override
-    public void emitIfEnd() {
-        writeTarget("\n\t\t}");
+    public String emitIfEnd() {
+        return "\n\t\t}";
     }
 
     @Override
-    public void emitForBegin(String controlVar, String fromAssignVar, String toAssignVar, String stepAssignVar) {
-        writeTarget("\n\t\tfor( *" + controlVar + " = " + fromAssignVar + ";");
-        writeTarget("*" + controlVar + " <= " + toAssignVar + ";");
+    public String emitForBegin(String controlVar, String fromAssignVar, String toAssignVar, String stepAssignVar) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n\t\tfor( *").append(controlVar).append(" = ").append(fromAssignVar).append(";");
+        sb.append("*").append(controlVar).append(" <= ").append(toAssignVar).append(";");
         if (stepAssignVar != null && !stepAssignVar.isEmpty()) {
-            writeTarget("*" + controlVar + " = *" + controlVar + " + " + stepAssignVar + "){");
+            sb.append("*").append(controlVar).append(" = *").append(controlVar).append(" + ").append(stepAssignVar).append("){");
         } else {
-            writeTarget(controlVar + " = " + controlVar + " + (*new INT(1))){");
+            sb.append(controlVar).append(" = ").append(controlVar).append(" + (*new INT(1))){");
         }
+        return sb.toString();
     }
 
     @Override
-    public void emitForEnd() {
-        writeTarget("\n\t\t}");
+    public String emitForEnd() {
+        return "\n\t\t}";
     }
 
     @Override
-    public void emitWhileBegin(String condAssignVar) {
-        writeTarget("\n\t\twhile(" + condAssignVar + "){");
+    public String emitWhileBegin(String condAssignVar) {
+        return "\n\t\twhile(" + condAssignVar + "){";
     }
 
     @Override
-    public void emitWhileEnd() {
-        writeTarget("\n\t\t}");
+    public String emitWhileEnd() {
+        return "\n\t\t}";
     }
 
     @Override
-    public void emitRepeatBegin() {
-        writeTarget("\n\t\tdo{");
+    public String emitRepeatBegin() {
+        return "\n\t\tdo{";
     }
 
     @Override
-    public void emitRepeatEnd(String condAssignVar) {
-        writeTarget("\n\t\t}while(" + condAssignVar + ");");
+    public String emitRepeatEnd(String condAssignVar) {
+        return "\n\t\t}while(" + condAssignVar + ");";
     }
 
     @Override
-    public void emitCaseBegin(String exprAssignVar) {
-        writeTarget("\n\t\tswitch(" + exprAssignVar + "){");
+    public String emitCaseBegin(String exprAssignVar) {
+        return "\n\t\tswitch(" + exprAssignVar + "){";
     }
 
     @Override
-    public void emitCaseOption(String value) {
-        writeTarget("\n\t\t\tcase " + value + " :");
+    public String emitCaseOption(String value) {
+        return "\n\t\t\tcase " + value + " :";
     }
 
     @Override
-    public void emitCaseDefault() {
-        writeTarget("\n\t\t\tdefault :");
+    public String emitCaseDefault() {
+        return "\n\t\t\tdefault :";
     }
 
     @Override
-    public void emitCaseEnd() {
-        writeTarget("\n\t\t}");
+    public String emitCaseEnd() {
+        return "\n\t\t}";
     }
 
     @Override
-    public void emitPrintStmt(String exprAssignVar) {
-        writeTarget("\n\t\tcout << " + exprAssignVar + " << endl;");
+    public String emitPrintStmt(String exprAssignVar) {
+        return "\n\t\tcout << " + exprAssignVar + " << endl;";
     }
 
 
     // ═══ 函数 / PROGRAM ═══
 
     @Override
-    public void emitFuncDeclBegin(String funcName, String returnType, String params) {
-        writeTarget("\nclass " + funcName + " : public PLC_Function<" + returnType + ">{");
-        writeTarget("\n\tpublic:");
+    public String emitFuncDeclBegin(String funcName, String returnType, String params) {
+        return "\nclass " + funcName + " : public PLC_Function<" + returnType + ">{"
+                + "\n\tpublic:";
     }
 
     @Override
-    public void emitFuncDeclEnd() {
-        writeTarget("\n};");
+    public String emitFuncDeclEnd() {
+        return "\n};";
     }
 
     @Override
-    public void emitFuncBodyBegin() {
-        // OOP 模式下函数体在 funcExecute 方法中
+    public String emitFuncBodyBegin() {
+        return ""; // OOP 模式下函数体在 funcExecute 方法中
     }
 
     @Override
-    public void emitFuncBodyEnd() {
-        // OOP 模式下由 TranslateFunc_decl 处理
+    public String emitFuncBodyEnd() {
+        return ""; // OOP 模式下由 TranslateFunc_decl 处理
     }
 
     @Override
-    public void emitFuncCall(String funcName, List<String> params) {
-        // OOP 模式下由 TranslateFunc_call 处理
+    public String emitFuncCall(String funcName, List<String> params) {
+        return ""; // OOP 模式下由 TranslateFunc_call 处理
     }
 
     @Override
-    public void emitProgDeclBegin(String progName) {
-        // OOP 模式下由 TranslateProg_decl 处理
+    public String emitProgDeclBegin(String progName) {
+        return ""; // OOP 模式下由 TranslateProg_decl 处理
     }
 
     @Override
-    public void emitProgDeclEnd() {
-        writeTarget("\n}");
+    public String emitProgDeclEnd() {
+        return "\n}";
     }
 
     @Override
-    public void emitProgBodyBegin() {
-        // OOP 模式下由 TranslateProg_decl 处理
+    public String emitProgBodyBegin() {
+        return ""; // OOP 模式下由 TranslateProg_decl 处理
     }
 
     @Override
-    public void emitProgBodyEnd() {
-        // OOP 模式下由 TranslateProg_decl 处理
+    public String emitProgBodyEnd() {
+        return ""; // OOP 模式下由 TranslateProg_decl 处理
     }
 
 
     // ═══ 函数块 ═══
 
     @Override
-    public void emitFBBodyBegin() {
-        // 由 TranslateFb_body 处理
+    public String emitFBBodyBegin() {
+        return ""; // 由 TranslateFb_body 处理
     }
 
     @Override
-    public void emitFBBodyEnd() {
-        // 由 TranslateFb_body 处理
+    public String emitFBBodyEnd() {
+        return ""; // 由 TranslateFb_body 处理
     }
 
 
     // ═══ 初始化 ═══
 
     @Override
-    public void emitInitFuncBegin() {
-        writeTarget("\nvoid initFunc(){");
+    public String emitInitFuncBegin() {
+        return "\nvoid initFunc(){";
     }
 
     @Override
-    public void emitInitFuncEnd() {
-        writeTarget("\n}");
+    public String emitInitFuncEnd() {
+        return "\n}";
     }
 
     @Override
-    public void emitInitFuncCall(String sentence) {
-        writeTarget("\n\t" + sentence);
+    public String emitInitFuncCall(String sentence) {
+        return "\n\t" + sentence;
     }
 
 
     // ═══ 底层输出 ═══
 
     @Override
-    public void write(String code) {
-        writeTarget(code);
+    public String write(String code) {
+        return code;
     }
 }

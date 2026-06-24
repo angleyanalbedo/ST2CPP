@@ -9,13 +9,12 @@ import antlr4.PLCSTPARSERParser;
 
 import java.util.ArrayList;
 
-import static PLCTargetFileOutPut.TargetFileOutput.writeTarget;
-
 public class TranslateMethod_prototype {
     //接口参数语句
     ArrayList<String> interfaceParaSentences = new ArrayList<>();
 
-    public ArrayList<String> translateNode(PLCSTPARSERParser.Method_prototypeContext ctx, PLCTranslatorNew translatorNew){
+    public String translateNode(PLCSTPARSERParser.Method_prototypeContext ctx, PLCTranslatorNew translatorNew){
+        StringBuilder sb = new StringBuilder();
         //方法原型名称
         String MethodProtoTypeName = ctx.method_name().getText();
         //方法原型返回类型
@@ -25,8 +24,7 @@ public class TranslateMethod_prototype {
             methodProtoReTypeName = methodProtoReType.getRuntimeTypeName();
         }
         //********************************************************方法原型类声明*******************************************
-//        System.out.println("\tclass "+MethodProtoTypeName +": public METHODPROTO {");
-        writeTarget("\n\tclass "+MethodProtoTypeName +": public METHODPROTO {");
+        sb.append("\n\tclass "+MethodProtoTypeName +": public METHODPROTO {");
 
         //******************************************************方法原型参数变量翻译****************************************
         for (PLCSTPARSERParser.Io_var_declsContext io_var_decl : ctx.io_var_decls()) {
@@ -40,18 +38,13 @@ public class TranslateMethod_prototype {
         }
 
         //******************************************************接口类中纯虚函数翻译****************************************
-//        System.out.print("\t\tvirtual "+methodProtoReTypeName+ " callFunc(");
-        writeTarget("\n\t\tvirtual "+methodProtoReTypeName+ " callFunc(");
-//        System.out.print(MethodProtoTypeName+"* meth");
-        writeTarget(MethodProtoTypeName+"* meth");
+        sb.append("\n\t\tvirtual "+methodProtoReTypeName+ " callFunc(");
+        sb.append(MethodProtoTypeName+"* meth");
         for (String interfaceParaSentence : this.interfaceParaSentences) {
-//            System.out.print(","+interfaceParaSentence);
-            writeTarget(","+interfaceParaSentence);
+            sb.append(","+interfaceParaSentence);
         }
-//        System.out.print(") = 0;\n");
-        writeTarget(") = 0;\n");
-//        System.out.println("\t};");
-        writeTarget("\t};");
-        return null;
+        sb.append(") = 0;\n");
+        sb.append("\t};");
+        return sb.toString();
     }
 }

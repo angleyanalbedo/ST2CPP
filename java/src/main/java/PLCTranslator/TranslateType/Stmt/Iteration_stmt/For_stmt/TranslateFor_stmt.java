@@ -6,12 +6,12 @@ import PLCTranslator.PLCTranslatorNew;
 import PLCTranslator.TranslateType.packageFactory;
 import antlr4.PLCSTPARSERParser;
 
-import java.util.ArrayList;
 import java.util.Objects;
 
 public class TranslateFor_stmt {
     packageFactory pFactory = new packageFactory();
-    public ArrayList<String> translateNode(PLCSTPARSERParser.For_stmtContext ctx, PLCTranslatorNew translatorNew){
+    public String translateNode(PLCSTPARSERParser.For_stmtContext ctx, PLCTranslatorNew translatorNew){
+        StringBuilder sb = new StringBuilder();
         //*********************************************翻译for循环条件****************************************************
         PLCVariable controlVariable = (PLCVariable) PLCTranslatorNew.properties.get(ctx.control_variable()).get(0);
         String conVar = controlVariable.getName();
@@ -28,13 +28,16 @@ public class TranslateFor_stmt {
         }
 
         // 使用 CodeGenerator 生成 for 循环
-        PLCTranslatorNew.codeGen.emitForBegin(conVar, varExpression1.getAssignVar(),
-                varExpression2.getAssignVar(), stepVar);
+        sb.append(PLCTranslatorNew.codeGen.emitForBegin(conVar, varExpression1.getAssignVar(),
+                varExpression2.getAssignVar(), stepVar));
 
         //翻译for循环体内操作
-        translatorNew.visit(ctx.stmt_list());
+        String bodyResult = translatorNew.visit(ctx.stmt_list());
+        if (bodyResult != null) {
+            sb.append(bodyResult);
+        }
 
-        PLCTranslatorNew.codeGen.emitForEnd();
-        return null;
+        sb.append(PLCTranslatorNew.codeGen.emitForEnd());
+        return sb.toString();
     }
 }

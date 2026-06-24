@@ -3,14 +3,15 @@ package PLCTranslator.TranslateType.Stmt_list;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
 
-import java.util.ArrayList;
-
 public class TranslateStmt_list {
-    public ArrayList<String> translateNode(PLCSTPARSERParser.Stmt_listContext ctx, PLCTranslatorNew translatorNew){
+    public String translateNode(PLCSTPARSERParser.Stmt_listContext ctx, PLCTranslatorNew translatorNew){
+        StringBuilder sb = new StringBuilder();
         for (PLCSTPARSERParser.StmtContext stmtContext : ctx.stmt()) {
-            translatorNew.visit(stmtContext);
+            String result = translatorNew.visit(stmtContext);
+            if (result != null) {
+                sb.append(result);
+            }
         }
-
-        return null;
+        return sb.toString();
     }
 }

@@ -10,7 +10,6 @@ import antlr4.PLCSTPARSERParser;
 import java.util.ArrayList;
 import java.util.List;
 
-import static PLCTargetFileOutPut.TargetFileOutput.writeTarget;
 import static PLCTranslator.PLCTranslatorNew.properties;
 import static PLCTranslator.TranslateType.Startpoint.TranslateStartpoint.funcInitSentences;
 
@@ -36,7 +35,8 @@ public class TranslateFunc_decl {
     //函数调用参数语句
     ArrayList<String> callFuncParaSentences = new ArrayList<>();
 
-    public ArrayList<String> translateNode(PLCSTPARSERParser.Func_declContext ctx, PLCTranslatorNew translatorNew) {
+    public String translateNode(PLCSTPARSERParser.Func_declContext ctx, PLCTranslatorNew translatorNew) {
+        StringBuilder sb = new StringBuilder();
         //获取函数符号
         PLCFCDeclSymbol funcSymbol = (PLCFCDeclSymbol) properties.get(ctx).get(0);
         //函数返回语句信息
@@ -49,7 +49,7 @@ public class TranslateFunc_decl {
         String funcReType ="void";
         if(ctx.data_type_access()!=null) {
             funcReType = PLCTotalSymbolTable.getTypeByTypeID(funcSymbol.getReturnTypeId()).getRuntimeName();
-            returnSentence1 = "new " + funcReType +"(getFuncReturn<"+funcReType+"*>())";
+            returnSentence1 = "new " + funcReType +"(getFuncReturn<"+funcReType+"*>)";
 //            returnSentence2 = "auto re =";
             //returnSentence3 = "return this->getFuncReturnVar<"+funcReType+">();";
         }
@@ -76,89 +76,90 @@ public class TranslateFunc_decl {
             returnValueType = PLCTotalSymbolTable.getTypeByTypeID(funcSymbol.getReturnTypeId()).getName();
         }
         //函数类占位符
-        writeTarget("\nclass "+funcName+": public PLC_Function<"+returnValueType+">{");
-        writeTarget("\npublic:");
+        sb.append("\nclass "+funcName+": public PLC_Function<"+returnValueType+">{");
+        sb.append("\npublic:");
 
         //*************************************************组装函数类的构造函数*********************************************
-        writeTarget("\n\t"+funcName + "(int funcID, varMap* vMap) : PLC_Function(funcID, vMap){");
+        sb.append("\n\t"+funcName + "(int funcID, varMap* vMap) : PLC_Function(funcID, vMap){");
         if(ctx.data_type_access()!=null){
-            writeTarget("\n\t\t"+"this->addReturnVar<"+funcReType+">();");
-            writeTarget("\n\t\t"+"this->returnValue = new "+funcReType+"();");
+            sb.append("\n\t\t"+"this->addReturnVar<"+funcReType+">();");
+            sb.append("\n\t\t"+"this->returnValue = new "+funcReType+"();");
         }
         for (String conSentence : this.conSentences) {
-            writeTarget("\n\t\t"+conSentence);
+            sb.append("\n\t\t"+conSentence);
         }
-        writeTarget("\n\t}");
+        sb.append("\n\t}");
 
         //**************************************************组装函数执行接口***********************************************
         String callFuncReturnType = "void";
-        writeTarget("\n\t"+callFuncReturnType+" funcExecute(");
+        sb.append("\n\t"+callFuncReturnType+" funcExecute(");
         //函数执行参数翻译
         if(this.funcParaSentences.size()>0){
-            writeTarget(this.funcParaSentences.get(0));
+            sb.append(this.funcParaSentences.get(0));
         }
         for(int t = 1;t<this.funcParaSentences.size();t++){
-            writeTarget(","+this.funcParaSentences.get(t));
+            sb.append(","+this.funcParaSentences.get(t));
         }
-        writeTarget("){");
+        sb.append("){");
         //输入参数变量传值初始化
         for (String funcCallInitSentence : this.funcCallInitSentences) {
-            writeTarget("\n\t\t"+funcCallInitSentence);
+            sb.append("\n\t\t"+funcCallInitSentence);
         }
 
         //访问函数操作体
-        translatorNew.visit(ctx.func_body());
+        String result = translatorNew.visit(ctx.func_body());
+        sb.append(result);
 
         //函数输出返回
         for (String funcCallOutputSentence : this.funcCallOutputSentences) {
-            writeTarget("\n\t\t"+funcCallOutputSentence);
+            sb.append("\n\t\t"+funcCallOutputSentence);
         }
-        writeTarget("\n\t}");
+        sb.append("\n\t}");
 
         //*************************************************组装变量重置接口************************************************
-//        writeTarget("\n\tvoid resetValue(){");
+//        sb.append("\n\tvoid resetValue(){");
 //        for (String resetSentence : this.resetSentences) {
-//            writeTarget("\n\t\t"+resetSentence);
+//            sb.append("\n\t\t"+resetSentence);
 //        }
-//        writeTarget("\n\t}");
+//        sb.append("\n\t}");
 
         //*************************************************组装函数调用接口************************************************
         String callFuncReturn ="void";
         if(ctx.data_type_access()!=null){
             callFuncReturn = funcReType+"*";
         }
-        writeTarget("\n\t"+callFuncReturn+" callFunc(");
+        sb.append("\n\t"+callFuncReturn+" callFunc(");
         if(this.funcParaSentences.size()>0){
-            writeTarget(this.funcParaSentences.get(0));
+            sb.append(this.funcParaSentences.get(0));
         }
         for(int t = 1;t<this.funcParaSentences.size();t++){
-            writeTarget(","+this.funcParaSentences.get(t));
+            sb.append(","+this.funcParaSentences.get(t));
         }
-        writeTarget("){");
+        sb.append("){");
 
-        writeTarget("\n\t\t"+"funcExecute(");
+        sb.append("\n\t\t"+"funcExecute(");
 
         if(this.callFuncParaSentences.size()>0){
-            writeTarget(this.callFuncParaSentences.get(0));
+            sb.append(this.callFuncParaSentences.get(0));
         }
         for(int t =1; t<this.callFuncParaSentences.size(); t++){
-            writeTarget(","+this.callFuncParaSentences.get(t));
+            sb.append(","+this.callFuncParaSentences.get(t));
         }
-        writeTarget(");");
+        sb.append(");");
 
-//        writeTarget("\n\t\tresetValue();");
+//        sb.append("\n\t\tresetValue();");
 
-        writeTarget("\n\t\treturn "+returnSentence1+";");
+        sb.append("\n\t\treturn "+returnSentence1+";");
 
-        writeTarget("\n\t}");
+        sb.append("\n\t}");
 
-        writeTarget("\n};");
+        sb.append("\n};");
 
         //将该函数实例化添加到总表下
         funcInitSentences.add(pFactory.packageAddVarToMapSentences(String.valueOf(funcSymbol.getSymbolId()),
                 funcSymbol.getName()));
 
-        return null;
+        return sb.toString();
     }
 
     /**

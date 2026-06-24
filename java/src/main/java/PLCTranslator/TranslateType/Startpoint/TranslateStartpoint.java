@@ -8,16 +8,21 @@ import antlr4.PLCSTPARSERParser;
 
 import java.util.ArrayList;
 
-import static PLCTargetFileOutPut.TargetFileOutput.writeTarget;
-
 //PLCSt翻译起点
 public class TranslateStartpoint {
     public static ArrayList<String> funcInitSentences = new ArrayList<>();
 
-    public ArrayList<String> translateNode(PLCSTPARSERParser.StartpointContext ctx, PLCTranslatorNew translatorNew){
+    public String translateNode(PLCSTPARSERParser.StartpointContext ctx, PLCTranslatorNew translatorNew){
+        StringBuilder sb = new StringBuilder();
         // 使用 CodeGenerator 生成头文件（OOP 或 Flat）
-        PLCTranslatorNew.codeGen.emitHeader();
-        translatorNew.visitChildren(ctx);
-        return null;
+        sb.append(PLCTranslatorNew.codeGen.emitHeader());
+        // 手动遍历子节点并拼接
+        for (int i = 0; i < ctx.getChildCount(); i++) {
+            String result = translatorNew.visit(ctx.getChild(i));
+            if (result != null) {
+                sb.append(result);
+            }
+        }
+        return sb.toString();
     }
 }

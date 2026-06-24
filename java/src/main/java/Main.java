@@ -18,12 +18,14 @@ import staticCheckVisitor.PLCVisitor;
 import staticCheckVisitor.factory.Factory;
 import staticCheckVisitor.register.Registrant;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 
 import static PLCSymbolAndScope.PLCScopeStack.*;
-import static PLCTargetFileOutPut.TargetFileOutput.closeWriter;
 
 
 public class Main {
@@ -85,21 +87,22 @@ public class Main {
 
         plcVisitor.visit(parseTree);
 
-        // 设置输出文件路径
-        PLCTargetFileOutPut.TargetFileOutput.setOutputPath(outputFile);
-
         // 使用选择的后端创建翻译器
         PLCTranslatorNew translatorNew = new PLCTranslatorNew(property, codeGen);
 
-        translatorNew.visit(parseTree);
+        // visit 返回完整的代码字符串（不再在内部写文件）
+        String fullCode = translatorNew.visit(parseTree);
+
+        // 统一一次性写入文件
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
+            writer.write(fullCode != null ? fullCode : "");
+        }
 
         // 输出 Flat 后端的 GVL 偏移量信息
         if (codeGen instanceof FlatCodeGenerator) {
             FlatCodeGenerator flatGen = (FlatCodeGenerator) codeGen;
             System.out.println("\n" + flatGen.getOffsetDefinitions());
         }
-
-        closeWriter();
 
         System.out.println("Translation completed: " + outputFile);
     }

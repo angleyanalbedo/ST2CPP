@@ -4,13 +4,12 @@ import PLCSymbolAndScope.PLCSymbols.PLCVariable;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
 
-import java.util.ArrayList;
-
 /**
  * 翻译功能块和类对象调用
  */
 public class TranslateInvocation2 {
-    public ArrayList<String> translateNode(PLCSTPARSERParser.Invocation2Context ctx, PLCTranslatorNew translatorNew){
+    public String translateNode(PLCSTPARSERParser.Invocation2Context ctx, PLCTranslatorNew translatorNew){
+        StringBuilder sb = new StringBuilder();
         PLCVariable instanceSymbol = (PLCVariable) PLCTranslatorNew.properties.get(ctx.invocation2branch()).get(0);
 
 //        System.out.println(instanceSymbol.getRuntimeName()+"::callFunc("+instanceSymbol.getName());
@@ -21,6 +20,6 @@ public class TranslateInvocation2 {
 //            System.out.print(","+paraSymbol.getRuntimeName()); //类内函数调用细化修改
         }
 //        System.out.print(");");
-        return null;
+        return sb.toString();
     }
 }

@@ -9,7 +9,6 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import java.util.ArrayList;
 import java.util.Map;
 
-import static PLCTargetFileOutPut.TargetFileOutput.writeTarget;
 import static PLCTranslator.TranslateType.Class_decl.TranslateClass_decl.classVariableList;
 
 public class TranslateMethod_decl {
@@ -35,7 +34,8 @@ public class TranslateMethod_decl {
 
     packageFactory pFactory = new packageFactory();
 
-    public ArrayList<String> translateNode(PLCSTPARSERParser.Method_declContext ctx, PLCTranslatorNew translatorNew) {
+    public String translateNode(PLCSTPARSERParser.Method_declContext ctx, PLCTranslatorNew translatorNew) {
+        StringBuilder sb = new StringBuilder();
         if(ctx.data_type_access()!=null){
             this.returnOrNot = 1;
         }
@@ -45,82 +45,83 @@ public class TranslateMethod_decl {
         packageMethodIOVarSentences(methodDeclSymbol.getVariableMap());
 
         //************************************************翻译函数声明****************************************************
-        writeTarget("\nclass "+methodDeclSymbol.getName()+": public METHOD{");
-        writeTarget("\npublic:");
+        sb.append("\nclass "+methodDeclSymbol.getName()+": public METHOD{");
+        sb.append("\npublic:");
 
         //***********************************************翻译方法构造函数**************************************************
-        writeTarget("\n\t"+methodDeclSymbol.getName()+"(int methodID, std::string methodName, CLASS* classP)");
-        writeTarget(":METHOD(methodID, std::move(methodName), classP){");
+        sb.append("\n\t"+methodDeclSymbol.getName()+"(int methodID, std::string methodName, CLASS* classP)");
+        sb.append(":METHOD(methodID, std::move(methodName), classP){");
         for (String conSentence : this.conSentences) {
-            writeTarget("\n\t\t"+conSentence);
+            sb.append("\n\t\t"+conSentence);
         }
-        writeTarget("\n\t}");
+        sb.append("\n\t}");
 
         //***********************************************翻译方法执行接口**************************************************
         if(returnOrNot == 1){
-            writeTarget("\n\tauto funcExecute(");
+            sb.append("\n\tauto funcExecute(");
         }else{
-            writeTarget("\n\tvoid funcExecute(");
+            sb.append("\n\tvoid funcExecute(");
         }
 
         //函数执行接口参数翻译
         if(!this.funcParaSentences.isEmpty()){
-            writeTarget(this.funcParaSentences.get(0));
+            sb.append(this.funcParaSentences.get(0));
             for(int t = 1; t<this.funcParaSentences.size(); t++){
-                writeTarget(","+this.funcParaSentences.get(t));
+                sb.append(","+this.funcParaSentences.get(t));
             }
         }
-        writeTarget("){");
+        sb.append("){");
 
         //传递输入参数值
         for (String funcCallInitSentence : this.funcCallInitSentences) {
-            writeTarget("\n\t\t"+funcCallInitSentence);
+            sb.append("\n\t\t"+funcCallInitSentence);
         }
 
         //翻译函数执行内容
-        translatorNew.visit(ctx.func_body());
+        String funcBodyResult = translatorNew.visit(ctx.func_body());
+        sb.append(funcBodyResult);
 
         //将输出参数值赋值返回
         for (String funcCallOutputSentence : this.funcCallOutputSentences) {
-            writeTarget(funcCallOutputSentence);
+            sb.append(funcCallOutputSentence);
         }
-        writeTarget("\n\t}");
+        sb.append("\n\t}");
 
         //*******************************************翻译函数内值重置接口***************************************************
-        writeTarget("\n\tvoid resetValue(){");
+        sb.append("\n\tvoid resetValue(){");
         for (String resetSentence : this.resetSentences) {
-            writeTarget("\n\t\t"+resetSentence);
+            sb.append("\n\t\t"+resetSentence);
         }
-        writeTarget("\n\t}");
+        sb.append("\n\t}");
 
         //*********************************************翻译函数调用接口****************************************************
         if(returnOrNot == 1) {
-            writeTarget("\n\t\tauto callFunc(");
+            sb.append("\n\t\tauto callFunc(");
         }else{
-            writeTarget("\n\t\t void callFunc(");
+            sb.append("\n\t\t void callFunc(");
         }
 
         //函数调用参数翻译
         if(!this.funcParaSentences.isEmpty()){
-            writeTarget(this.funcParaSentences.get(0));
+            sb.append(this.funcParaSentences.get(0));
             for(int t = 1; t<this.funcParaSentences.size(); t++){
-                writeTarget(","+this.funcParaSentences.get(t));
+                sb.append(","+this.funcParaSentences.get(t));
             }
         }
 
-        writeTarget("){");
-        writeTarget("\n\t\tfuncExecute(");
+        sb.append("){");
+        sb.append("\n\t\tfuncExecute(");
         if(!this.callFuncParaSentences.isEmpty()){
-            writeTarget(this.callFuncParaSentences.get(0));
+            sb.append(this.callFuncParaSentences.get(0));
             for(int t = 1; t<this.callFuncParaSentences.size(); t++){
-                writeTarget(","+this.callFuncParaSentences.get(t));
+                sb.append(","+this.callFuncParaSentences.get(t));
             }
         }
-        writeTarget(");");
-        writeTarget("\n\t\tresetValue();");
-        writeTarget("\n\t}");
-        writeTarget("};");
-        return null;
+        sb.append(");");
+        sb.append("\n\t\tresetValue();");
+        sb.append("\n\t}");
+        sb.append("};");
+        return sb.toString();
     }
 
     void packageMethodIOVarSentences(Map<String, PLCVariable> valueMap){

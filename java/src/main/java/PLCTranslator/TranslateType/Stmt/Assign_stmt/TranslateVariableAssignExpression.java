@@ -5,26 +5,28 @@ import PLCSymbolAndScope.PLCSymbols.PLCVariable;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
 
-import java.util.ArrayList;
-
 /**
  * 翻译PLCSt的变量赋值语句
  */
 public class TranslateVariableAssignExpression {
-    public ArrayList<String> translateNode(PLCSTPARSERParser.VariableAssignExpressionContext ctx, PLCTranslatorNew translatorNew){
-        translatorNew.visit(ctx.expression());
+    public String translateNode(PLCSTPARSERParser.VariableAssignExpressionContext ctx, PLCTranslatorNew translatorNew){
+        StringBuilder sb = new StringBuilder();
+        String visitResult = translatorNew.visit(ctx.expression());
+        if (visitResult != null) {
+            sb.append(visitResult);
+        }
         PLCVariable varSymbol = (PLCVariable) PLCTranslatorNew.properties.get(ctx).get(0);
 
         PLCVariable varExpression = (PLCVariable) PLCTranslatorNew.properties.get(ctx.expression()).get(0);
 
         if(varSymbol.getSort() != PLCModifierEnum.Sort.FC) {
             // 使用 CodeGenerator 生成赋值
-            PLCTranslatorNew.codeGen.emitAssign(varSymbol.getName(), varSymbol.getAssignVar());
+            sb.append(PLCTranslatorNew.codeGen.emitAssign(varSymbol.getName(), varSymbol.getAssignVar()));
         }else{
             // 函数返回值赋值
-            PLCTranslatorNew.codeGen.emitFuncReturnAssign(varExpression.getAssignVar());
+            sb.append(PLCTranslatorNew.codeGen.emitFuncReturnAssign(varExpression.getAssignVar()));
         }
-        return null;
+        return sb.toString();
 
     }
 }

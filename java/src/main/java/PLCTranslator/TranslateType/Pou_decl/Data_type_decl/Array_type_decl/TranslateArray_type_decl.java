@@ -10,38 +10,30 @@ import antlr4.PLCSTPARSERParser;
 
 import java.util.ArrayList;
 
-import static PLCTargetFileOutPut.TargetFileOutput.writeTarget;
-
 public class TranslateArray_type_decl {
 
     packageFactory pFactory = new packageFactory();
 
-    public ArrayList<String> translateNode(PLCSTPARSERParser.Array_type_declContext ctx, PLCTranslatorNew translatorNew){
+    public String translateNode(PLCSTPARSERParser.Array_type_declContext ctx, PLCTranslatorNew translatorNew){
+        StringBuilder sb = new StringBuilder();
 
         PLCSubtypeDeclSymbol arraySymbol = (PLCSubtypeDeclSymbol) PLCTranslatorNew.properties.get(ctx).get(0);
 
         //数组类型创建
-//        System.out.println(pFactory.packageArrayTypeInitSentences(arraySymbol.getName()));
-        writeTarget("\n"+pFactory.packageArrayTypeInitSentences(arraySymbol.getName()));
+        sb.append("\n"+pFactory.packageArrayTypeInitSentences(arraySymbol.getName()));
         ArrayList<PLCSymbol> arrayInitList = PLCTranslatorNew.properties.get(ctx.array_spec_init());
 
         for (PLCSymbol symbol : arrayInitList) {
             PLCVariable tempSymbol = (PLCVariable) symbol;
-//            System.out.println(pFactory.packageArrayElementAddSentences("*(new "+tempSymbol.getAssignVar()+")",
-//                    arraySymbol.getName()));
-            writeTarget("\n"+pFactory.packageArrayElementAddSentences("*(new "+tempSymbol.getAssignVar()+")",
+            sb.append("\n"+pFactory.packageArrayElementAddSentences("*(new "+tempSymbol.getAssignVar()+")",
                     arraySymbol.getName()));
 
         }
 
-//        System.out.println("PLC_Array_Type<"+String.valueOf(arraySymbol.getTypeId())+"> "+ arraySymbol.getName()+"_"
-//                +"= new "+"PLC_Array_Type<"+String.valueOf(arraySymbol.getTypeId())+">(0,v"+arraySymbol.getName()+");");
-        writeTarget("\nPLC_Array_Type<"+String.valueOf(arraySymbol.getTypeId())+"> "+ arraySymbol.getName()+"_"
+        sb.append("\nPLC_Array_Type<"+String.valueOf(arraySymbol.getTypeId())+"> "+ arraySymbol.getName()+"_"
                 +"= new "+"PLC_Array_Type<"+String.valueOf(arraySymbol.getTypeId())+">(0,v"+arraySymbol.getName()+");");
-//        System.out.println(pFactory.packageTypedefSentences("PLC_Array<"
-//                +String.valueOf(arraySymbol.getTypeId())+">", arraySymbol.getName()));
-        writeTarget("\n"+pFactory.packageTypedefSentences("PLC_Array<"
+        sb.append("\n"+pFactory.packageTypedefSentences("PLC_Array<"
                 +String.valueOf(arraySymbol.getTypeId())+">", arraySymbol.getName()));
-        return null;
+        return sb.toString();
     }
 }

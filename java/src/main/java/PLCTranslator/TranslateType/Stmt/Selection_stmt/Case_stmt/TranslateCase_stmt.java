@@ -7,14 +7,13 @@ import antlr4.PLCSTPARSERParser;
 
 import java.util.ArrayList;
 
-import static PLCTargetFileOutPut.TargetFileOutput.writeTarget;
-
 /**
  * 翻译case语句，将case语句翻译成if <else if> <else> 句型
  */
 
 public class TranslateCase_stmt {
-    public ArrayList<String> translateNode(PLCSTPARSERParser.Case_stmtContext ctx, PLCTranslatorNew translatorNew){
+    public String translateNode(PLCSTPARSERParser.Case_stmtContext ctx, PLCTranslatorNew translatorNew){
+        StringBuilder sb = new StringBuilder();
         PLCVariable varExpression = (PLCVariable) PLCTranslatorNew.properties.get(ctx.expression()).get(0);
         //***********************************************翻译第一个if****************************************************
 
@@ -23,50 +22,53 @@ public class TranslateCase_stmt {
 //        System.out.println("if(("+varExpression.getAssignVar()+"=="+((PLCVariable)caseList.get(0)).getAssignVar()+
 //                ")");
 
-        writeTarget("\nif(("+varExpression.getAssignVar()+"=="+((PLCVariable)caseList.get(0)).getAssignVar()+
+        sb.append("\nif(("+varExpression.getAssignVar()+"=="+((PLCVariable)caseList.get(0)).getAssignVar()+
                 ")");
 
         for(int t =1; t<ctx.case_selection(0).case_list().case_list_elem().size(); t++){
 //            System.out.println("||("+varExpression.getAssignVar()+"=="+ ctx.case_selection(0).case_list().case_list_elem(t)+")");
-            writeTarget("\n||("+varExpression.getAssignVar()+"=="
+            sb.append("\n||("+varExpression.getAssignVar()+"=="
                     + ctx.case_selection(0).case_list().case_list_elem(t)+")");
         }
 
 //        System.out.print("){");
-        writeTarget("){");
+        sb.append("){");
         //翻译case操作内容
-        translatorNew.visit(ctx.case_selection(0).stmt_list());
+        String result = translatorNew.visit(ctx.case_selection(0).stmt_list());
+        sb.append(result);
 
 //        System.out.print("}");
-        writeTarget("}");
+        sb.append("}");
         //**********************************************翻译后续case为else if*********************************************
         for(int i = 1; i<ctx.case_selection().size(); i++){
             ArrayList<PLCSymbol> caseTempList = PLCTranslatorNew.properties.get(ctx.case_selection(i).case_list());
 //            System.out.println("else if(("+varExpression.getAssignVar()+"=="+((PLCVariable)caseTempList.get(0)).getAssignVar()+
 //                    ")");
-            writeTarget("\nelse if(("+varExpression.getAssignVar()+"=="+((PLCVariable)caseTempList.get(0)).getAssignVar()+
+            sb.append("\nelse if(("+varExpression.getAssignVar()+"=="+((PLCVariable)caseTempList.get(0)).getAssignVar()+
                     ")");
 
             for(int t =1; t<ctx.case_selection(i).case_list().case_list_elem().size(); t++){
 //                System.out.println("||("+varExpression.getAssignVar()+"=="+ ctx.case_selection(i).case_list().case_list_elem(t)+")");
-                writeTarget("\n||("+varExpression.getAssignVar()+"=="+ ctx.case_selection(i).case_list().case_list_elem(t)+")");
+                sb.append("\n||("+varExpression.getAssignVar()+"=="+ ctx.case_selection(i).case_list().case_list_elem(t)+")");
             }
 
 //            System.out.println("){");
-            writeTarget("\n){");
-            translatorNew.visit(ctx.case_selection(i).stmt_list());
+            sb.append("\n){");
+            result = translatorNew.visit(ctx.case_selection(i).stmt_list());
+            sb.append(result);
 
 //            System.out.println("}");
-            writeTarget("\n}");
+            sb.append("\n}");
         }
 
         //***********************************************翻译else语句****************************************************
         if(ctx.else_stmt() != null){
-            translatorNew.visit(ctx.else_stmt());
+            result = translatorNew.visit(ctx.else_stmt());
+            sb.append(result);
         }else{
 //            System.out.println("else{}");
-            writeTarget("\nelse{}");
+            sb.append("\nelse{}");
         }
-        return null;
+        return sb.toString();
     }
 }

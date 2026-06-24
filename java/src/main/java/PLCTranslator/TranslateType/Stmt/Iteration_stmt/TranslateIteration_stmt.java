@@ -3,24 +3,25 @@ package PLCTranslator.TranslateType.Stmt.Iteration_stmt;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
 
-import java.util.ArrayList;
 import java.util.Objects;
 
-import static PLCTargetFileOutPut.TargetFileOutput.writeTarget;
-
 public class TranslateIteration_stmt {
-    public ArrayList<String> translateNode(PLCSTPARSERParser.Iteration_stmtContext ctx, PLCTranslatorNew translatorNew){
+    public String translateNode(PLCSTPARSERParser.Iteration_stmtContext ctx, PLCTranslatorNew translatorNew){
+        StringBuilder sb = new StringBuilder();
         if(ctx.EXITORCONTINUE() != null){
             if(Objects.equals(ctx.EXITORCONTINUE().getText(), "CONTINUE")){
 //                System.out.println("continue;");
-                writeTarget("\ncontinue;");
+                sb.append("\ncontinue;");
             }else {
 //                System.out.println("break;");
-                writeTarget("\nbreak;");
+                sb.append("\nbreak;");
             }
         }else {
-            translatorNew.visit(ctx.getChild(0));
+            String result = translatorNew.visit(ctx.getChild(0));
+            if (result != null) {
+                sb.append(result);
+            }
         }
-        return null;
+        return sb.toString();
     }
 }

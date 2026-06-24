@@ -7,18 +7,16 @@ import PLCSymbolAndScope.PLCSymbols.PLCVariable;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
 
-import java.util.ArrayList;
-
-import static PLCTargetFileOutPut.TargetFileOutput.writeTarget;
-
 public class TranslateInterface_decl {
 
-    public ArrayList<String> translateNode(PLCSTPARSERParser.Interface_declContext ctx, PLCTranslatorNew translatorNew){
+    public String translateNode(PLCSTPARSERParser.Interface_declContext ctx, PLCTranslatorNew translatorNew){
+        StringBuilder sb = new StringBuilder();
         for (PLCSTPARSERParser.Method_prototypeContext method_prototypeContext : ctx.method_prototype()) {
-            translatorNew.visit(method_prototypeContext);
+            String result = translatorNew.visit(method_prototypeContext);
+            sb.append(result);
         }
 
 
-        return null;
+        return sb.toString();
     }
 }

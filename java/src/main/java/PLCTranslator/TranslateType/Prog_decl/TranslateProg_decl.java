@@ -10,28 +10,28 @@ import antlr4.PLCSTPARSERParser;
 
 import java.util.ArrayList;
 
-import static PLCTargetFileOutPut.TargetFileOutput.writeTarget;
 import static PLCTranslator.TranslateType.Startpoint.TranslateStartpoint.funcInitSentences;
 
 public class TranslateProg_decl {
 
     packageFactory pFactory = new packageFactory();
 
-    public ArrayList<String> translateNode(PLCSTPARSERParser.Prog_declContext ctx, PLCTranslatorNew translatorNew) {
+    public String translateNode(PLCSTPARSERParser.Prog_declContext ctx, PLCTranslatorNew translatorNew) {
+        StringBuilder sb = new StringBuilder();
         //********************************************全局静态函数初始化***************************************************
-        writeTarget("\nvoid initFunc(){");
+        sb.append("\nvoid initFunc(){");
 
         for(String funcInitSentence : funcInitSentences){
-            writeTarget("\n\t"+funcInitSentence);
+            sb.append("\n\t"+funcInitSentence);
         }
-        writeTarget("\n}\n");
+        sb.append("\n}\n");
 
 
         //*********************************************main函数翻译******************************************************
 
-        writeTarget("\n"+"int main(){");
+        sb.append("\n"+"int main(){");
         //翻译静态方法
-        writeTarget("\n\tinitFunc();");
+        sb.append("\n\tinitFunc();");
         //翻译变量段
         for (PLCSTPARSERParser.Func_var_declsContext func_var_decl : ctx.func_var_decls()) {
             ArrayList<PLCSymbol> funcVarDecl = PLCTranslatorNew.properties.get(func_var_decl);
@@ -46,7 +46,7 @@ public class TranslateProg_decl {
                     //组装变量声明
 //                    System.out.println(pFactory.packagePROGVarDeclSentences(symbol.getName(), varSymbol.getRuntimeTypeName(),
 //                            varSymbol.getAssignVar()));
-                    writeTarget("\n\t"+pFactory.packagePROGVarDeclSentences(symbol.getName(), varSymbol.getRuntimeTypeName(),
+                    sb.append("\n\t"+pFactory.packagePROGVarDeclSentences(symbol.getName(), varSymbol.getRuntimeTypeName(),
                             varSymbol.getAssignVar()));
                 }
             }
@@ -69,7 +69,7 @@ public class TranslateProg_decl {
                     PLCVariable varSymbol = (PLCVariable) symbol;
 //                    System.out.println(pFactory.packagePROGVarDeclSentences(symbol.getRuntimeName(), varSymbol.getRuntimeTypeName(),
 //                            varSymbol.getAssignVar()));
-                    writeTarget("\n\t"+pFactory.packagePROGVarDeclSentences(symbol.getRuntimeName(), varSymbol.getRuntimeTypeName(),
+                    sb.append("\n\t"+pFactory.packagePROGVarDeclSentences(symbol.getRuntimeName(), varSymbol.getRuntimeTypeName(),
                             varSymbol.getAssignVar()));
                 }
             }
@@ -92,15 +92,16 @@ public class TranslateProg_decl {
                     PLCVariable varSymbol = (PLCVariable) symbol;
 //                    System.out.println(pFactory.packagePROGVarDeclSentences(symbol.getRuntimeName(), varSymbol.getRuntimeTypeName(),
 //                            varSymbol.getAssignVar()));
-                    writeTarget("\n\t"+pFactory.packagePROGVarDeclSentences(symbol.getRuntimeName(), varSymbol.getRuntimeTypeName(),
+                    sb.append("\n\t"+pFactory.packagePROGVarDeclSentences(symbol.getRuntimeName(), varSymbol.getRuntimeTypeName(),
                             varSymbol.getAssignVar()));
                 }
             }
         }
 
-        translatorNew.visit(ctx.fb_body());
+        String result = translatorNew.visit(ctx.fb_body());
+        sb.append(result);
 //        System.out.println("}");
-        writeTarget("\n}");
-        return null;
+        sb.append("\n}");
+        return sb.toString();
     }
 }

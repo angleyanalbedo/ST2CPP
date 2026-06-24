@@ -4,20 +4,22 @@ import PLCSymbolAndScope.PLCSymbols.PLCVariable;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
 
-import java.util.ArrayList;
-
 /**
  * 翻译repeat循环语句
  */
 public class TranslateRepeat_stmt {
-    public ArrayList<String> translateNode(PLCSTPARSERParser.Repeat_stmtContext ctx, PLCTranslatorNew translatorNew){
+    public String translateNode(PLCSTPARSERParser.Repeat_stmtContext ctx, PLCTranslatorNew translatorNew){
+        StringBuilder sb = new StringBuilder();
        //翻译do while语句
-       PLCTranslatorNew.codeGen.emitRepeatBegin();
-       translatorNew.visit(ctx.stmt_list());
+       sb.append(PLCTranslatorNew.codeGen.emitRepeatBegin());
+       String bodyResult = translatorNew.visit(ctx.stmt_list());
+       if (bodyResult != null) {
+           sb.append(bodyResult);
+       }
 
        PLCVariable varExpression = (PLCVariable) PLCTranslatorNew.properties.get(ctx.expression()).get(0);
        //while条件语句
-       PLCTranslatorNew.codeGen.emitRepeatEnd(varExpression.getAssignVar());
-       return null;
+       sb.append(PLCTranslatorNew.codeGen.emitRepeatEnd(varExpression.getAssignVar()));
+       return sb.toString();
     }
 }
