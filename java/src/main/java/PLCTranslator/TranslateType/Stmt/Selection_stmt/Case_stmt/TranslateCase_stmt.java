@@ -22,12 +22,11 @@ public class TranslateCase_stmt {
 //        System.out.println("if(("+varExpression.getAssignVar()+"=="+((PLCVariable)caseList.get(0)).getAssignVar()+
 //                ")");
 
-        sb.append("\nif(("+varExpression.getAssignVar()+"=="+((PLCVariable)caseList.get(0)).getAssignVar()+
+        sb.append("\nif(("+translatorNew.codeGen.translateExpr(varExpression.getAssignVar())+"=="+translatorNew.codeGen.translateExpr(((PLCVariable)caseList.get(0)).getAssignVar())+
                 ")");
 
         for(int t =1; t<ctx.case_selection(0).case_list().case_list_elem().size(); t++){
-//            System.out.println("||("+varExpression.getAssignVar()+"=="+ ctx.case_selection(0).case_list().case_list_elem(t)+")");
-            sb.append("\n||("+varExpression.getAssignVar()+"=="
+            sb.append("\n||("+translatorNew.codeGen.translateExpr(varExpression.getAssignVar())+"=="
                     + ctx.case_selection(0).case_list().case_list_elem(t)+")");
         }
 
@@ -44,12 +43,11 @@ public class TranslateCase_stmt {
             ArrayList<PLCSymbol> caseTempList = PLCTranslatorNew.properties.get(ctx.case_selection(i).case_list());
 //            System.out.println("else if(("+varExpression.getAssignVar()+"=="+((PLCVariable)caseTempList.get(0)).getAssignVar()+
 //                    ")");
-            sb.append("\nelse if(("+varExpression.getAssignVar()+"=="+((PLCVariable)caseTempList.get(0)).getAssignVar()+
+            sb.append("\nelse if(("+translatorNew.codeGen.translateExpr(varExpression.getAssignVar())+"=="+translatorNew.codeGen.translateExpr(((PLCVariable)caseTempList.get(0)).getAssignVar())+
                     ")");
 
             for(int t =1; t<ctx.case_selection(i).case_list().case_list_elem().size(); t++){
-//                System.out.println("||("+varExpression.getAssignVar()+"=="+ ctx.case_selection(i).case_list().case_list_elem(t)+")");
-                sb.append("\n||("+varExpression.getAssignVar()+"=="+ ctx.case_selection(i).case_list().case_list_elem(t)+")");
+                sb.append("\n||("+translatorNew.codeGen.translateExpr(varExpression.getAssignVar())+"=="+ ctx.case_selection(i).case_list().case_list_elem(t)+")");
             }
 
 //            System.out.println("){");

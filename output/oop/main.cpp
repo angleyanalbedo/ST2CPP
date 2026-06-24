@@ -17,7 +17,7 @@ public:
 	}
 	INT* callFunc(INT*X){
 		funcExecute(X);
-		return new INT(getFuncReturn<INT*>());
+		return new INT(getFuncReturn<INT*>);
 	}
 };
 void initFunc(){

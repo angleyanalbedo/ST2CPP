@@ -13,10 +13,10 @@ public class TranslateCallFunc {
 
             for (PLCSTPARSERParser.Param_assignContext param_assignContext : childCtx.param_assign()) {
                 PLCVariable plcVariable =(PLCVariable) PLCTranslatorNew.properties.get(param_assignContext).get(0);
-                sb.append("\n\t\tauto "+plcVariable.getRuntimeName()+"="+plcVariable.getAssignVar()+";");
+                sb.append("\n\t\tauto "+plcVariable.getRuntimeName()+"="+translatorNew.codeGen.translateExpr(plcVariable.getAssignVar())+";");
 
             }
-            String var = funcSymbol.getAssignVar().substring(1);
+            String var = translatorNew.codeGen.translateExpr(funcSymbol.getAssignVar()).substring(1);
             sb.append("\n\t\t" + var + ";");
         }else{
             String result = translatorNew.visit(ctx.getChild(0));

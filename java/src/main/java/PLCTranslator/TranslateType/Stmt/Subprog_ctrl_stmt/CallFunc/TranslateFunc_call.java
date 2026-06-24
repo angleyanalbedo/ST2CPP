@@ -23,7 +23,7 @@ public class TranslateFunc_call {
 
         for (PLCSTPARSERParser.Param_assignContext param_assignContext : ctx.param_assign()) {
             PLCVariable plcVariable =(PLCVariable) PLCTranslatorNew.properties.get(param_assignContext).get(0);
-            sb.append("\n\t\tauto "+plcVariable.getRuntimeName()+"="+plcVariable.getAssignVar()+";");
+            sb.append("\n\t\tauto "+plcVariable.getRuntimeName()+"="+translatorNew.codeGen.translateExpr(plcVariable.getAssignVar())+";");
 
         }
         return sb.toString();

@@ -16,4 +16,14 @@ void PROGRAM_P(GVL& gvl, ProcessImage& io, TIME dt) {
 		auto _X0=A;
 		gvl.write<INT>(2, ADD_TEN(_X0));
 		}
-}
+} 
+// === Test Entry === 
+#include <cstdio> 
+int main() { 
+    GVL gvl; 
+    ProcessImage io; 
+    TIME dt = T_ms(1); 
+    PROGRAM_P(gvl, io, dt); 
+    printf("Program executed.\n"); 
+    return 0; 
+} 

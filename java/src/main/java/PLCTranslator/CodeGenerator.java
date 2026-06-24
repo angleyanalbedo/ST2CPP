@@ -143,6 +143,30 @@ public interface CodeGenerator {
     String emitInitFuncCall(String sentence);
 
 
+    // ═══ 表达式转换 ═══
+
+    /**
+     * 将静态检查层生成的 OOP 风格表达式转换为当前后端的表达式。
+     *
+     * OOP 风格的 assignVar 示例：
+     *   - 字面量：(*(new INT(2)))
+     *   - 变量引用：(*::PLC::RFM->getSymbolByID<TYPE*>(symbolId))
+     *   - 函数调用：*::PLC::RFM->getSymbolByID<FUN*>(id)->callFunc(&p1, &p2)
+     *   - 复合表达式：((*(new INT(1))) + (*(new INT(2))))
+     *
+     * OOP 后端：直接返回原字符串（直通）
+     * Flat 后端：转换为原生 C++ 表达式
+     *   - 字面量：2
+     *   - 变量引用：gvl.read<TYPE>(offset)
+     *   - 函数调用：FUN(p1, p2)
+     *   - 复合表达式：(1 + 2)
+     *
+     * @param oopExpr 静态检查层生成的 OOP 风格表达式
+     * @return 当前后端风格的表达式
+     */
+    String translateExpr(String oopExpr);
+
+
     // ═══ 底层输出 ═══
 
     /** 直接输出代码片段（用于特殊情况） */

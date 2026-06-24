@@ -25,7 +25,7 @@ public class TranslateArray_type_decl {
 
         for (PLCSymbol symbol : arrayInitList) {
             PLCVariable tempSymbol = (PLCVariable) symbol;
-            sb.append("\n"+pFactory.packageArrayElementAddSentences("*(new "+tempSymbol.getAssignVar()+")",
+            sb.append("\n"+pFactory.packageArrayElementAddSentences("*(new "+translatorNew.codeGen.translateExpr(tempSymbol.getAssignVar())+")",
                     arraySymbol.getName()));
 
         }

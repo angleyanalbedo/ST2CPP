@@ -21,7 +21,7 @@ public class TranslateGlobal_var_decls {
 //                System.out.println("auto " + symbol.getRuntimeName() +"="+"new "+varSymbol.getRuntimeTypeName()
 //                        +"("+varSymbol.getAssignVar()+");");
                 sb.append("\nauto " + symbol.getRuntimeName() +"="+"new "+varSymbol.getRuntimeTypeName()
-                        +"("+varSymbol.getAssignVar()+");");
+                        +"("+translatorNew.codeGen.translateExpr(varSymbol.getAssignVar())+");");
             }
         }
 

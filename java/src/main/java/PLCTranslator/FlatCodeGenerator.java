@@ -1,6 +1,8 @@
 package PLCTranslator;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Flat 后端 — 生成 GVL 偏移量风格的 C++ 代码
@@ -9,6 +11,8 @@ import java.util.*;
  * 变量通过偏移量直接读写 GVL 内存，零堆分配、零虚函数。
  *
  * 所有 emit 方法返回代码字符串（不再直接写文件）。
+ * 所有接收表达式参数的 emit 方法会自动调用 translateExpr() 将
+ * OOP 风格的 assignVar 转换为原生 C++ 表达式。
  */
 public class FlatCodeGenerator implements CodeGenerator {
 
@@ -16,6 +20,12 @@ public class FlatCodeGenerator implements CodeGenerator {
     private final Map<String, Integer> offsetMap = new LinkedHashMap<>();
     private final Map<String, String> typeMap = new LinkedHashMap<>();
     private int currentOffset = 0;
+
+    // symbolId → 变量名 映射（用于表达式转换时查找变量名）
+    private final Map<String, String> symbolIdToNameMap = new LinkedHashMap<>();
+
+    // 变量名 → symbolId 映射（反向查找）
+    private final Map<String, String> nameToSymbolIdMap = new LinkedHashMap<>();
 
     // ST 类型名 → 原生 C++ 类型名
     private static final Map<String, String> TYPE_MAP = new HashMap<>();
@@ -92,26 +102,51 @@ public class FlatCodeGenerator implements CodeGenerator {
     }
 
     /**
+     * 注册变量名和 symbolId 的映射关系
+     * 用于表达式转换时将 RFM symbolId 查找替换为 GVL 偏移量读写
+     */
+    public void registerVariable(String varName, String symbolId) {
+        if (varName != null && symbolId != null) {
+            symbolIdToNameMap.put(symbolId, varName);
+            nameToSymbolIdMap.put(varName, symbolId);
+        }
+    }
+
+    /**
+     * 根据 symbolId 查找变量名
+     */
+    private String findVarNameBySymbolId(String symbolId) {
+        return symbolIdToNameMap.get(symbolId);
+    }
+
+    /**
      * 获取变量的 GVL 读取表达式
      */
     private String readExpr(String varName) {
-        String type = typeMap.get(varName);
-        Integer offset = offsetMap.get(varName);
+        // 去掉 OOP 模式的解引用星号前缀
+        String cleanName = varName.startsWith("*") ? varName.substring(1) : varName;
+        String type = typeMap.get(cleanName);
+        Integer offset = offsetMap.get(cleanName);
         if (type == null || offset == null) {
-            // 未知变量，可能是临时变量或表达式结果，直接返回
             return varName;
         }
         return "gvl.read<" + type + ">(" + offset + ")";
     }
 
     /**
-     * 获取变量的 GVL 写入语句前缀
+     * 获取变量的 GVL 写入语句
      */
     private String writeExpr(String varName, String valueExpr) {
-        String type = typeMap.get(varName);
-        Integer offset = offsetMap.get(varName);
+        // 去掉 OOP 模式的解引用星号前缀
+        String cleanName = varName.startsWith("*") ? varName.substring(1) : varName;
+        // 处理 OOP 函数返回值：*this->returnValue → return
+        if (cleanName.trim().equals("this->returnValue")) {
+            return "return " + valueExpr;
+        }
+        String type = typeMap.get(cleanName.trim());
+        Integer offset = offsetMap.get(cleanName.trim());
         if (type == null || offset == null) {
-            return varName + " = " + valueExpr;
+            return cleanName.trim() + " = " + valueExpr;
         }
         return "gvl.write<" + type + ">(" + offset + ", " + valueExpr + ")";
     }
@@ -129,7 +164,7 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     @Override
     public String emitFooter() {
-        return ""; // Flat 模式不需要特殊清理
+        return "";
     }
 
 
@@ -139,10 +174,9 @@ public class FlatCodeGenerator implements CodeGenerator {
     public String emitVarDecl(String name, String typeName, String assignVar) {
         String nativeType = toNativeType(typeName);
         allocateOffset(name, nativeType);
-        // Flat 模式：变量在 GVL 中，不需要 C++ 声明
-        // 但如果需要初始化，生成初始化代码
         if (assignVar != null && !assignVar.isEmpty() && !"0".equals(assignVar) && !"\"\"".equals(assignVar)) {
-            return "\n\t\t" + writeExpr(name, assignVar) + ";";
+            String translated = translateExpr(assignVar);
+            return "\n\t\t" + writeExpr(name, translated) + ";";
         }
         return "";
     }
@@ -151,7 +185,6 @@ public class FlatCodeGenerator implements CodeGenerator {
     public String emitGlobalVarDecl(String name, String typeName, String assignVar, String varSection) {
         String nativeType = toNativeType(typeName);
         allocateOffset(name, nativeType);
-        // 全局变量在 GVL 中，不需要 C++ 声明
         return "";
     }
 
@@ -159,7 +192,6 @@ public class FlatCodeGenerator implements CodeGenerator {
     public String emitProgVarDecl(String name, String typeName, String assignVar) {
         String nativeType = toNativeType(typeName);
         allocateOffset(name, nativeType);
-        // PROGRAM 变量在 GVL 中
         return "";
     }
 
@@ -168,12 +200,14 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     @Override
     public String emitAssign(String varName, String exprAssignVar) {
-        return "\n\t\t" + writeExpr(varName, exprAssignVar) + ";";
+        String translated = translateExpr(exprAssignVar);
+        return "\n\t\t" + writeExpr(varName, translated) + ";";
     }
 
     @Override
     public String emitFuncReturnAssign(String exprAssignVar) {
-        return "\n\t\treturn " + exprAssignVar + ";";
+        String translated = translateExpr(exprAssignVar);
+        return "\n\t\treturn " + translated + ";";
     }
 
 
@@ -181,12 +215,12 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     @Override
     public String emitIfBegin(String condAssignVar) {
-        return "\n\t\tif(" + condAssignVar + "){";
+        return "\n\t\tif(" + translateExpr(condAssignVar) + "){";
     }
 
     @Override
     public String emitElseIf(String condAssignVar) {
-        return "\n\t\t}else if(" + condAssignVar + "){";
+        return "\n\t\t}else if(" + translateExpr(condAssignVar) + "){";
     }
 
     @Override
@@ -201,14 +235,32 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     @Override
     public String emitForBegin(String controlVar, String fromAssignVar, String toAssignVar, String stepAssignVar) {
+        // 去掉 OOP 模式的解引用星号前缀
+        String cleanVar = controlVar.startsWith("*") ? controlVar.substring(1) : controlVar;
         StringBuilder sb = new StringBuilder();
-        // Flat 模式：for 循环用原生 C++ 变量
-        sb.append("\n\t\tfor( ").append(controlVar).append(" = ").append(fromAssignVar).append(";");
-        sb.append(controlVar).append(" <= ").append(toAssignVar).append(";");
-        if (stepAssignVar != null && !stepAssignVar.isEmpty()) {
-            sb.append(controlVar).append(" = ").append(controlVar).append(" + ").append(stepAssignVar).append("){");
+
+        // 检查控制变量是否在 GVL 中（已分配偏移量）
+        boolean isGvlVar = offsetMap.containsKey(cleanVar);
+
+        if (isGvlVar) {
+            // GVL 变量：需要在 for 循环前声明一个局部副本
+            String type = typeMap.getOrDefault(cleanVar, "INT");
+            sb.append("\n\t\t").append(type).append(" ").append(cleanVar).append(" = ")
+              .append(translateExpr(fromAssignVar)).append(";");
+            sb.append("\n\t\tfor( ; ").append(cleanVar).append(" <= ")
+              .append(translateExpr(toAssignVar)).append(";");
         } else {
-            sb.append(controlVar).append("++){");
+            // 局部变量：直接在 for 中声明
+            sb.append("\n\t\tfor( ").append(cleanVar).append(" = ")
+              .append(translateExpr(fromAssignVar)).append(";");
+            sb.append(cleanVar).append(" <= ").append(translateExpr(toAssignVar)).append(";");
+        }
+
+        if (stepAssignVar != null && !stepAssignVar.isEmpty()) {
+            sb.append(cleanVar).append(" = ").append(cleanVar).append(" + ")
+              .append(translateExpr(stepAssignVar)).append("){");
+        } else {
+            sb.append(cleanVar).append("++){");
         }
         return sb.toString();
     }
@@ -220,7 +272,7 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     @Override
     public String emitWhileBegin(String condAssignVar) {
-        return "\n\t\twhile(" + condAssignVar + "){";
+        return "\n\t\twhile(" + translateExpr(condAssignVar) + "){";
     }
 
     @Override
@@ -235,17 +287,17 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     @Override
     public String emitRepeatEnd(String condAssignVar) {
-        return "\n\t\t}while(!(" + condAssignVar + "));";
+        return "\n\t\t}while(!(" + translateExpr(condAssignVar) + "));";
     }
 
     @Override
     public String emitCaseBegin(String exprAssignVar) {
-        return "\n\t\tswitch(" + exprAssignVar + "){";
+        return "\n\t\tswitch(" + translateExpr(exprAssignVar) + "){";
     }
 
     @Override
     public String emitCaseOption(String value) {
-        return "\n\t\t\tcase " + value + " :";
+        return "\n\t\t\tcase " + translateExpr(value) + " :";
     }
 
     @Override
@@ -260,7 +312,8 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     @Override
     public String emitPrintStmt(String exprAssignVar) {
-        return "\n\t\tprintf(\"%d\\n\", (int)(" + exprAssignVar + "));";
+        String translated = translateExpr(exprAssignVar);
+        return "\n\t\tprintf(\"%d\\n\", (int)(" + translated + "));";
     }
 
 
@@ -279,12 +332,12 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     @Override
     public String emitFuncBodyBegin() {
-        return ""; // Flat 模式下函数体直接在函数内
+        return "";
     }
 
     @Override
     public String emitFuncBodyEnd() {
-        return ""; // Flat 模式下由 emitFuncDeclEnd 关闭
+        return "";
     }
 
     @Override
@@ -293,7 +346,7 @@ public class FlatCodeGenerator implements CodeGenerator {
         sb.append(funcName).append("(");
         for (int i = 0; i < params.size(); i++) {
             if (i > 0) sb.append(", ");
-            sb.append(params.get(i));
+            sb.append(translateExpr(params.get(i)));
         }
         sb.append(")");
         return sb.toString();
@@ -311,12 +364,12 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     @Override
     public String emitProgBodyBegin() {
-        return ""; // Flat 模式下 PROGRAM 体直接在函数内
+        return "";
     }
 
     @Override
     public String emitProgBodyEnd() {
-        return ""; // Flat 模式下由 emitProgDeclEnd 关闭
+        return "";
     }
 
 
@@ -324,12 +377,12 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     @Override
     public String emitFBBodyBegin() {
-        return ""; // Flat 模式下 FB 体直接在函数内
+        return "";
     }
 
     @Override
     public String emitFBBodyEnd() {
-        return ""; // Flat 模式下由 emitFuncDeclEnd 关闭
+        return "";
     }
 
 
@@ -342,12 +395,147 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     @Override
     public String emitInitFuncEnd() {
-        return ""; // 不需要
+        return "";
     }
 
     @Override
     public String emitInitFuncCall(String sentence) {
-        return ""; // 不需要
+        return "";
+    }
+
+
+    // ═══ 表达式转换 ═══
+
+    /**
+     * OOP→Flat 表达式转换器
+     *
+     * 将静态检查层生成的 OOP 风格 assignVar 转换为原生 C++ 表达式。
+     *
+     * 转换规则：
+     * 1. 字面量：(*(new INT(2))) → (2)
+     * 2. 变量引用：(*::PLC::RFM->getSymbolByID<TYPE*>(id)) → gvl.read<TYPE>(offset) 或 varName
+     * 3. 函数调用：*::PLC::RFM->getSymbolByID<FUN*>(id)->callFunc(&p1, &p2) → FUN(p1, p2)
+     * 4. 清理残余的解引用星号
+     */
+    private static final Pattern LITERAL_PATTERN =
+            Pattern.compile("\\(\\*\\(\\s*new\\s+(\\w+)\\s*\\(([^)]*)\\)\\s*\\)\\s*\\)");
+
+    private static final Pattern RFM_VAR_PATTERN =
+            Pattern.compile("\\(\\*::PLC::RFM->getSymbolByID<(\\w+)\\*>\\s*\\(\\s*(\\d+)\\s*\\)\\s*\\)");
+
+    private static final Pattern RFM_CALL_PATTERN =
+            Pattern.compile("\\*::PLC::RFM->getSymbolByID<(\\w+)\\*>\\s*\\(\\s*(\\d+)\\s*\\)->callFunc\\s*\\(([^)]*)\\)");
+
+    private static final Pattern RFM_VAR_SIMPLE_PATTERN =
+            Pattern.compile("::PLC::RFM->getSymbolByID<(\\w+)\\*>\\s*\\(\\s*(\\d+)\\s*\\)");
+
+    @Override
+    public String translateExpr(String oopExpr) {
+        if (oopExpr == null || oopExpr.isEmpty()) {
+            return oopExpr;
+        }
+
+        String result = oopExpr;
+        boolean changed = true;
+        int maxRounds = 10;
+        while (changed && maxRounds-- > 0) {
+            changed = false;
+            String prev = result;
+
+            // 1. 字面量：(*(new INT(2))) → (2)
+            Matcher litMatcher = LITERAL_PATTERN.matcher(result);
+            StringBuilder sb = new StringBuilder();
+            while (litMatcher.find()) {
+                changed = true;
+                String type = litMatcher.group(1);
+                String value = litMatcher.group(2).trim();
+                if ("BOOL".equals(type)) {
+                    value = value.equals("TRUE") || value.equals("1") ? "true" : "false";
+                }
+                litMatcher.appendReplacement(sb, "(" + value + ")");
+            }
+            litMatcher.appendTail(sb);
+            result = sb.toString();
+
+            // 2. RFM 变量引用（带括号）
+            Matcher varMatcher = RFM_VAR_PATTERN.matcher(result);
+            sb = new StringBuilder();
+            while (varMatcher.find()) {
+                changed = true;
+                String type = varMatcher.group(1);
+                String symbolId = varMatcher.group(2);
+                String nativeType = toNativeType(type);
+                String varName = findVarNameBySymbolId(symbolId);
+                if (varName != null) {
+                    Integer offset = offsetMap.get(varName);
+                    String nType = typeMap.getOrDefault(varName, nativeType);
+                    if (offset != null) {
+                        varMatcher.appendReplacement(sb, "gvl.read<" + nType + ">(" + offset + ")");
+                    } else {
+                        varMatcher.appendReplacement(sb, varName);
+                    }
+                } else {
+                    varMatcher.appendReplacement(sb, "gvl.read<" + nativeType + ">(" + symbolId + ")");
+                }
+            }
+            varMatcher.appendTail(sb);
+            result = sb.toString();
+
+            // 3. RFM 函数调用
+            Matcher callMatcher = RFM_CALL_PATTERN.matcher(result);
+            sb = new StringBuilder();
+            while (callMatcher.find()) {
+                changed = true;
+                String funcType = callMatcher.group(1);
+                String params = callMatcher.group(3);
+                params = params.replaceAll("&", "").trim();
+                callMatcher.appendReplacement(sb, funcType + "(" + params + ")");
+            }
+            callMatcher.appendTail(sb);
+            result = sb.toString();
+
+            // 4. 简单 RFM 变量引用（无括号）
+            Matcher simpleVarMatcher = RFM_VAR_SIMPLE_PATTERN.matcher(result);
+            sb = new StringBuilder();
+            while (simpleVarMatcher.find()) {
+                changed = true;
+                String type = simpleVarMatcher.group(1);
+                String symbolId = simpleVarMatcher.group(2);
+                String varName = findVarNameBySymbolId(symbolId);
+                if (varName != null) {
+                    Integer offset = offsetMap.get(varName);
+                    String nType = typeMap.getOrDefault(varName, toNativeType(type));
+                    if (offset != null) {
+                        simpleVarMatcher.appendReplacement(sb, "gvl.read<" + nType + ">(" + offset + ")");
+                    } else {
+                        simpleVarMatcher.appendReplacement(sb, varName);
+                    }
+                } else {
+                    simpleVarMatcher.appendReplacement(sb, symbolId);
+                }
+            }
+            simpleVarMatcher.appendTail(sb);
+            result = sb.toString();
+
+            if (!changed && result.equals(prev)) break;
+        }
+
+        // 5. 清理残余的 OOP 解引用星号
+        // OOP 模式下变量是指针，使用 *varName 解引用
+        // Flat 模式下变量是值类型，不需要解引用
+        // 匹配独立的 *varName（不在运算符上下文中）
+        // 策略：替换 (*varName) 为 (varName)，以及独立的 *varName 为 varName
+        result = result.replaceAll("\\(\\*([A-Za-z_]\\w*)\\)", "($1)");
+        // 替换独立的 *varName（不在其他字符旁边）
+        result = result.replaceAll("(?<![\\w*+\\-/<>])\\*([A-Za-z_]\\w*)(?![\\w*+\\-/<>])", "$1");
+        // 清理 ( 后面紧跟的 *
+        result = result.replace("( *", "(");
+
+        // 6. 清理 OOP 运行时特有的表达式
+        // *this->returnValue → returnValue（Flat 模式下用局部变量替代）
+        result = result.replace("*this->returnValue", "returnValue");
+
+        return result;
     }
 
 
@@ -361,9 +549,6 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     // ═══ 辅助方法 ═══
 
-    /**
-     * 获取 GVL 偏移量定义（用于输出注释或头文件）
-     */
     public String getOffsetDefinitions() {
         StringBuilder sb = new StringBuilder();
         sb.append("// GVL Offset Definitions\n");

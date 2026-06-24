@@ -230,6 +230,14 @@ public class OOPCodeGenerator implements CodeGenerator {
     }
 
 
+    // ═══ 表达式转换 ═══
+
+    @Override
+    public String translateExpr(String oopExpr) {
+        return oopExpr; // OOP 模式：直通，不做转换
+    }
+
+
     // ═══ 底层输出 ═══
 
     @Override

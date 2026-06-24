@@ -14,10 +14,10 @@ public class TranslatePrint_stmt {
         PLCVariable varElement = (PLCVariable) PLCTranslatorNew.properties.get(ctx.print_stmt_element(0)).get(0);
         // 使用 CodeGenerator 生成 print
         // 拼接所有 print 元素
-        StringBuilder expr = new StringBuilder(varElement.getAssignVar());
+        StringBuilder expr = new StringBuilder(translatorNew.codeGen.translateExpr(varElement.getAssignVar()));
         for(int t = 1; t < ctx.print_stmt_element().size(); t++){
             PLCVariable varTempElement = (PLCVariable) PLCTranslatorNew.properties.get(ctx.print_stmt_element(t)).get(0);
-            expr.append(" + ").append(varTempElement.getAssignVar());
+            expr.append(" + ").append(translatorNew.codeGen.translateExpr(varTempElement.getAssignVar()));
         }
         sb.append(PLCTranslatorNew.codeGen.emitPrintStmt(expr.toString()));
         return sb.toString();

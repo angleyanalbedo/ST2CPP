@@ -259,7 +259,7 @@ public class TranslateFunc_decl {
                 if (isFlat) {
                     // Flat 模式：局部变量声明为原生 C++ 变量
                     String nativeType = mapToNativeType(tempSymbol.getRuntimeTypeName());
-                    this.funcCallInitSentences.add("\n\t" + nativeType + " " + tempSymbol.getName() + " = " + tempSymbol.getAssignVar() + ";");
+                    this.funcCallInitSentences.add("\n\t" + nativeType + " " + tempSymbol.getName() + " = " + PLCTranslatorNew.codeGen.translateExpr(tempSymbol.getAssignVar()) + ";");
                 } else {
                     // OOP 模式：保持原有逻辑
                     //在构造函数中将变量加入map中
@@ -281,7 +281,7 @@ public class TranslateFunc_decl {
                 if (isFlat) {
                     // Flat 模式：临时变量声明为原生 C++ 变量
                     String nativeType = mapToNativeType(tempSymbol.getRuntimeTypeName());
-                    this.funcCallInitSentences.add("\n\t" + nativeType + " " + tempSymbol.getName() + " = " + tempSymbol.getAssignVar() + ";");
+                    this.funcCallInitSentences.add("\n\t" + nativeType + " " + tempSymbol.getName() + " = " + PLCTranslatorNew.codeGen.translateExpr(tempSymbol.getAssignVar()) + ";");
                 } else {
                     // OOP 模式：保持原有逻辑
                     //在构造函数中将变量加入map中
