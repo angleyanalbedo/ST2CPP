@@ -140,8 +140,9 @@ public class FlatCodeGenerator implements CodeGenerator {
                 java.util.regex.Matcher typeMatcher = typePattern.matcher(arrType);
                 if (typeMatcher.find()) {
                     String elemType = typeMatcher.group(2);
-                    // 生成：*(gvl.ptr<ELEM_TYPE>(offset) + index)
-                    return "*(gvl.ptr<" + elemType + ">(" + arrOffset + ") + " + indexExpr + ")";
+                    int count = Integer.parseInt(typeMatcher.group(1));
+                    // 生成：gvl.safeArrayAt<ELEM_TYPE>(offset, index, count)
+                    return "gvl.safeArrayAt<" + elemType + ">(" + arrOffset + ", " + indexExpr + ", " + count + ")";
                 }
             }
         }
@@ -179,9 +180,9 @@ public class FlatCodeGenerator implements CodeGenerator {
                 java.util.regex.Matcher typeMatcher = typePattern.matcher(arrType);
                 if (typeMatcher.find()) {
                     String elemType = typeMatcher.group(2);
-                    int elemSize = getTypeSize(elemType);
-                    // 生成：*(gvl.ptr<ELEM_TYPE>(offset) + index) = value
-                    return "*(gvl.ptr<" + elemType + ">(" + arrOffset + ") + " + indexExpr + ") = " + valueExpr;
+                    int count = Integer.parseInt(typeMatcher.group(1));
+                    // 生成：gvl.safeArrayAt<ELEM_TYPE>(offset, index, count) = value
+                    return "gvl.safeArrayAt<" + elemType + ">(" + arrOffset + ", " + indexExpr + ", " + count + ") = " + valueExpr;
                 }
             }
         }
@@ -642,8 +643,10 @@ public class FlatCodeGenerator implements CodeGenerator {
                     Matcher typeMatcher = typePattern.matcher(arrType);
                     if (typeMatcher.find()) {
                         String elemType = typeMatcher.group(2);
+                        int count = Integer.parseInt(typeMatcher.group(1));
+                        // 使用 gvl.safeArrayAt 进行越界检查
                         arrayAccessMatcher.appendReplacement(sb,
-                            "*(gvl.ptr<" + elemType + ">(" + arrOffset + ") + " + indexExpr + ")");
+                            "gvl.safeArrayAt<" + elemType + ">(" + arrOffset + ", " + indexExpr + ", " + count + ")");
                         continue;
                     }
                 }

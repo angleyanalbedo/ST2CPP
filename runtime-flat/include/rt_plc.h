@@ -18,6 +18,7 @@
 #include <thread>
 #include <functional>
 #include <atomic>
+#include "core/types.h"
 
 namespace rt_plc {
 
@@ -73,9 +74,7 @@ struct WSTRING {
 // TIME / DATE / TIME_OF_DAY / DATE_AND_TIME
 // ═══════════════════════════════════════════════════════
 
-// TIME: 微秒精度时间间隔（有符号，支持负差值）
-typedef int64_t TIME;
-
+// TIME 类型定义在 types.h 中
 // 辅助构造（ST 的 T#100ms 由编译器翻译成这些调用）
 inline TIME T_us(int64_t us)  { return us; }
 inline TIME T_ms(int64_t ms)  { return ms * 1000; }
@@ -311,20 +310,7 @@ struct TCI {
 // 严重错误（除零、越界）→ 系统进入 ERROR 状态
 // 轻微错误（溢出、精度丢失）→ 记录并继续
 
-enum class ErrorCode : uint16_t {
-    NONE = 0,
-    DIV_BY_ZERO,
-    ARRAY_OUT_OF_BOUNDS,
-    INT_OVERFLOW,
-    FLOAT_OVERFLOW,
-    NULL_POINTER,
-    STRING_OVERFLOW,
-    STACK_OVERFLOW,
-    WATCHDOG_TIMEOUT,
-    IO_ERROR,
-    CONFIG_ERROR,
-    USER_ERROR        // 用户自定义（ASSERT 等）
-};
+// ErrorCode 枚举定义在 types.h 中
 
 constexpr int MAX_ERROR_LOG = 32;  // 环形错误日志
 
@@ -422,7 +408,7 @@ struct ErrorManager {
         return a / b;
     }
 
-    // 安全数组访问
+    // 安全数组访问（C++ 数组引用）
     template<typename T, size_t N>
     T& safeArrayAt(T (&arr)[N], size_t index, uint32_t pouId, uint32_t line, TIME sysTime) {
         if (index >= N) {
@@ -431,6 +417,17 @@ struct ErrorManager {
             return arr[N - 1];
         }
         return arr[index];
+    }
+
+    // 安全数组访问（GVL 指针版本，用于 Flat 模式）
+    template<typename T>
+    T& safeArrayAt(T* ptr, size_t index, size_t count, uint32_t pouId, uint32_t line, TIME sysTime) {
+        if (index >= count) {
+            report(ErrorCode::ARRAY_OUT_OF_BOUNDS, pouId, line, "array index out of bounds", sysTime,
+                   (int64_t)index, (int64_t)count);
+            return ptr[count - 1];
+        }
+        return ptr[index];
     }
 
     template<typename T>

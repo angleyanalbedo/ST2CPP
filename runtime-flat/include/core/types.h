@@ -47,4 +47,27 @@ enum class ScanPhase : uint8_t {
     HOUSEKEEPING
 };
 
+// 时间戳（微秒）
+typedef int64_t TIME;
+
+// 错误码
+enum class ErrorCode : uint16_t {
+    NONE = 0,
+    DIV_BY_ZERO,
+    ARRAY_OUT_OF_BOUNDS,
+    INT_OVERFLOW,
+    FLOAT_OVERFLOW,
+    NULL_POINTER,
+    STRING_OVERFLOW,
+    STACK_OVERFLOW,
+    WATCHDOG_TIMEOUT,
+    IO_ERROR,
+    TASK_OVERRUN,
+    CONFIG_ERROR,
+    SAFETY_VIOLATION,
+    RETAIN_CORRUPTED,
+    MISC_ERROR,
+    USER_ERROR        // 用户自定义（ASSERT 等）
+};
+
 } // namespace rt_plc

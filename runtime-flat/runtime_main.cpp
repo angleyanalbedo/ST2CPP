@@ -33,6 +33,7 @@ int main() {
 
     // 初始化 GVL（编译器生成的代码会在 PROGRAM_P 中进一步初始化变量）
     sched.gvl.clear();
+    sched.gvl.errorMgr = &sched.errorMgr;  // 设置错误管理器，用于数组越界等运行时检查
 
     // 注册编译器生成的 PROGRAM 为 Cyclic 任务
     // 任务名 "MainTask"，优先级 5，周期 10ms

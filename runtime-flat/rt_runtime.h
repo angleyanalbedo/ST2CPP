@@ -19,6 +19,7 @@
 #define RT_RUNTIME_H
 
 #include "rt_plc.h"
+#include "core/gvl.h"
 #include <cstdint>
 #include <cstring>
 #include <cstdio>
@@ -26,135 +27,13 @@
 namespace rt_plc {
 
 // ═══════════════════════════════════════════════════════
-// 常量
+// 常量和枚举（定义在 include/core/ 中，通过 rt_plc.h 和 gvl.h 包含）
 // ═══════════════════════════════════════════════════════
 
-constexpr int    MAX_TASKS         = 16;
-constexpr int    MAX_EVENTS        = 16;
-constexpr int    MAX_PROGRAMS      = 32;    // 最大 PROGRAM 实例数
-constexpr int    MAX_POUS_PER_TASK = 8;
-constexpr size_t GVL_SIZE          = 65536; // 64 KB 全局变量区
-constexpr size_t GVL_RETAIN_SIZE   = 8192;  // 8 KB RETAIN 区域（暖启动保留）
-constexpr int    MAX_PRIORITY      = 31;
-constexpr int    MIN_PRIORITY      = 0;
-
-
-// ═══════════════════════════════════════════════════════
-// 枚举
-// ═══════════════════════════════════════════════════════
-
-enum class TaskTrigger : uint8_t {
-    CYCLIC,
-    EVENT,
-    FREEWHEELING
-};
-
-enum class SystemState : uint8_t {
-    STOP,
-    STARTING,   // 正在启动（Init/Pre 阶段）
-    RUN,
-    STOPPING,   // 正在停止（Post 阶段）
-    ERROR,
-    PAUSED
-};
-
-enum class TaskState : uint8_t {
-    IDLE,
-    READY,
-    RUNNING,
-    OVERRUN,
-    ERROR
-};
-
-enum class EventEdge : uint8_t {
-    RISING,
-    FALLING,
-    BOTH
-};
-
-enum class StartupMode : uint8_t {
-    COLD,   // 冷启动：全部清零
-    WARM    // 暖启动：保留 RETAIN 区域
-};
-
-// 扫描周期阶段
-enum class ScanPhase : uint8_t {
-    IDLE,
-    READ_INPUTS,
-    LOGIC_SOLVE,
-    WRITE_OUTPUTS,
-    HOUSEKEEPING
-};
-
-
-// ═══════════════════════════════════════════════════════
-// GVL: 全局变量表（跨 POU 共享）
-// ═══════════════════════════════════════════════════════
-
-// 缓存行对齐的全局变量表
-struct alignas(64) GVL {
-    alignas(64) uint8_t memory[GVL_SIZE];
-
-    // RETAIN 区域标记：偏移 [retainStart, retainEnd) 在暖启动时保留
-    size_t retainStart = 0;
-    size_t retainEnd   = 0;
-
-    // 高水位标记：记录最大写入位置，O(1) usedBytes()
-    size_t highWaterMark = 0;
-
-    void clear() {
-        memset(memory, 0, GVL_SIZE);
-        highWaterMark = 0;
-    }
-
-    // 暖启动清零：只清零非 RETAIN 区域
-    void clearNonRetain() {
-        if (retainStart > 0) {
-            memset(memory, 0, retainStart);
-        }
-        if (retainEnd < GVL_SIZE) {
-            memset(memory + retainEnd, 0, GVL_SIZE - retainEnd);
-        }
-        // 重算 highWaterMark（保守：保留 RETAIN 区域的大小）
-        highWaterMark = retainEnd;
-    }
-
-    // 设置 RETAIN 区域范围（编译器在 Memory Layout Pass 中计算）
-    void setRetainRegion(size_t start, size_t end) {
-        retainStart = start;
-        retainEnd   = end;
-    }
-
-    template<typename T>
-    T read(size_t offset) const {
-        T val;
-        memcpy(&val, memory + offset, sizeof(T));
-        return val;
-    }
-
-    template<typename T>
-    void write(size_t offset, T val) {
-        memcpy(memory + offset, &val, sizeof(T));
-        // 更新高水位标记
-        size_t end = offset + sizeof(T);
-        if (end > highWaterMark) highWaterMark = end;
-    }
-
-    template<typename T>
-    T* ptr(size_t offset) {
-        return reinterpret_cast<T*>(memory + offset);
-    }
-
-    template<typename T>
-    const T* ptr(size_t offset) const {
-        return reinterpret_cast<const T*>(memory + offset);
-    }
-
-    // 使用量统计 — O(1) 查询
-    size_t usedBytes() const {
-        return highWaterMark;
-    }
-};
+// MAX_TASKS, MAX_EVENTS, MAX_PROGRAMS, MAX_POUS_PER_TASK, GVL_SIZE, GVL_RETAIN_SIZE
+// MAX_PRIORITY, MIN_PRIORITY 在 constants.h 中定义
+// TaskTrigger, SystemState, TaskState, EventEdge, StartupMode, ScanPhase
+// ErrorCode, TIME 等均在 types.h 中定义
 
 
 // ═══════════════════════════════════════════════════════
