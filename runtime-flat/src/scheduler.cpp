@@ -21,6 +21,10 @@ int Scheduler::addProgram(const char* name,
 }
 
 int Scheduler::addCyclicTask(const char* name, int priority, TIME intervalUs) {
+    if (!name) name = "unnamed";
+    if (priority < MIN_PRIORITY) priority = MIN_PRIORITY;
+    if (priority > MAX_PRIORITY) priority = MAX_PRIORITY;
+    if (intervalUs <= 0) intervalUs = baseCycleTime;
     int idx = findFreeTask();
     if (idx < 0) return -1;
     Task& t = tasks_[idx];
@@ -35,6 +39,9 @@ int Scheduler::addCyclicTask(const char* name, int priority, TIME intervalUs) {
 }
 
 int Scheduler::addFreewheelingTask(const char* name, int priority) {
+    if (!name) name = "unnamed";
+    if (priority < MIN_PRIORITY) priority = MIN_PRIORITY;
+    if (priority > MAX_PRIORITY) priority = MAX_PRIORITY;
     int idx = findFreeTask();
     if (idx < 0) return -1;
     Task& t = tasks_[idx];
@@ -49,6 +56,9 @@ int Scheduler::addFreewheelingTask(const char* name, int priority) {
 
 int Scheduler::addEventTask(const char* name, int priority,
                  EventConditionFunc cond, EventEdge edge) {
+    if (!name) name = "unnamed";
+    if (priority < MIN_PRIORITY) priority = MIN_PRIORITY;
+    if (priority > MAX_PRIORITY) priority = MAX_PRIORITY;
     int taskIdx = findFreeTask();
     int evtIdx  = findFreeEvent();
     if (taskIdx < 0 || evtIdx < 0) return -1;

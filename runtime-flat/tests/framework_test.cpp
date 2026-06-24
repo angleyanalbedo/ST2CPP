@@ -14,6 +14,10 @@
  * 10.  互斥锁
  * 11.  系统状态机（STOP→STARTING→RUN→STOPPING→STOP, ERROR 恢复）
  * 12.  诊断统计
+ * 13.  GVL 偏移量越界检查
+ * 14.  ProcessImage 偏移量越界检查
+ * 15.  Task 参数校验
+ * 16.  错误操作数记录
  */
 #include "rt_runtime.h"
 #include <cstdio>
@@ -616,6 +620,156 @@ void test_error_integration() {
 }
 
 
+void test_gvl_bounds() {
+    printf("\n--- 13. GVL 偏移量越界检查 ---\n");
+
+    GVL gvl;
+    gvl.clear();
+
+    TEST("GVL 正常读写");
+    gvl.write<DINT>(0, 42);
+    DINT v = gvl.read<DINT>(0);
+    CHECK(v == 42, "正常读写应正确");
+
+    TEST("GVL read 越界返回默认值");
+    DINT outOfBounds = gvl.read<DINT>(GVL_SIZE - 1);
+    CHECK(outOfBounds == 0, "越界读应返回 0");
+
+    TEST("GVL write 越界不崩溃");
+    gvl.write<DINT>(GVL_SIZE - 1, 999);
+    DINT afterOOB = gvl.read<DINT>(0);
+    CHECK(afterOOB == 42, "越界写不应影响已有数据");
+
+    TEST("GVL ptr 越界返回 nullptr");
+    DINT* p = gvl.ptr<DINT>(GVL_SIZE - 1);
+    CHECK(p == nullptr, "越界 ptr 应返回 nullptr");
+
+    TEST("GVL ptr 正常返回有效指针");
+    DINT* pOk = gvl.ptr<DINT>(0);
+    CHECK(pOk != nullptr, "正常 ptr 应非空");
+
+    TEST("GVL 边界精确检查 (offset + sizeof(T) == GVL_SIZE)");
+    // offset=65532, sizeof(DINT)=4, total=65536 = GVL_SIZE → 应允许
+    gvl.write<DINT>(GVL_SIZE - sizeof(DINT), 123);
+    DINT edgeVal = gvl.read<DINT>(GVL_SIZE - sizeof(DINT));
+    CHECK(edgeVal == 123, "恰好在边界应允许");
+}
+
+
+void test_process_image_bounds() {
+    printf("\n--- 14. ProcessImage 偏移量越界检查 ---\n");
+
+    ProcessImage img;
+    img.clearInputs();
+    img.clearOutputs();
+
+    TEST("ProcessImage 正常读写");
+    img.writeOutput<INT>(10, 5678);
+    INT readback = img.readOutput<INT>(10);
+    CHECK(readback == 5678, "正常读写应正确");
+
+    TEST("ProcessImage readInput 越界返回默认值");
+    INT oobIn = img.readInput<INT>(PROCESS_IMAGE_SIZE - 1);
+    CHECK(oobIn == 0, "越界读应返回 0");
+
+    TEST("ProcessImage writeOutput 越界不崩溃");
+    img.writeOutput<INT>(PROCESS_IMAGE_SIZE - 1, 9999);
+    INT afterOOB = img.readOutput<INT>(10);
+    CHECK(afterOOB == 5678, "越界写不应影响已有数据");
+
+    TEST("ProcessImage readInputBit 越界返回 FALSE");
+    BOOL bitOOB = img.readInputBit(PROCESS_IMAGE_SIZE, 0);
+    CHECK(bitOOB == FALSE, "越界位读应返回 FALSE");
+
+    TEST("ProcessImage readInputBit 位偏移越界");
+    BOOL bitOOB2 = img.readInputBit(0, 8);
+    CHECK(bitOOB2 == FALSE, "位偏移>7应返回 FALSE");
+
+    TEST("ProcessImage writeOutputBit 越界不崩溃");
+    img.writeOutputBit(PROCESS_IMAGE_SIZE, 0, TRUE);
+    CHECK(img.outputs[0] == 0x00, "越界位写不应影响数据");
+
+    TEST("ProcessImage 位读写正常");
+    img.writeOutputBit(PLC_QX(5, 3), TRUE);
+    BOOL b = img.readInputBit(5, 3);
+    CHECK(b == FALSE, "输入位应为初始值");
+    // 验证输出位通过 outputs 数组直接检查
+    CHECK((img.outputs[5] & (1 << 3)) != 0, "输出位应已设置");
+}
+
+
+void test_task_parameter_validation() {
+    printf("\n--- 15. Task 参数校验 ---\n");
+
+    Scheduler sched;
+
+    TEST("addCyclicTask priority 超上限 clamp");
+    int t1 = sched.addCyclicTask("HighPri", 100, T_ms(10));
+    CHECK(t1 >= 0, "应成功创建");
+    CHECK(sched.task(t1).priority == MAX_PRIORITY, "priority 应被 clamp 到 MAX");
+
+    TEST("addCyclicTask priority 低于下限 clamp");
+    int t2 = sched.addCyclicTask("LowPri", -5, T_ms(10));
+    CHECK(t2 >= 0, "应成功创建");
+    CHECK(sched.task(t2).priority == MIN_PRIORITY, "priority 应被 clamp 到 MIN");
+
+    TEST("addCyclicTask interval 为 0 使用默认值");
+    int t3 = sched.addCyclicTask("ZeroInt", 1, 0);
+    CHECK(t3 >= 0, "应成功创建");
+    CHECK(sched.task(t3).interval == sched.baseCycleTime, "interval 应为 baseCycleTime");
+
+    TEST("addCyclicTask name 为 nullptr 不崩溃");
+    int t4 = sched.addCyclicTask(nullptr, 1, T_ms(5));
+    CHECK(t4 >= 0, "应成功创建");
+    CHECK(strlen(sched.task(t4).name) > 0, "name 应有默认值");
+
+    TEST("addFreewheelingTask priority clamp");
+    int t5 = sched.addFreewheelingTask("FWHigh", 50);
+    CHECK(t5 >= 0 && sched.task(t5).priority == MAX_PRIORITY, "priority 应 clamp");
+
+    TEST("addEventTask priority clamp");
+    int t6 = sched.addEventTask("EvtHigh", -10, nullptr);
+    CHECK(t6 >= 0 && sched.task(t6).priority == MIN_PRIORITY, "priority 应 clamp");
+}
+
+
+void test_error_operand_recording() {
+    printf("\n--- 16. 错误操作数记录 ---\n");
+
+    ErrorManager em;
+
+    TEST("safeDiv 记录操作数");
+    em.safeDiv((DINT)100, (DINT)0, 1u, 10u, 1000);
+    CHECK(em.log[0].operandA == 100 && em.log[0].operandB == 0,
+          "应记录 a=100, b=0");
+
+    TEST("safeMod 记录操作数");
+    em.safeMod((DINT)42, (DINT)0, 2u, 20u, 2000);
+    CHECK(em.log[1].operandA == 42 && em.log[1].operandB == 0,
+          "MOD 应记录操作数");
+
+    TEST("safeAdd 溢出检测");
+    DINT maxVal = 2147483647;  // DINT max
+    DINT result = em.safeAdd(maxVal, (DINT)1, 3u, 30u, 3000);
+    CHECK(em.lastError == ErrorCode::INT_OVERFLOW, "应检测到溢出");
+
+    TEST("safeSub 溢出检测");
+    DINT minVal = (-2147483647 - 1);  // DINT min
+    DINT result2 = em.safeSub(minVal, (DINT)1, 4u, 40u, 4000);
+    CHECK(em.lastError == ErrorCode::INT_OVERFLOW, "应检测到下溢");
+
+    TEST("safeMul 溢出检测");
+    DINT big = 100000;
+    DINT result3 = em.safeMul(big, big, 5u, 50u, 5000);
+    CHECK(em.lastError == ErrorCode::INT_OVERFLOW, "应检测到乘法溢出");
+
+    TEST("正常运算不触发错误");
+    em.reset();
+    DINT ok = em.safeAdd((DINT)10, (DINT)20, 0u, 0u, 0);
+    CHECK(ok == 30 && em.totalCount == 0, "正常加法不应记录错误");
+}
+
+
 // ═══════════════════════════════════════════════════════
 // main
 // ═══════════════════════════════════════════════════════
@@ -636,6 +790,10 @@ int main() {
     test_system_state_machine();
     test_watchdog_and_diag();
     test_error_integration();
+    test_gvl_bounds();
+    test_process_image_bounds();
+    test_task_parameter_validation();
+    test_error_operand_recording();
 
     printf("\n═══════════════════════════════\n");
     printf("通过: %d  失败: %d  总计: %d\n", test_pass, test_fail, test_pass + test_fail);

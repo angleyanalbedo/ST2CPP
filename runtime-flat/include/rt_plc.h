@@ -201,9 +201,13 @@ struct alignas(64) ProcessImage {
     void clearInputs()  { memset(inputs, 0, PROCESS_IMAGE_SIZE); }
     void clearOutputs() { memset(outputs, 0, PROCESS_IMAGE_SIZE); }
 
-    // 按偏移读写
     template<typename T>
     T readInput(size_t offset) const {
+        if (offset + sizeof(T) > PROCESS_IMAGE_SIZE) {
+            fprintf(stderr, "[ProcessImage] readInput out of bounds: offset=%zu sizeof(T)=%zu\n",
+                    offset, sizeof(T));
+            return T{};
+        }
         T val;
         memcpy(&val, inputs + offset, sizeof(T));
         return val;
@@ -211,22 +215,41 @@ struct alignas(64) ProcessImage {
 
     template<typename T>
     void writeOutput(size_t offset, T val) {
+        if (offset + sizeof(T) > PROCESS_IMAGE_SIZE) {
+            fprintf(stderr, "[ProcessImage] writeOutput out of bounds: offset=%zu sizeof(T)=%zu\n",
+                    offset, sizeof(T));
+            return;
+        }
         memcpy(outputs + offset, &val, sizeof(T));
     }
 
     template<typename T>
     T readOutput(size_t offset) const {
+        if (offset + sizeof(T) > PROCESS_IMAGE_SIZE) {
+            fprintf(stderr, "[ProcessImage] readOutput out of bounds: offset=%zu sizeof(T)=%zu\n",
+                    offset, sizeof(T));
+            return T{};
+        }
         T val;
         memcpy(&val, outputs + offset, sizeof(T));
         return val;
     }
 
-    // 按位访问（%IX0.0 风格）
     BOOL readInputBit(size_t byteOff, int bitOff) const {
+        if (byteOff >= PROCESS_IMAGE_SIZE || bitOff < 0 || bitOff > 7) {
+            fprintf(stderr, "[ProcessImage] readInputBit out of bounds: byteOff=%zu bitOff=%d\n",
+                    byteOff, bitOff);
+            return FALSE;
+        }
         return (inputs[byteOff] & (1 << bitOff)) ? TRUE : FALSE;
     }
 
     void writeOutputBit(size_t byteOff, int bitOff, BOOL val) {
+        if (byteOff >= PROCESS_IMAGE_SIZE || bitOff < 0 || bitOff > 7) {
+            fprintf(stderr, "[ProcessImage] writeOutputBit out of bounds: byteOff=%zu bitOff=%d\n",
+                    byteOff, bitOff);
+            return;
+        }
         if (val) outputs[byteOff] |=  (1 << bitOff);
         else     outputs[byteOff] &= ~(1 << bitOff);
     }
@@ -307,9 +330,11 @@ constexpr int MAX_ERROR_LOG = 32;  // 环形错误日志
 
 struct ErrorEntry {
     ErrorCode   code      = ErrorCode::NONE;
-    uint32_t    pouId     = 0;     // 发生错误的 POU 标识（编译器分配）
-    uint32_t    lineNo    = 0;     // ST 源码行号（编译器注入）
-    TIME        timestamp = 0;     // 系统时间
+    uint32_t    pouId     = 0;
+    uint32_t    lineNo    = 0;
+    TIME        timestamp = 0;
+    int64_t     operandA  = 0;
+    int64_t     operandB  = 0;
     char        message[64] = {0};
 };
 
@@ -328,12 +353,15 @@ struct ErrorManager {
 
     // 报告错误（编译器在可能出错的点生成此调用）
     void report(ErrorCode code, uint32_t pouId, uint32_t line,
-                const char* msg, TIME sysTime) {
+                const char* msg, TIME sysTime,
+                int64_t opA = 0, int64_t opB = 0) {
         ErrorEntry& e = log[logIndex % MAX_ERROR_LOG];
         e.code      = code;
         e.pouId     = pouId;
         e.lineNo    = line;
         e.timestamp = sysTime;
+        e.operandA  = opA;
+        e.operandB  = opB;
         strncpy(e.message, msg, sizeof(e.message) - 1);
         e.message[sizeof(e.message) - 1] = '\0';
 
@@ -363,15 +391,20 @@ struct ErrorManager {
     template<typename T>
     T safeDiv(T a, T b, uint32_t pouId, uint32_t line, TIME sysTime) {
         if (b == (T)0) {
-            report(ErrorCode::DIV_BY_ZERO, pouId, line, "division by zero", sysTime);
-            return (T)0;  // 返回 0，不崩溃
+            report(ErrorCode::DIV_BY_ZERO, pouId, line, "division by zero", sysTime,
+                   (int64_t)a, (int64_t)b);
+            return (T)0;
         }
         return a / b;
     }
 
     REAL safeDiv(REAL a, REAL b, uint32_t pouId, uint32_t line, TIME sysTime) {
         if (b == 0.0f) {
-            report(ErrorCode::DIV_BY_ZERO, pouId, line, "float division by zero", sysTime);
+            int64_t aBits, bBits;
+            memcpy(&aBits, &a, sizeof(float));
+            memcpy(&bBits, &b, sizeof(float));
+            report(ErrorCode::DIV_BY_ZERO, pouId, line, "float division by zero", sysTime,
+                   aBits, bBits);
             return 0.0f;
         }
         return a / b;
@@ -379,7 +412,11 @@ struct ErrorManager {
 
     LREAL safeDiv(LREAL a, LREAL b, uint32_t pouId, uint32_t line, TIME sysTime) {
         if (b == 0.0) {
-            report(ErrorCode::DIV_BY_ZERO, pouId, line, "lreal division by zero", sysTime);
+            int64_t aBits, bBits;
+            memcpy(&aBits, &a, sizeof(double));
+            memcpy(&bBits, &b, sizeof(double));
+            report(ErrorCode::DIV_BY_ZERO, pouId, line, "lreal division by zero", sysTime,
+                   aBits, bBits);
             return 0.0;
         }
         return a / b;
@@ -389,20 +426,52 @@ struct ErrorManager {
     template<typename T, size_t N>
     T& safeArrayAt(T (&arr)[N], size_t index, uint32_t pouId, uint32_t line, TIME sysTime) {
         if (index >= N) {
-            report(ErrorCode::ARRAY_OUT_OF_BOUNDS, pouId, line, "array index out of bounds", sysTime);
-            return arr[N - 1];  // 安全回退
+            report(ErrorCode::ARRAY_OUT_OF_BOUNDS, pouId, line, "array index out of bounds", sysTime,
+                   (int64_t)index, (int64_t)N);
+            return arr[N - 1];
         }
         return arr[index];
     }
 
-    // 安全 MOD
     template<typename T>
     T safeMod(T a, T b, uint32_t pouId, uint32_t line, TIME sysTime) {
         if (b == (T)0) {
-            report(ErrorCode::DIV_BY_ZERO, pouId, line, "MOD by zero", sysTime);
+            report(ErrorCode::DIV_BY_ZERO, pouId, line, "MOD by zero", sysTime,
+                   (int64_t)a, (int64_t)b);
             return (T)0;
         }
         return a % b;
+    }
+
+    template<typename T>
+    T safeAdd(T a, T b, uint32_t pouId, uint32_t line, TIME sysTime) {
+        T result = a + b;
+        if ((b > 0 && result < a) || (b < 0 && result > a)) {
+            report(ErrorCode::INT_OVERFLOW, pouId, line, "integer overflow in addition", sysTime,
+                   (int64_t)a, (int64_t)b);
+        }
+        return result;
+    }
+
+    template<typename T>
+    T safeSub(T a, T b, uint32_t pouId, uint32_t line, TIME sysTime) {
+        T result = a - b;
+        if ((b > 0 && result > a) || (b < 0 && result < a)) {
+            report(ErrorCode::INT_OVERFLOW, pouId, line, "integer overflow in subtraction", sysTime,
+                   (int64_t)a, (int64_t)b);
+        }
+        return result;
+    }
+
+    template<typename T>
+    T safeMul(T a, T b, uint32_t pouId, uint32_t line, TIME sysTime) {
+        if (a == 0 || b == 0) return 0;
+        T result = a * b;
+        if (result / a != b) {
+            report(ErrorCode::INT_OVERFLOW, pouId, line, "integer overflow in multiplication", sysTime,
+                   (int64_t)a, (int64_t)b);
+        }
+        return result;
     }
 
     void printLog() const {
@@ -411,8 +480,9 @@ struct ErrorManager {
         for (int i = 0; i < count; i++) {
             int idx = (logIndex - count + i + MAX_ERROR_LOG) % MAX_ERROR_LOG;
             const ErrorEntry& e = log[idx];
-            printf("  [%lld] code=%d pou=%u line=%u msg='%s'\n",
-                   (long long)e.timestamp, (int)e.code, e.pouId, e.lineNo, e.message);
+            printf("  [%lld] code=%d pou=%u line=%u opA=%lld opB=%lld msg='%s'\n",
+                   (long long)e.timestamp, (int)e.code, e.pouId, e.lineNo,
+                   (long long)e.operandA, (long long)e.operandB, e.message);
         }
         printf("===========================\n");
     }
@@ -424,6 +494,12 @@ struct ErrorManager {
     ((em).safeDiv((a), (b), (pouId), (line), (sysT)))
 #define PLC_MOD(a, b, em, pouId, line, sysT) \
     ((em).safeMod((a), (b), (pouId), (line), (sysT)))
+#define PLC_ADD(a, b, em, pouId, line, sysT) \
+    ((em).safeAdd((a), (b), (pouId), (line), (sysT)))
+#define PLC_SUB(a, b, em, pouId, line, sysT) \
+    ((em).safeSub((a), (b), (pouId), (line), (sysT)))
+#define PLC_MUL(a, b, em, pouId, line, sysT) \
+    ((em).safeMul((a), (b), (pouId), (line), (sysT)))
 #define PLC_ARRAY_AT_SAFE(arr, idx, lower, em, pouId, line, sysT) \
     ((em).safeArrayAt((arr), (size_t)((idx) - (lower)), (pouId), (line), (sysT)))
 

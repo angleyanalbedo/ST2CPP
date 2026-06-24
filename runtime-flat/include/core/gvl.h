@@ -3,6 +3,7 @@
 #include "constants.h"
 #include <cstdint>
 #include <cstring>
+#include <cstdio>
 
 namespace rt_plc {
 
@@ -27,6 +28,11 @@ struct alignas(64) GVL {
 
     template<typename T>
     T read(size_t offset) const {
+        if (offset + sizeof(T) > GVL_SIZE) {
+            fprintf(stderr, "[GVL] read out of bounds: offset=%zu sizeof(T)=%zu GVL_SIZE=%zu\n",
+                    offset, sizeof(T), GVL_SIZE);
+            return T{};
+        }
         T val;
         memcpy(&val, memory + offset, sizeof(T));
         return val;
@@ -34,19 +40,33 @@ struct alignas(64) GVL {
 
     template<typename T>
     void write(size_t offset, T val) {
+        if (offset + sizeof(T) > GVL_SIZE) {
+            fprintf(stderr, "[GVL] write out of bounds: offset=%zu sizeof(T)=%zu GVL_SIZE=%zu\n",
+                    offset, sizeof(T), GVL_SIZE);
+            return;
+        }
         memcpy(memory + offset, &val, sizeof(T));
-        // 更新高水位标记
         size_t end = offset + sizeof(T);
         if (end > highWaterMark) highWaterMark = end;
     }
 
     template<typename T>
     T* ptr(size_t offset) {
+        if (offset + sizeof(T) > GVL_SIZE) {
+            fprintf(stderr, "[GVL] ptr out of bounds: offset=%zu sizeof(T)=%zu GVL_SIZE=%zu\n",
+                    offset, sizeof(T), GVL_SIZE);
+            return nullptr;
+        }
         return reinterpret_cast<T*>(memory + offset);
     }
 
     template<typename T>
     const T* ptr(size_t offset) const {
+        if (offset + sizeof(T) > GVL_SIZE) {
+            fprintf(stderr, "[GVL] ptr out of bounds: offset=%zu sizeof(T)=%zu GVL_SIZE=%zu\n",
+                    offset, sizeof(T), GVL_SIZE);
+            return nullptr;
+        }
         return reinterpret_cast<const T*>(memory + offset);
     }
 
