@@ -1,6 +1,7 @@
 package PLCTranslator.TranslateType.Class_decl;
 
 import PLCSymbolAndScope.PLCSymbols.*;
+import PLCTranslator.FlatCodeGenerator;
 import PLCTranslator.PLCTranslatorNew;
 import PLCTranslator.TranslateType.packageFactory;
 import antlr4.PLCSTPARSERParser;
@@ -18,6 +19,7 @@ public class TranslateClass_decl {
     packageFactory pFactory = new packageFactory();
 
     public String translateNode(PLCSTPARSERParser.Class_declContext ctx, PLCTranslatorNew translatorNew){
+        boolean isFlat = translatorNew.codeGen instanceof FlatCodeGenerator;
         StringBuilder sb = new StringBuilder();
         //*******************************************************翻译类中函数类********************************************
         for (PLCSTPARSERParser.Method_declContext method_declContext : ctx.method_decl()) {
@@ -28,18 +30,30 @@ public class TranslateClass_decl {
         //*****************************************************翻译类中变量声明********************************************
         PLCClassDeclSymbol classDeclSymbol = (PLCClassDeclSymbol) PLCTranslatorNew.properties.get(ctx).get(0);
 
-        packageCreateClassVariable(classDeclSymbol);
+        if (isFlat) {
+            // Flat 模式：类变为 C++ struct
+            sb.append("\nstruct " + classDeclSymbol.getName() + " {");
+            // 变量变为 struct 成员
+            for (PLCVariable value : classDeclSymbol.getVariableMap().values()) {
+                String nativeType = mapToNativeType(value.getRuntimeTypeName());
+                sb.append("\n\t" + nativeType + " " + value.getName() + ";");
+            }
+            sb.append("\n};");
+        } else {
+            // OOP 模式：保持原有逻辑
+            packageCreateClassVariable(classDeclSymbol);
 
-        //*****************************************************翻译类的声明***********************************************
-        sb.append("\nclass " +classDeclSymbol.getName()+" : public CLASS{");
-        sb.append("\npublic:");
-        sb.append("\n\t"+classDeclSymbol.getName()
-                +"(int instanceId, PLC::varMap *vMap) : CLASS(instanceId, vMap) {");
-        for (String conSentence : this.conSentences) {
-            sb.append("\n\t\t"+conSentence);
+            //*****************************************************翻译类的声明***********************************************
+            sb.append("\nclass " +classDeclSymbol.getName()+" : public CLASS{");
+            sb.append("\npublic:");
+            sb.append("\n\t"+classDeclSymbol.getName()
+                    +"(int instanceId, PLC::varMap *vMap) : CLASS(instanceId, vMap) {");
+            for (String conSentence : this.conSentences) {
+                sb.append("\n\t\t"+conSentence);
+            }
+            sb.append("\n\t}");
+            sb.append("\n};");
         }
-        sb.append("\n\t}");
-        sb.append("\n};");
 
         return sb.toString();
     }
@@ -58,6 +72,23 @@ public class TranslateClass_decl {
         }
     }
 
-
+    /**
+     * 将运行时类型名映射为原生 C++ 类型名
+     */
+    private String mapToNativeType(String runtimeTypeName) {
+        if (runtimeTypeName == null) return "int";
+        switch (runtimeTypeName) {
+            case "PLC_SINT_Value": return "SINT";
+            case "PLC_INT_Value": return "INT";
+            case "PLC_DINT_Value": return "DINT";
+            case "PLC_LINT_Value": return "LINT";
+            case "PLC_Real_Value": return "REAL";
+            case "PLC_LReal_Value": return "LREAL";
+            case "PLC_Bool_Value": return "BOOL";
+            case "PLC_String_Value": return "STRING";
+            default:
+                return runtimeTypeName;
+        }
+    }
 
 }
