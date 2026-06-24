@@ -1,5 +1,17 @@
 lexer grammar PLCSTLEXER;
 
+// 类型构造关键字（必须在 Identifier 之前定义，确保优先匹配）
+ARRAY_KW : 'ARRAY';
+OF_KW : 'OF';
+STRUCT_KW : 'STRUCT';
+END_STRUCT_KW : 'END_STRUCT';
+OVERLAP_KW : 'OVERLAP';
+TYPE_KW : 'TYPE';
+END_TYPE_KW : 'END_TYPE';
+REF_TO_KW : 'REF_TO';
+REF_KW : 'REF';
+THIS_KW : 'THIS';
+
 Identifier
   : IdentifierStart IdentifierPart* ;
 
@@ -86,17 +98,7 @@ Other_Languages : 'syntaxlexer for other languages not shown here';
 
 ReservedKeyword
   :
-  'TYPE'
-  |'END_TYPE'
-  |'ARRAY'
-  |'OF'
-  |'STRUCT'
-  |'OVERLAP'
-  |'END_STRUCT'
-  |'REF_TO'
-  |'REF'
-  |'THIS'
-  |'VAR_INPUT'
+  'VAR_INPUT'
   |'RETAIN'
   |'NON_RETAIN'
   |'END_VAR'

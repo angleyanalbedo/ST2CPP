@@ -392,9 +392,9 @@ struct_type_name
 
 
 data_type_decl
-            : 'TYPE'
+            : TYPE_KW
               ( type_decl ';' )+
-              'END_TYPE'
+              END_TYPE_KW
             ;
 
 //SC DONE
@@ -511,8 +511,8 @@ array_spec_init         //SC DONE
 
 //PLCTypeDeclSymbol
 array_spec              //SC DONE
-                :'ARRAY' '[' subrange
-                  ( ',' subrange )* ']' 'OF'
+                : ARRAY_KW '[' subrange
+                  ( ',' subrange )* ']' OF_KW
                   data_type_access
                 ;
 
@@ -563,9 +563,9 @@ struct_spec_init
 //PLCStructDeclSymbol
 //SC DONE
 struct_decl
-                : 'STRUCT' 'OVERLAP' ?
+                : STRUCT_KW OVERLAP_KW ?
                 ( struct_elem_decl ';' )+
-                'END_STRUCT'
+                END_STRUCT_KW
                 ;
 
 //PLCStructDeclSymbol
@@ -643,7 +643,7 @@ ref_spec_init       //SC DONE by bal
                 ;
 
 ref_spec            //SC DONE
-                : 'REF_TO' +
+                : REF_TO_KW +
                   data_type_access
                 ;
 
@@ -667,7 +667,7 @@ ref_value         //SC DONE
                 ;
 
 ref_addr              //SC DONE
-                : 'REF' '('
+                : REF_KW '('
                   ( symbolic_variable
                   | fb_instance_name
                   | instance_name )
@@ -745,7 +745,7 @@ array_index
             :'[' subscript( ',' subscript )*']';
 
 symbolic_variable
-                : ( 'THIS' '.' )?
+                : ( THIS_KW '.' )?
                    identifier '^'*//PLCVariable
                   ( 
                   (array_index*)//ArrayList
@@ -889,7 +889,7 @@ array_var_decl_init           //SC DONE
                 ;
 
 array_conformand                             //变长数组
-                : 'ARRAY' '[' '*' ( ',' '*' )* ']' 'OF'    //childcount 6,8,10...
+                : ARRAY_KW '[' '*' ( ',' '*' )* ']' OF_KW    //childcount 6,8,10...
                   data_type_access
                 ;
 
@@ -1129,7 +1129,7 @@ func_name
                 | derived_func_name
                 ;
 
-func_access     : ('THIS' '.')?               //SC DONE
+func_access     : (THIS_KW '.')?               //SC DONE
                   ( scope_name '.' )*    
                   func_name
                 ;
@@ -1743,8 +1743,8 @@ il_invocation
                   ((( fb_instance_name
                     | func_name
                     | method_name
-                    | 'THIS '
-                    | (( 'THIS' '.'
+                    | THIS_KW
+                    | (( THIS_KW '.'
                         (( fb_instance_name
                          | instance_name
                          ) '.'
@@ -2054,7 +2054,7 @@ invocation
                     )?
                     ')'                                         #invocation2
                   |
-                  ( 'THIS' '.')?
+                  ( THIS_KW '.')?
                   method_name
                     '('
                     ( param_assign
@@ -2064,7 +2064,7 @@ invocation
                 ;
 
 invocation1branch
-                : ( 'THIS' '.')?
+                : ( THIS_KW '.')?
                   (
                   instance_name '.'
                   )+
@@ -2072,7 +2072,7 @@ invocation1branch
 
 invocation2branch
                 :
-                  fb_instance_name | method_name | 'THIS'
+                  fb_instance_name | method_name | THIS_KW
                 ;
 
 subprog_ctrl_stmt
@@ -2120,7 +2120,7 @@ else_stmt       :                   //SC DONE
 
 
 case_stmt                                                       //SC DONE
-                : 'CASE' expression 'OF' case_selection +
+                : 'CASE' expression OF_KW case_selection +
 //                  ( 'ELSE' stmt_list )?
                   else_stmt?
                   'END_CASE'
@@ -2192,20 +2192,20 @@ fb_diagram
 
 reservedKeyword
                 :
-                |'TYPE'
-                |'END_TYPE'
-                |'ARRAY'
-                |'OF'
-                |'STRUCT'
-                |'OVERLAP'
-                |'END_STRUCT'
-                |'REF_TO'
-                |'REF'
+                | TYPE_KW
+                | END_TYPE_KW
+                | ARRAY_KW
+                | OF_KW
+                | STRUCT_KW
+                | OVERLAP_KW
+                | END_STRUCT_KW
+                | REF_TO_KW
+                | REF_KW
                 |'POINTER'
                 |'TO'
                 |'ADR'
                 |'DREF'
-                |'THIS'
+                | THIS_KW
                 |'VAR_INPUT'
                 |'RETAIN'
                 |'NON_RETAIN'

@@ -1,4 +1,4 @@
-// Generated from D:/source/Project/ST2C/java/src/main/resources/antlr4/PLCSTPARSER.g4 by ANTLR 4.13.2
+// Generated from PLCSTPARSER.g4 by ANTLR 4.10.1
 package antlr4;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 

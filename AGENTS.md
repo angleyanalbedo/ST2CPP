@@ -195,6 +195,29 @@ test-flat.bat myprog.st    # 指定输入
 4. `TranslateXxx` 类根据 `translatorNew.codeGen` 类型选择 OOP/Flat 代码生成路径
 5. `FlatCodeGenerator.translateExpr()` 将 OOP 风格表达式转换为原生 C++
 
+## 语法修改记录
+
+### 2025-06-24: 修复 ARRAY/STRUCT/CLASS 关键字识别
+
+**问题**：`Identifier` 规则在 `ReservedKeyword` 之前定义，导致 `ARRAY`、`STRUCT`、`TYPE` 等关键字被识别为标识符，无法用于类型声明。
+
+**修改文件**：
+1. `java/src/main/resources/antlr4/PLCSTLEXER.g4`
+   - 在 `Identifier` 之前添加独立关键字规则：`ARRAY_KW`、`OF_KW`、`STRUCT_KW`、`END_STRUCT_KW`、`OVERLAP_KW`、`TYPE_KW`、`END_TYPE_KW`、`REF_TO_KW`、`REF_KW`、`THIS_KW`
+   - 从 `ReservedKeyword` 中移除已单独定义的关键字
+
+2. `java/src/main/resources/antlr4/PLCSTPARSER.g4`
+   - `startpoint` 规则：添加 `data_type_decl`、`class_decl`、`interface_decl` 直接支持
+   - 将所有 `'ARRAY'` 替换为 `ARRAY_KW`，`'OF'` 替换为 `OF_KW`，`'STRUCT'` 替换为 `STRUCT_KW`，等等
+   - `derived_type_access` 添加 `array_spec_init` 和 `struct_spec_init` 支持
+
+**验证结果**：
+- `test.st` 正常工作 ✅
+- `test_array.st` 语法解析成功（`ARRAY[0..4] OF INT`）✅
+- 语义检查阶段报错：`type mismatch : ARR[I]:=I*10`（需修复静态检查器）
+
+**待修复**：静态检查器 `VisitVariableAssignExpression` 需要支持数组元素访问的类型推断。
+
 ## 注意事项
 
 - **Windows 计时精度**：`std::chrono::steady_clock` 在 Windows 上精度约 15ms，测试中连续 `tick()` 可能不触发 `isDue()`。测试时用 1us 间隔或直接调用 `ProgramInstance` 方法绕过计时。
@@ -203,3 +226,4 @@ test-flat.bat myprog.st    # 指定输入
 - **GVL 固定 64KB**：RETAIN 区域固定 8KB，可按需调整常量。
 - **单线程调度**：当前不支持多核。多任务通过优先级在单线程内串行执行。
 - **功能块（FB）**：Runtime 已预留接口，但具体 FB 翻译逻辑待实现。
+- **标识符大小写**：ST 语法要求标识符必须大写（`[A-Z][A-Z0-9$_]*`），小写变量名会导致解析失败。
