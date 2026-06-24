@@ -23,7 +23,14 @@ public class TranslateFunc_call {
 
         for (PLCSTPARSERParser.Param_assignContext param_assignContext : ctx.param_assign()) {
             PLCVariable plcVariable =(PLCVariable) PLCTranslatorNew.properties.get(param_assignContext).get(0);
-            sb.append("\n\t\tauto "+plcVariable.getRuntimeName()+"="+translatorNew.codeGen.translateExpr(plcVariable.getAssignVar())+";");
+            String typeName = plcVariable.getRuntimeTypeName();
+            if (typeName == null || typeName.isEmpty()) {
+                typeName = "INT"; // 默认类型
+            }
+            if (translatorNew.codeGen instanceof PLCTranslator.FlatCodeGenerator) {
+                typeName = ((PLCTranslator.FlatCodeGenerator) translatorNew.codeGen).toNativeType(typeName);
+            }
+            sb.append("\n\t\t" + typeName + " " + plcVariable.getRuntimeName() + "=" + translatorNew.codeGen.translateExpr(plcVariable.getAssignVar()) + ";");
 
         }
         return sb.toString();

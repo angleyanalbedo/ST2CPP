@@ -27,6 +27,7 @@ if not exist "%INPUT_ST%" (
 REM Step 2: Compile Java compiler
 echo [1/4] Compiling Java compiler...
 cd /d "%PROJECT_ROOT%java"
+set "JAVA_HOME=C:\Program Files\Java\jdk-24"
 call mvn compile -q 2>&1
 if errorlevel 1 (
     echo [ERROR] Java compilation failed
@@ -37,6 +38,7 @@ echo       OK
 REM Step 3: Flat backend translation
 echo.
 echo [2/4] Flat backend ST -> C++ translation...
+set "JAVA_HOME=C:\Program Files\Java\jdk-24"
 call mvn exec:java -Dexec.mainClass="Main" -Dexec.args="--backend flat --input %INPUT_ST% --output %PROJECT_ROOT%runtime-flat\generated_pou.cpp --verbose" -q 2>&1
 if errorlevel 1 (
     echo [ERROR] Flat translation failed

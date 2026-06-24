@@ -78,7 +78,7 @@ public class FlatCodeGenerator implements CodeGenerator {
         SIZE_MAP.put("DATE_AND_TIME", 8);
     }
 
-    private String toNativeType(String typeName) {
+    public String toNativeType(String typeName) {
         String mapped = TYPE_MAP.get(typeName);
         return mapped != null ? mapped : typeName;
     }
@@ -534,6 +534,19 @@ public class FlatCodeGenerator implements CodeGenerator {
         // 6. 清理 OOP 运行时特有的表达式
         // *this->returnValue → returnValue（Flat 模式下用局部变量替代）
         result = result.replace("*this->returnValue", "returnValue");
+
+        // 7. GVL 变量替换：简单变量名 → gvl.read<TYPE>(offset)
+        // 遍历所有已注册的 GVL 变量，在表达式中替换为偏移量读取
+        // 注意：只替换独立的变量名（不在其他标识符内部）
+        for (Map.Entry<String, Integer> entry : offsetMap.entrySet()) {
+            String varName = entry.getKey();
+            Integer offset = entry.getValue();
+            String type = typeMap.get(varName);
+            if (type == null || offset == null) continue;
+            // 使用正则匹配独立的变量名（前后不是字母/数字/下划线）
+            String regex = "(?<![A-Za-z0-9_])" + Pattern.quote(varName) + "(?![A-Za-z0-9_])";
+            result = result.replaceAll(regex, "gvl.read<" + type + ">(" + offset + ")");
+        }
 
         return result;
     }

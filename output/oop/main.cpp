@@ -29,7 +29,7 @@ int main(){
 	auto* A=new INT((*(new INT(0))));
 	auto* B=new INT((*(new INT(0))));
 		for( *A = (*(new INT(1)));*A <= (*(new INT(5)));*A = *A + (*(new INT(1)))){
-		auto _X0=*A;
+		INT _X0=*A;
 		*B = *::PLC::RFM->getSymbolByID<ADD_TEN*>(219)->callFunc(&_X0);
 		}
 }
