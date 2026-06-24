@@ -125,6 +125,27 @@ public class FlatCodeGenerator implements CodeGenerator {
     private String readExpr(String varName) {
         // 去掉 OOP 模式的解引用星号前缀
         String cleanName = varName.startsWith("*") ? varName.substring(1) : varName;
+
+        // 检测数组元素访问：ARR[I] 或 (ARR[I])
+        String arrayElemPattern = "^\\(?([A-Z][A-Z0-9$_]*)\\[(.+)\\]\\)?$";
+        java.util.regex.Matcher arrayMatcher = java.util.regex.Pattern.compile(arrayElemPattern).matcher(cleanName.trim());
+        if (arrayMatcher.matches()) {
+            String arrName = arrayMatcher.group(1);
+            String indexExpr = arrayMatcher.group(2);
+            String arrType = typeMap.get(arrName);
+            Integer arrOffset = offsetMap.get(arrName);
+            if (arrType != null && arrType.startsWith("ARRAY[") && arrOffset != null) {
+                // 解析元素类型和数量：ARRAY[count] OF elemType
+                java.util.regex.Pattern typePattern = java.util.regex.Pattern.compile("ARRAY\\[(\\d+)\\] OF (\\w+)");
+                java.util.regex.Matcher typeMatcher = typePattern.matcher(arrType);
+                if (typeMatcher.find()) {
+                    String elemType = typeMatcher.group(2);
+                    // 生成：*(gvl.ptr<ELEM_TYPE>(offset) + index)
+                    return "*(gvl.ptr<" + elemType + ">(" + arrOffset + ") + " + indexExpr + ")";
+                }
+            }
+        }
+
         String type = typeMap.get(cleanName);
         Integer offset = offsetMap.get(cleanName);
         if (type == null || offset == null) {
@@ -143,6 +164,28 @@ public class FlatCodeGenerator implements CodeGenerator {
         if (cleanName.trim().equals("this->returnValue")) {
             return "return " + valueExpr;
         }
+
+        // 检测数组元素访问：ARR[I] 或 (ARR[I])
+        String arrayElemPattern = "^\\(?([A-Z][A-Z0-9$_]*)\\[(.+)\\]\\)?$";
+        java.util.regex.Matcher arrayMatcher = java.util.regex.Pattern.compile(arrayElemPattern).matcher(cleanName.trim());
+        if (arrayMatcher.matches()) {
+            String arrName = arrayMatcher.group(1);
+            String indexExpr = arrayMatcher.group(2);
+            String arrType = typeMap.get(arrName);
+            Integer arrOffset = offsetMap.get(arrName);
+            if (arrType != null && arrType.startsWith("ARRAY[") && arrOffset != null) {
+                // 解析元素类型和数量：ARRAY[count] OF elemType
+                java.util.regex.Pattern typePattern = java.util.regex.Pattern.compile("ARRAY\\[(\\d+)\\] OF (\\w+)");
+                java.util.regex.Matcher typeMatcher = typePattern.matcher(arrType);
+                if (typeMatcher.find()) {
+                    String elemType = typeMatcher.group(2);
+                    int elemSize = getTypeSize(elemType);
+                    // 生成：*(gvl.ptr<ELEM_TYPE>(offset) + index) = value
+                    return "*(gvl.ptr<" + elemType + ">(" + arrOffset + ") + " + indexExpr + ") = " + valueExpr;
+                }
+            }
+        }
+
         String type = typeMap.get(cleanName.trim());
         Integer offset = offsetMap.get(cleanName.trim());
         if (type == null || offset == null) {
@@ -172,6 +215,19 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     @Override
     public String emitVarDecl(String name, String typeName, String assignVar) {
+        // 处理数组类型：ARRAY[low..high] OF elemType
+        if (typeName != null && typeName.startsWith("ARRAY")) {
+            ArrayInfo info = parseArrayType(typeName);
+            if (info != null) {
+                int elemSize = getTypeSize(info.elemType);
+                int totalSize = elemSize * info.count;
+                int aligned = (currentOffset + elemSize - 1) / elemSize * elemSize;
+                offsetMap.put(name, aligned);
+                typeMap.put(name, "ARRAY[" + info.count + "] OF " + info.elemType);
+                currentOffset = aligned + totalSize;
+                return "";
+            }
+        }
         String nativeType = toNativeType(typeName);
         allocateOffset(name, nativeType);
         if (assignVar != null && !assignVar.isEmpty() && !"0".equals(assignVar) && !"\"\"".equals(assignVar)) {
@@ -183,6 +239,19 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     @Override
     public String emitGlobalVarDecl(String name, String typeName, String assignVar, String varSection) {
+        // 处理数组类型
+        if (typeName != null && typeName.startsWith("ARRAY")) {
+            ArrayInfo info = parseArrayType(typeName);
+            if (info != null) {
+                int elemSize = getTypeSize(info.elemType);
+                int totalSize = elemSize * info.count;
+                int aligned = (currentOffset + elemSize - 1) / elemSize * elemSize;
+                offsetMap.put(name, aligned);
+                typeMap.put(name, "ARRAY[" + info.count + "] OF " + info.elemType);
+                currentOffset = aligned + totalSize;
+                return "";
+            }
+        }
         String nativeType = toNativeType(typeName);
         allocateOffset(name, nativeType);
         return "";
@@ -190,9 +259,50 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     @Override
     public String emitProgVarDecl(String name, String typeName, String assignVar) {
+        // 处理数组类型
+        if (typeName != null && typeName.startsWith("ARRAY")) {
+            ArrayInfo info = parseArrayType(typeName);
+            if (info != null) {
+                int elemSize = getTypeSize(info.elemType);
+                int totalSize = elemSize * info.count;
+                int aligned = (currentOffset + elemSize - 1) / elemSize * elemSize;
+                offsetMap.put(name, aligned);
+                typeMap.put(name, "ARRAY[" + info.count + "] OF " + info.elemType);
+                currentOffset = aligned + totalSize;
+                return "";
+            }
+        }
         String nativeType = toNativeType(typeName);
         allocateOffset(name, nativeType);
         return "";
+    }
+
+    /**
+     * 数组类型信息
+     */
+    private static class ArrayInfo {
+        int count;      // 元素数量
+        String elemType; // 元素类型（原生 C++ 类型名）
+    }
+
+    /**
+     * 解析数组类型字符串，如 "ARRAY[0..4] OF INT"
+     * 返回 ArrayInfo，解析失败返回 null
+     */
+    private ArrayInfo parseArrayType(String typeName) {
+        ArrayInfo info = new ArrayInfo();
+        // 匹配 ARRAY[low..high] OF elemType
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
+            "ARRAY\\[(\\d+)\\.\\.(\\d+)\\]\\s+OF\\s+(\\w+)");
+        java.util.regex.Matcher matcher = pattern.matcher(typeName);
+        if (matcher.find()) {
+            int low = Integer.parseInt(matcher.group(1));
+            int high = Integer.parseInt(matcher.group(2));
+            info.count = high - low + 1;
+            info.elemType = toNativeType(matcher.group(3));
+            return info;
+        }
+        return null;
     }
 
 
@@ -517,10 +627,35 @@ public class FlatCodeGenerator implements CodeGenerator {
             simpleVarMatcher.appendTail(sb);
             result = sb.toString();
 
+            // 5. 数组元素访问替换：ARR[I] → *(gvl.ptr<ELEM_TYPE>(offset) + I)
+            String arrayAccessPattern = "([A-Z][A-Z0-9$_]*)\\[(.*?)\\]";
+            Matcher arrayAccessMatcher = Pattern.compile(arrayAccessPattern).matcher(result);
+            sb = new StringBuilder();
+            while (arrayAccessMatcher.find()) {
+                changed = true;
+                String arrName = arrayAccessMatcher.group(1);
+                String indexExpr = arrayAccessMatcher.group(2);
+                String arrType = typeMap.get(arrName);
+                Integer arrOffset = offsetMap.get(arrName);
+                if (arrType != null && arrType.startsWith("ARRAY[") && arrOffset != null) {
+                    Pattern typePattern = Pattern.compile("ARRAY\\[(\\d+)\\] OF (\\w+)");
+                    Matcher typeMatcher = typePattern.matcher(arrType);
+                    if (typeMatcher.find()) {
+                        String elemType = typeMatcher.group(2);
+                        arrayAccessMatcher.appendReplacement(sb,
+                            "*(gvl.ptr<" + elemType + ">(" + arrOffset + ") + " + indexExpr + ")");
+                        continue;
+                    }
+                }
+                arrayAccessMatcher.appendReplacement(sb, arrayAccessMatcher.group(0));
+            }
+            arrayAccessMatcher.appendTail(sb);
+            result = sb.toString();
+
             if (!changed && result.equals(prev)) break;
         }
 
-        // 5. 清理残余的 OOP 解引用星号
+        // 6. 清理残余的 OOP 解引用星号
         // OOP 模式下变量是指针，使用 *varName 解引用
         // Flat 模式下变量是值类型，不需要解引用
         // 匹配独立的 *varName（不在运算符上下文中）
@@ -538,11 +673,14 @@ public class FlatCodeGenerator implements CodeGenerator {
         // 7. GVL 变量替换：简单变量名 → gvl.read<TYPE>(offset)
         // 遍历所有已注册的 GVL 变量，在表达式中替换为偏移量读取
         // 注意：只替换独立的变量名（不在其他标识符内部）
+        // 跳过数组类型变量（数组元素访问需要特殊处理）
         for (Map.Entry<String, Integer> entry : offsetMap.entrySet()) {
             String varName = entry.getKey();
             Integer offset = entry.getValue();
             String type = typeMap.get(varName);
             if (type == null || offset == null) continue;
+            // 跳过数组类型变量（类型名以 "ARRAY[" 开头）
+            if (type.startsWith("ARRAY[")) continue;
             // 使用正则匹配独立的变量名（前后不是字母/数字/下划线）
             String regex = "(?<![A-Za-z0-9_])" + Pattern.quote(varName) + "(?![A-Za-z0-9_])";
             result = result.replaceAll(regex, "gvl.read<" + type + ">(" + offset + ")");

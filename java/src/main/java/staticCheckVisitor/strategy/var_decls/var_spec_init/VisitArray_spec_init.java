@@ -33,7 +33,23 @@ public class VisitArray_spec_init implements Strategy {
         arrayInitVar.setTypeId(basicArrayType.getTypeId());
         arrayInitVar.setSort(basicArrayType.getVarSort());
         arrayInitVar.setAssignVar(basicArrayType.getInitVar());
-        arrayInitVar.setRuntimeTypeName(basicArrayType.getRuntimeTypeName());
+
+        // 构造数组类型的 runtimeTypeName，格式：ARRAY[low..high] OF elemType
+        // 用于 FlatCodeGenerator 识别数组类型并分配 GVL 偏移量
+        StringBuilder arrayTypeName = new StringBuilder("ARRAY[");
+        PLCSTPARSERParser.Array_specContext arraySpec = ctx.array_spec();
+        if (arraySpec != null) {
+            for (int i = 0; i < arraySpec.subrange().size(); i++) {
+                PLCSTPARSERParser.SubrangeContext subrange = arraySpec.subrange(i);
+                if (i > 0) arrayTypeName.append(",");
+                arrayTypeName.append(subrange.getText());
+            }
+            arrayTypeName.append("] OF ");
+            // 获取元素类型名
+            PLCSymbol elemTypeSymbol = visitor.visit(arraySpec.data_type_access()).get(0);
+            arrayTypeName.append(elemTypeSymbol.getName());
+        }
+        arrayInitVar.setRuntimeTypeName(arrayTypeName.toString());
 
         //访问下层
         if(ctx.array_init() != null){
