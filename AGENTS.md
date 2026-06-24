@@ -156,11 +156,11 @@ test-flat.bat myprog.st    # 指定输入
 
 ### 编译器改进
 
-- [ ] **临时变量类型推断**：`auto _X0=A` 改为具体类型 `INT _X0=A`
-- [ ] **GVL 变量在表达式中的转换**：`(A)` 改为 `(gvl.read<INT>(0))`
-- [ ] **RETAIN 区域标记**：编译器生成 `setRetainRegion()` 调用
+- [x] **临时变量类型推断**：`auto _X0=A` 改为具体类型 `INT _X0=A`
+- [x] **GVL 变量在表达式中的转换**：`(A)` 改为 `(gvl.read<INT>(0))`
+- [x] **RETAIN 区域标记**：编译器生成 `setRetainRegion()` 调用
+- [x] **ARRAY 类型支持**：Flat 模式支持 `VAR` 内联数组声明和元素访问
 - [ ] **FB（功能块）翻译**：当前仅支持 FUNCTION 和 PROGRAM
-- [ ] **ARRAY 类型支持**：当前生成 `// Flat: TODO`
 - [ ] **STRUCT 类型支持**：当前生成 `// Flat: TODO`
 
 ## 开发指南
