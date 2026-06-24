@@ -1,0 +1,59 @@
+#pragma once
+
+#include "constants.h"
+#include <cstdint>
+#include <cstring>
+
+namespace rt_plc {
+
+// 缓存行对齐的全局变量表
+struct alignas(64) GVL {
+    alignas(64) uint8_t memory[GVL_SIZE];
+
+    // RETAIN 区域标记：偏移 [retainStart, retainEnd) 在暖启动时保留
+    size_t retainStart = 0;
+    size_t retainEnd   = 0;
+
+    // 高水位标记：记录最大写入位置，O(1) usedBytes()
+    size_t highWaterMark = 0;
+
+    void clear();
+
+    // 暖启动清零：只清零非 RETAIN 区域
+    void clearNonRetain();
+
+    // 设置 RETAIN 区域范围（编译器在 Memory Layout Pass 中计算）
+    void setRetainRegion(size_t start, size_t end);
+
+    template<typename T>
+    T read(size_t offset) const {
+        T val;
+        memcpy(&val, memory + offset, sizeof(T));
+        return val;
+    }
+
+    template<typename T>
+    void write(size_t offset, T val) {
+        memcpy(memory + offset, &val, sizeof(T));
+        // 更新高水位标记
+        size_t end = offset + sizeof(T);
+        if (end > highWaterMark) highWaterMark = end;
+    }
+
+    template<typename T>
+    T* ptr(size_t offset) {
+        return reinterpret_cast<T*>(memory + offset);
+    }
+
+    template<typename T>
+    const T* ptr(size_t offset) const {
+        return reinterpret_cast<const T*>(memory + offset);
+    }
+
+    // 使用量统计 — O(1) 查询
+    size_t usedBytes() const {
+        return highWaterMark;
+    }
+};
+
+} // namespace rt_plc

@@ -55,8 +55,8 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Compile runtime_main.cpp + generated_pou.cpp together
-g++ -O2 -std=c++17 -I"%PROJECT_ROOT%runtime-flat" "%PROJECT_ROOT%runtime-flat\runtime_main.cpp" "%PROJECT_ROOT%runtime-flat\generated_pou.cpp" -o "%PROJECT_ROOT%runtime-flat\build\runtime_test.exe" 2>&1
+REM Compile runtime_main.cpp + generated_pou.cpp together with new include structure
+g++ -O2 -std=c++17 -I"%PROJECT_ROOT%runtime-flat\include" "%PROJECT_ROOT%runtime-flat\runtime_main.cpp" "%PROJECT_ROOT%runtime-flat\generated_pou.cpp" -o "%PROJECT_ROOT%runtime-flat\build\runtime_test.exe" 2>&1
 if errorlevel 1 (
     echo [ERROR] C++ compilation failed
     exit /b 1

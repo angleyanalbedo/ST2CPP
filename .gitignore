@@ -5,3 +5,4 @@ rt-Runtime/build
 runtime-flat/build
 
 runtime-oop/build/
+runtime-flat/*.o
