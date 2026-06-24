@@ -2,7 +2,7 @@
 chcp 65001 >nul
 setlocal enabledelayedexpansion
 
-REM ST2C++ Flat backend test script
+REM ST2C++ Flat backend test script with rt_runtime scheduler
 REM Usage: test-flat.bat [input.st]
 REM Default: input.st = examples\test.st
 
@@ -12,7 +12,7 @@ if "%INPUT_ST%"=="" set "INPUT_ST=%PROJECT_ROOT%examples\test.st"
 
 echo.
 echo ==========================================
-echo  ST2C++ Flat Backend Test
+echo  ST2C++ Flat Backend + rt_runtime Test
 echo ==========================================
 echo  Input: %INPUT_ST%
 echo ==========================================
@@ -25,7 +25,7 @@ if not exist "%INPUT_ST%" (
 )
 
 REM Step 2: Compile Java compiler
-echo [1/5] Compiling Java compiler...
+echo [1/4] Compiling Java compiler...
 cd /d "%PROJECT_ROOT%java"
 call mvn compile -q 2>&1
 if errorlevel 1 (
@@ -36,66 +36,38 @@ echo       OK
 
 REM Step 3: Flat backend translation
 echo.
-echo [2/5] Flat backend ST -> C++ translation...
-call mvn exec:java -Dexec.mainClass="Main" -Dexec.args="--backend flat --input %INPUT_ST% --output %PROJECT_ROOT%output\flat\main.cpp --verbose" -q 2>&1
+echo [2/4] Flat backend ST -> C++ translation...
+call mvn exec:java -Dexec.mainClass="Main" -Dexec.args="--backend flat --input %INPUT_ST% --output %PROJECT_ROOT%runtime-flat\generated_pou.cpp --verbose" -q 2>&1
 if errorlevel 1 (
     echo [ERROR] Flat translation failed
     exit /b 1
 )
-echo       Generated: output\flat\main.cpp
+echo       Generated: runtime-flat\generated_pou.cpp
 
-REM Step 4: Copy to runtime-flat and add main entry
+REM Step 4: Compile C++ (runtime_main + generated_pou)
 echo.
-echo [3/5] Preparing C++ compilation...
-cd /d "%PROJECT_ROOT%"
-
-copy /Y "output\flat\main.cpp" "runtime-flat\generated_main.cpp" >nul
-
-REM Append main entry
-echo. >> "runtime-flat\generated_main.cpp"
-echo // === Test Entry === >> "runtime-flat\generated_main.cpp"
-echo #include ^<cstdio^> >> "runtime-flat\generated_main.cpp"
-echo int main() { >> "runtime-flat\generated_main.cpp"
-echo     GVL gvl; >> "runtime-flat\generated_main.cpp"
-echo     ProcessImage io; >> "runtime-flat\generated_main.cpp"
-echo     TIME dt = T_ms(1); >> "runtime-flat\generated_main.cpp"
-echo     PROGRAM_P(gvl, io, dt); >> "runtime-flat\generated_main.cpp"
-echo     printf("Program executed.\n"); >> "runtime-flat\generated_main.cpp"
-echo     return 0; >> "runtime-flat\generated_main.cpp"
-echo } >> "runtime-flat\generated_main.cpp"
-
-echo       Generated: runtime-flat\generated_main.cpp
-
-REM Step 5: Compile C++
-echo.
-echo [4/5] Compiling C++...
-cd /d "%PROJECT_ROOT%runtime-flat\build"
+echo [3/4] Compiling C++ with rt_runtime...
+cd /d "%PROJECT_ROOT%runtime-flat"
 
 where g++ >nul 2>&1
 if errorlevel 1 (
-    echo [WARN] g++ not found, trying CMake...
-    if not exist "CMakeCache.txt" (
-        cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release >nul 2>&1
-    )
-    mingw32-make -j4 -q 2>&1
-    if errorlevel 1 (
-        echo [ERROR] CMake/MinGW compilation failed. Please install MinGW.
-        exit /b 1
-    )
-) else (
-    g++ -O2 -std=c++17 -I"%PROJECT_ROOT%runtime-flat" "%PROJECT_ROOT%runtime-flat\generated_main.cpp" -o "%PROJECT_ROOT%runtime-flat\build\generated_test.exe" 2>&1
-    if errorlevel 1 (
-        echo [ERROR] g++ compilation failed
-        exit /b 1
-    )
+    echo [ERROR] g++ not found. Please install MinGW.
+    exit /b 1
+)
+
+REM Compile runtime_main.cpp + generated_pou.cpp together
+g++ -O2 -std=c++17 -I"%PROJECT_ROOT%runtime-flat" "%PROJECT_ROOT%runtime-flat\runtime_main.cpp" "%PROJECT_ROOT%runtime-flat\generated_pou.cpp" -o "%PROJECT_ROOT%runtime-flat\build\runtime_test.exe" 2>&1
+if errorlevel 1 (
+    echo [ERROR] C++ compilation failed
+    exit /b 1
 )
 echo       OK
 
-REM Step 6: Run
+REM Step 5: Run
 echo.
-echo [5/5] Running generated program...
-if exist "%PROJECT_ROOT%runtime-flat\build\generated_test.exe" (
-    "%PROJECT_ROOT%runtime-flat\build\generated_test.exe" 2>&1
+echo [4/4] Running with rt_runtime scheduler...
+if exist "%PROJECT_ROOT%runtime-flat\build\runtime_test.exe" (
+    "%PROJECT_ROOT%runtime-flat\build\runtime_test.exe" 2>&1
 ) else (
     echo [ERROR] Executable not found
     exit /b 1
@@ -103,5 +75,5 @@ if exist "%PROJECT_ROOT%runtime-flat\build\generated_test.exe" (
 
 echo.
 echo ==========================================
-echo  Flat Backend Test Complete
+echo  Flat + rt_runtime Test Complete
 echo ==========================================
