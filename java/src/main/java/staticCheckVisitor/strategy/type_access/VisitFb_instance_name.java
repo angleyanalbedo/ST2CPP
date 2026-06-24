@@ -19,14 +19,14 @@ public class VisitFb_instance_name implements Strategy {
     @Override
     public ArrayList<PLCSymbol> invoke(ParserRuleContext parserCtx, PLCVisitor visitor) {
         PLCSTPARSERParser.Fb_instance_nameContext ctx = (PLCSTPARSERParser.Fb_instance_nameContext) parserCtx;
-        //»ñÈ¡ÃüÃû¿Õ¼ä×÷ÓÃÓò
+        //è·å–å‘½åç©ºé—´ä½œç”¨åŸŸ
         ArrayList<String> nameList = new ArrayList<>();
         for (PLCSTPARSERParser.Namespace_nameContext nameContext : ctx.namespace_name()) {
             nameList.add(nameContext.getText());
         }
 
         PLCScope npScope;
-        if (nameList.isEmpty()) {//µ±Ç°×÷ÓÃÓò
+        if (nameList.isEmpty()) {//å½“å‰ä½œç”¨åŸŸ
             npScope = PLCScopeStack.currentScope;
         } else {
             npScope = visitor.visitorTool.findNameSpaceScopeByNames(nameList);
@@ -40,15 +40,15 @@ public class VisitFb_instance_name implements Strategy {
             }
         }
 
-        //»ñÈ¡±äÁ¿Ãû³Æ
+        //è·å–å˜é‡åç§°
         String typeName = ctx.fb_name().getText();
         PLCTypeDeclSymbol basicType = (PLCTypeDeclSymbol) npScope.deepFindSymbol(typeName);
         if (basicType == null) {
             throw new PLCSemanticException("\ncan not find type : " + typeName);
         }
-        //¼ì²éÎŞÎó£¬½øĞĞ×é×°
+        //æ£€æŸ¥æ— è¯¯ï¼Œè¿›è¡Œç»„è£…
         PLCTypeDeclSymbol targetVar = new PLCTypeDeclSymbol(basicType);
-        //ÉèÖÃruntimeName
+        //è®¾ç½®runtimeName
         StringBuilder runtimeName = new StringBuilder();
         for (String name : nameList) {
             runtimeName.append(name).append(".");
@@ -56,7 +56,7 @@ public class VisitFb_instance_name implements Strategy {
         runtimeName.append(basicType.getRuntimeName());
         targetVar.setRuntimeTypeName(new String(runtimeName));
 
-        //´ò°ü·µ»Ø
+        //æ‰“åŒ…è¿”å›
         return visitor.packSymbols(targetVar);
     }
 }

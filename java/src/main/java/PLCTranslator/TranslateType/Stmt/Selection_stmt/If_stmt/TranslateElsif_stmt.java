@@ -12,10 +12,9 @@ import java.util.ArrayList;
 public class TranslateElsif_stmt {
     public ArrayList<String> translateNode(PLCSTPARSERParser.Elsif_stmtContext ctx, PLCTranslatorNew translatorNew){
         PLCVariable varExpression = (PLCVariable) PLCTranslatorNew.properties.get(ctx.expression()).get(0);
-        // 使用 CodeGenerator 生成 else if
+        // 使用 CodeGenerator 生成 else if（不关闭，由 TranslateIf_stmt 最终关闭）
         PLCTranslatorNew.codeGen.emitElseIf(varExpression.getAssignVar());
         translatorNew.visit(ctx.stmt_list());
-        PLCTranslatorNew.codeGen.emitIfEnd();
         return null;
     }
 }

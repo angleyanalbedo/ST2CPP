@@ -20,7 +20,7 @@ public class TranslateArray_type_decl {
 
         PLCSubtypeDeclSymbol arraySymbol = (PLCSubtypeDeclSymbol) PLCTranslatorNew.properties.get(ctx).get(0);
 
-        //数组类型创建
+        //鏁扮粍绫诲瀷鍒涘缓
 //        System.out.println(pFactory.packageArrayTypeInitSentences(arraySymbol.getName()));
         writeTarget("\n"+pFactory.packageArrayTypeInitSentences(arraySymbol.getName()));
         ArrayList<PLCSymbol> arrayInitList = PLCTranslatorNew.properties.get(ctx.array_spec_init());

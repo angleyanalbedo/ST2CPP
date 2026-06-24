@@ -14,7 +14,7 @@ import static antlr4.PLCSTPARSERParser.RULE_var_spec;
 @StrategyForVisit(ruleIndex = RULE_var_spec)
 public class VisitVar_spec implements Strategy {
     /**
-     * ·µ»Øtype decl symbol
+     * è¿”å›žtype decl symbol
      * */
     @Override
     public ArrayList<PLCSymbol> invoke(ParserRuleContext parserCtx, PLCVisitor visitor) {

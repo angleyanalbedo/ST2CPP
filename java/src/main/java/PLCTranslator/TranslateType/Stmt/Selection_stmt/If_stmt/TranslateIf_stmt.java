@@ -17,7 +17,6 @@ public class TranslateIf_stmt {
         // 使用 CodeGenerator 生成 if
         PLCTranslatorNew.codeGen.emitIfBegin(varExpression.getAssignVar());
         translatorNew.visit(ctx.stmt_list());
-        PLCTranslatorNew.codeGen.emitIfEnd();
 
         //翻译else if语句
         for (PLCSTPARSERParser.Elsif_stmtContext elsif_stmtContext : ctx.elsif_stmt()) {
@@ -27,6 +26,8 @@ public class TranslateIf_stmt {
             //翻译else语句
             translatorNew.visit(ctx.else_stmt());
         }
+        // 在所有 elsif/else 之后关闭整个 if 链
+        PLCTranslatorNew.codeGen.emitIfEnd();
         return null;
     }
 }

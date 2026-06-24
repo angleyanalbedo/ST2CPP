@@ -1,80 +1,44 @@
 #include <iostream>
-#include <utility>
 #include "PLC.h"
 using namespace PLC;
 using namespace std;
-
-class M : public METHOD{
+class FUN: public PLC_Function<INT>{
 public:
-    M( int methodID, std::string methodName, CLASS* classP)
-    :METHOD(methodID, std::move(methodName), classP){
-        createMethodVariable(12,new INT());
-        createMethodVariable(13, new INT());
-        createMethodVariable(14,new INT());
-    }
+	FUN(int funcID, varMap* vMap) : PLC_Function(funcID, vMap){
+		this->addReturnVar<INT>();
+		this->returnValue = new INT();
+		::PLC::RFM->addVarToVarMap(237,createFuncVariable<INT>(237,(new INT(0))));
+	}
+	void funcExecute(INT*X){
+		auto* X_t = new INT(::PLC::RFM->getSymbolByID<INT*>(237));
+		*X_t = *X;
 
-    auto funcExecute(int varID = 0){
-        ::PLC::RFM->getInstanceVarByID<INT*>(this->classField->classInstanceID, 12)->setValue(2);
-        cout<<"M Method Execute"<<endl;
-    }
-
-    void resetValue() {
-        ::PLC::RFM->getInstanceVarByID<INT*>(this->classField->classInstanceID, 12)->setValue(0);
-    }
-
-    auto callFunc(int varID = 0){
-        funcExecute(varID);
-        resetValue();
-    }
-
+		if((*X) ==((*(new INT(2)))) ){
+		*this->returnValue  = (*(new INT(1)));
+		}else if((*X) ==((*(new INT(1)))) ){
+		*this->returnValue  = (*(new INT(1)));
+		}else{
+		auto _X0=(*X) -((*(new INT(1)))) ;
+		auto _X1=(*X) -((*(new INT(2)))) ;
+		*this->returnValue  = (*::PLC::RFM->getSymbolByID<FUN*>(219)->callFunc(&_X0)) +(*::PLC::RFM->getSymbolByID<FUN*>(219)->callFunc(&_X1)) ;
+		}
+	}
+	INT* callFunc(INT*X){
+		funcExecute(X);
+		return new INT(getFuncReturn<INT*>());
+	}
 };
-
-class M1 : public METHOD{
-public:
-    M1(int methodID, std::string methodName, CLASS* classP)
-            :METHOD(methodID, std::move(methodName), classP){
-        createMethodVariable(12,new INT());
-        createMethodVariable(13, new INT());
-        createMethodVariable(14,new INT());
-    }
-
-    auto funcExecute(int varID = 0){
-        ::PLC::RFM->getInstanceVarByID<INT*>(this->classField->classInstanceID, 12)->setValue(2);
-        cout<<"M1 Method Execute"<<endl;
-    }
-
-    void resetValue() {
-        ::PLC::RFM->getInstanceVarByID<INT*>(this->classField->classInstanceID, 12)->setValue(0);
-    }
-
-    auto callFunc(int varID = 0){
-        funcExecute(varID);
-        resetValue();
-    }
-
-};
-
-class A :public CLASS{
-public:
-    A(int instanceId, PLC::varMap *vMap) : CLASS(instanceId, vMap) {
-        createClassVariable<INT>("I", 3, new INT());
-        createClassVariable<INT>("E", 4, new INT());
-        createMethod<M>("M", 5, this);
-        createMethod<M1>("M1", 6, this);
-    }
-};
+void initFunc(){
+	::PLC::RFM->addVarToVarMap(219, new FUN(219, RFM));
+}
 
 int main(){
-    auto A1 = new A(4, ::PLC::RFM);
-    auto A2 = new A(5, ::PLC::RFM);
-
-    ::PLC::RFM->getInstanceVarByID<INT*>(4, 3 )->setValue(2);
-    ::PLC::RFM->getInstanceVarByID<INT*>(5, 3)->setValue(3);
-
-    cout<<::PLC::RFM->getInstanceVarByID<INT*>(4,3)->getValue()<<endl;
-    cout<<::PLC::RFM->getInstanceVarByID<INT*>(5,3)->getValue()<<endl;
-
-    ::PLC::RFM->getInstanceVarByID<M*>(4, 5)->callFunc();
-
-    ::PLC::RFM->getInstanceVarByID<M1*>(5, 6)->callFunc();
+	initFunc();
+	auto* A=new INT((*(new INT(10))));
+	auto* B=new INT((*(new INT(0))));
+		for( *B = (*(new INT(10)));*B <= (*(new INT(100)));*B = *B + (*(new INT(2)))){
+		*A = (*A) +((*(new INT(20)))) ;
+		}
+		auto _X2=(*(new INT(10)));
+		*B = *::PLC::RFM->getSymbolByID<FUN*>(219)->callFunc(&_X2);
 }

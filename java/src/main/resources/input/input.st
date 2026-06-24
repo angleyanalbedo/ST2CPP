@@ -15,7 +15,6 @@ PROGRAM P
     VAR
         A : INT := 10;
         B : INT;
-        C : POINTER TO INT;
     END_VAR
     FOR B := 10 TO 100 BY 2 DO
         A := A + 20;
