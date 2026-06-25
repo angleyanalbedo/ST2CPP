@@ -21,5 +21,6 @@ PROGRAM MAIN
         Y : INT;
     END_VAR
     CT.IN := X;
+    CT();
     Y := CT.OUT;
 END_PROGRAM

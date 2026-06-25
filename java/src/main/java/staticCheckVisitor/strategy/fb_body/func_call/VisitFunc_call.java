@@ -14,23 +14,26 @@ import static antlr4.PLCSTPARSERParser.RULE_func_call;
 
 @StrategyForVisit(ruleIndex = RULE_func_call)
 public class VisitFunc_call implements Strategy {
-    /**
-     * 返回一个PLCVariable，
-     * assignVar为完整的函数调用，
-     * typeid为函数的返回值id（没有为-1）
-     * sort为 函数返回值的sort（没有则为func_var）
-     *
-     *
-     * */
     @Override
     public ArrayList<PLCSymbol> invoke(ParserRuleContext parserCtx, PLCVisitor visitor) {
         PLCSTPARSERParser.Func_callContext ctx = (PLCSTPARSERParser.Func_callContext) parserCtx;
 
-
         //获得函数符号
         PLCBaseFUNDeclSymbol fcCopy = (PLCBaseFUNDeclSymbol) visitor.visit(ctx.func_access()).get(0);
-        PLCBaseFUNDeclSymbol fc = (PLCBaseFUNDeclSymbol) PLCTotalSymbolTable.getTypeByTypeID(fcCopy.getTypeId()
-        );
+
+        // FB 实例调用: 返回合成变量
+        if ("fb_instance_call".equals(fcCopy.getRuntimeTypeName())) {
+            PLCVariable funcCallVar = new PLCVariable();
+            funcCallVar.setName(fcCopy.getName());
+            funcCallVar.setRuntimeName("*" + fcCopy.getName() + "::callFunc");
+            funcCallVar.setRuntimeTypeName("fb_instance_call");
+            funcCallVar.setTypeId(fcCopy.getTypeId());
+            funcCallVar.setAssignVar("*gvl.ptr<FB>(" + fcCopy.getName() + ")->update()");
+            funcCallVar.setSort(PLCModifierEnum.Sort.FB);
+            return visitor.packSymbols(funcCallVar);
+        }
+
+        PLCBaseFUNDeclSymbol fc = (PLCBaseFUNDeclSymbol) PLCTotalSymbolTable.getTypeByTypeID(fcCopy.getTypeId());
         //获取参数列表
         ArrayList<PLCVariable> params = new ArrayList<>();
         for (PLCSTPARSERParser.Param_assignContext assignContext : ctx.param_assign()) {

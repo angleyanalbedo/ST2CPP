@@ -163,7 +163,7 @@ public class VisitFunc_access implements Strategy {
                 ArrayList<PLCModifierEnum.Sort> validSorts = new ArrayList<>(Arrays.asList(PLCModifierEnum.Sort.METHOD_DECL, PLCModifierEnum.Sort.FC_DECL));
                 if(function == null || !validSorts.contains(function.getSort())){
                     // 检查是否是 FB 实例调用: CT() 形式
-                    if (function != null && function.getSort() == PLCModifierEnum.Sort.VAR) {
+                    if (function != null && function.getSort() == PLCModifierEnum.Sort.FB) {
                         PLCVariable var = (PLCVariable) function;
                         PLCTypeDeclSymbol typeSym = PLCTotalSymbolTable.getTypeByTypeID(var.getTypeId());
                         if (typeSym instanceof PLCBaseClassDeclSymbol) {

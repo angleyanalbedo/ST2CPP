@@ -71,6 +71,9 @@ public class OscatLibraryTest {
 
             scanSyntax(content, stem);
 
+            // 每个文件独立编译，重置符号表
+            try { PLCSymbolAndScope.PLCScopeStack.reset(); } catch (Exception ignored) {}
+
             try {
                 compileFile(f);
                 passFiles.add(stem);

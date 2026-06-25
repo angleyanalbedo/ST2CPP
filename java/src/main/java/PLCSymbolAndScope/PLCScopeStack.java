@@ -31,6 +31,7 @@ public final class PLCScopeStack {
 
     //初始化全局变量
     static public void stackInit(){
+        if (!scopeStack.isEmpty()) return; // 已初始化
         //全局符号
         PLCImportScopeTypeDeclType globalSymbol = new PLCImportScopeTypeDeclType();
         globalSymbol.setName("GLOBAL");
@@ -38,6 +39,23 @@ public final class PLCScopeStack {
         push(globalSymbol, globalSymbolTable, globalScope);
         PLCTotalSymbolTable.addScope(globalScope);
         PLCTotalSymbolTable.addTable(globalSymbolTable);
+    }
+
+    // 重置：清空所有状态，重新初始化（测试用）
+    static public void reset() {
+        scopeStack.clear();
+        currentScope = null;
+        currentSymbolTable = null;
+        globalScope.childScopeList.clear();
+        globalScope.getScopeSymbolTable().symbolNameHashMap.clear();
+        globalScope.getScopeSymbolTable().symbolIDHashMap.clear();
+        basicTypeTable.symbolNameHashMap.clear();
+        basicTypeTable.symbolIDHashMap.clear();
+        PLCTotalSymbolTable.totalTypeMap.clear();
+        PLCTotalSymbolTable.totalSymbolMap.clear();
+        PLCTotalSymbolTable.totalScopeMap.clear();
+        PLCTotalSymbolTable.totalTableMap.clear();
+        // stackInit 和 GenerateBasicTypes 由 PLCVisitor 构造函数调用
     }
 
     //设置符号、符号表、作用域之间的引用关系
