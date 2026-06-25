@@ -517,6 +517,11 @@ public class PLCVisitor extends PLCSTPARSERBaseVisitor<ArrayList<PLCSymbol>> {
     }
 
     @Override
+    public ArrayList<PLCSymbol> visitAssert_stmt(PLCSTPARSERParser.Assert_stmtContext ctx) {
+        return factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
+    }
+
+    @Override
     public ArrayList<PLCSymbol> visitWhile_stmt(PLCSTPARSERParser.While_stmtContext ctx) {
         return factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
     }

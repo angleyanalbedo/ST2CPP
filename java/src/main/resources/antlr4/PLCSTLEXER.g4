@@ -11,6 +11,7 @@ END_TYPE_KW : 'END_TYPE';
 REF_TO_KW : 'REF_TO';
 REF_KW : 'REF';
 THIS_KW : 'THIS';
+ASSERT_KW : 'ASSERT';
 
 // 字符串字面量（必须在 Identifier 之前定义，确保 "hello" 整体匹配而非 h 被 Identifier 吃掉）
 StringLiteralS : '\'' (~['\r\n] | '\'\'' | '$$' | '$' [LlNnPpRrTt] | '$' Hex_Digit Hex_Digit)* '\'';

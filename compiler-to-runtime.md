@@ -7,25 +7,32 @@ ST2C++ 将 IEC 61131-3 结构化文本（ST）编译为 C++ 代码，由 `runtim
 - **编译器产出**：单个 `.cpp` 文件，包含 `#include "rt_plc.h"` + `#include "rt_runtime.h"`，函数签名匹配 `POUFunc` 类型
 - **运行时消费**：通过 `POURegistry` 按名字查找函数指针，挂载到 `Scheduler` 的 `Task` 上周期执行
 
-```
-ST 源码 (.st)
-    │
-    │  Java 编译器（ANTLR4 解析 → 语义检查 → 代码生成）
-    ▼
-C++ 源码 (.cpp)
-    │
-    │  CMake 编译 + 链接 runtime-flat
-    ▼
-可执行文件（runtime.exe）
-    │
-    │  运行时加载 tasks.json，按配置调度 POU 函数
-    ▼
-PLC 控制循环
+```mermaid
+flowchart TB
+    A["ST 源码 (.st)"] --> B["Java 编译器<br/>ANTLR4 解析 → 语义检查 → 代码生成"]
+    B --> C["C++ 源码 (.cpp)"]
+    C --> D["CMake 编译 + 链接 runtime-flat"]
+    D --> E["可执行文件 (runtime.exe)"]
+    E --> F["运行时加载 tasks.json<br/>按配置调度 POU 函数"]
+    F --> G["PLC 控制循环"]
 ```
 
 ---
 
 ## 1. 编译流程（5 步）
+
+### 编译管线
+
+```mermaid
+flowchart LR
+    A["① 策略注册<br/>Registrant.autoRegister()"] --> B["② 词法+语法分析<br/>PLCSTPARSERLexer/Parser"]
+    B --> C["③ 静态语义分析<br/>PLCVisitor.visit()"]
+    C --> D["④ 代码生成<br/>PLCTranslatorNew.visit()"]
+    D --> E["⑤ 文件输出<br/>BufferedWriter"]
+
+    C -.-> |"写入符号数据"| PTP["ParseTreeProperty"]
+    PTP -.-> |"读取符号数据"| D
+```
 
 ### 1.1 策略注册
 
@@ -250,6 +257,20 @@ private int allocateOffset(String varName, String nativeType) {
 ```
 
 `FlatCodeGenerator.translateExpr()` 通过多轮正则替换将其转换为原生 C++：
+
+### 转换管线
+
+```mermaid
+flowchart LR
+    A["RFM 中间表达式<br/>getSymbolByID&lt;INT*&gt;(123)"] --> B["轮次1: 字面量"]
+    B --> C["轮次2: RFM 变量"]
+    C --> D["轮次3: RFM 函数调用"]
+    D --> E["轮次4: 无括号变量"]
+    E --> F["轮次5: 数组访问"]
+    F --> G["轮次6: 清理 * 前缀"]
+    G --> H["轮次7: 裸变量兜底"]
+    H --> I["原生 C++<br/>gvl.read&lt;INT&gt;(0) + (10)"]
+```
 
 ### 转换步骤
 
@@ -503,8 +524,13 @@ void PROGRAM_MAIN(GVL& gvl, ProcessImage& io, TIME dt) {
 
 ### 调度阶段
 
-```
-tick() → READ_INPUTS → LOGIC_SOLVE → WRITE_OUTPUTS → HOUSEKEEPING
+```mermaid
+flowchart LR
+    A["tick()"] --> B["READ_INPUTS<br/>syncInputs()"]
+    B --> C["LOGIC_SOLVE<br/>按优先级执行 Task"]
+    C --> D["WRITE_OUTPUTS<br/>syncOutputs()"]
+    D --> E["HOUSEKEEPING<br/>诊断 / 看门狗"]
+    E --> A
 ```
 
 ---

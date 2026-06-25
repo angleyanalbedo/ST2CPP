@@ -1949,6 +1949,7 @@ stmt                            //SC DONE
                 | selection_stmt';'?
                 | iteration_stmt';'?
                 | print_stmt ';'?       //内部测试语法
+                | assert_stmt ';'?      //内部测试语法
                 ;
 
 print_stmt
@@ -1966,6 +1967,14 @@ print_stmt_element
                     identifier
                     | D_byte_char
                     | s_byte_char
+                ;
+
+assert_stmt
+                :
+                  ASSERT_KW
+                  '('
+                   expression
+                  ')'
                 ;
 
 

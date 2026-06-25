@@ -36,6 +36,7 @@ import PLCTranslator.TranslateType.Stmt.Iteration_stmt.Repeat_stmt.TranslateRepe
 import PLCTranslator.TranslateType.Stmt.Iteration_stmt.TranslateIteration_stmt;
 import PLCTranslator.TranslateType.Stmt.Iteration_stmt.While_stmt.TranslateWhile_stmt;
 import PLCTranslator.TranslateType.Stmt.Print_stmt.TranslatePrint_stmt;
+import PLCTranslator.TranslateType.Stmt.Assert_stmt.TranslateAssert_stmt;
 import PLCTranslator.TranslateType.Stmt.Selection_stmt.Case_stmt.TranslateCase_stmt;
 import PLCTranslator.TranslateType.Stmt.Selection_stmt.If_stmt.TranslateElsif_stmt;
 import PLCTranslator.TranslateType.Stmt.Selection_stmt.If_stmt.TranslateIf_stmt;
@@ -221,6 +222,12 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     public String visitPrint_stmt(PLCSTPARSERParser.Print_stmtContext ctx) {
         TranslatePrint_stmt translatePrint_stmt = new TranslatePrint_stmt();
         return translatePrint_stmt.translateNode(ctx, this);
+    }
+
+    @Override
+    public String visitAssert_stmt(PLCSTPARSERParser.Assert_stmtContext ctx) {
+        TranslateAssert_stmt translateAssert_stmt = new TranslateAssert_stmt();
+        return translateAssert_stmt.translateNode(ctx, this);
     }
 
     /**

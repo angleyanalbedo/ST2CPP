@@ -615,6 +615,17 @@ public class FlatCodeGenerator implements CodeGenerator {
         }
     }
 
+    @Override
+    public String emitAssert(String condAssignVar, String sourceExpr, int line) {
+        String cond = translateExpr(condAssignVar);
+        String exprEscaped = sourceExpr.replace("\\", "\\\\").replace("\"", "\\\"");
+        return "\n\t\t{ bool _st_assert = (" + cond + ");" +
+               "\n\t\t  if (_st_assert)" +
+               "\n\t\t    printf(\"  [PASS] assert (line " + line + ")\\n\");" +
+               "\n\t\t  else" +
+               "\n\t\t    printf(\"  [FAIL] assert (line " + line + "): " + exprEscaped + "\\n\"); }";
+    }
+
 
     // ═══ 函数 / PROGRAM ═══
 

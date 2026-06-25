@@ -26,8 +26,8 @@ public class Main {
     public static void main(String[] args) throws Exception {
         // 默认参数
         String backend = "flat";
-        String inputFile = "src/main/resources/input/input.st";
-        String outputFile = "src/main/resources/output/main.cpp";
+        String inputFile = "pou.st";
+        String outputFile = "main.cpp";
         boolean verbose = false;
 
         // 解析命令行参数
@@ -140,8 +140,8 @@ public class Main {
         System.out.println("  -h, --help           Show this help message and exit");
         System.out.println("  -v, --version        Show version information and exit");
         System.out.println("  --backend <mode>     Reserved, only 'flat' is supported");
-        System.out.println("  --input <file>       Input ST source file (default: src/main/resources/input/input.st)");
-        System.out.println("  --output <file>      Output C++ file (default: src/main/resources/output/main.cpp)");
+        System.out.println("  --input <file>       Input ST source file ");
+        System.out.println("  --output <file>      Output C++ file ");
         System.out.println("  --verbose            Print detailed translation statistics");
         System.out.println();
         System.out.println("Examples:");

@@ -47,6 +47,7 @@ ST2C-master/
 ├── CONTRIBUTING.md              # 开发指南、环境搭建、编码规范
 ├── compiler-to-runtime.md       # 编译器→运行时接口文档
 ├── st-support.md                # ST 语言支持矩阵
+├── architecture.md              # 架构详解（类图、序列图、状态图）
 ├── ST2C实时化改造方案.md         # 详细设计文档
 ├── PLC运行时架构知识库.md        # PLC 架构背景知识
 └── AGENTS.md                    # 本文件

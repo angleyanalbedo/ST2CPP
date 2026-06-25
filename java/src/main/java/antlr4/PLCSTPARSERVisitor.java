@@ -1,4 +1,4 @@
-// Generated from D:\source\Project\ST2C-master\java\src\main\resources\antlr4\PLCSTPARSER.g4 by ANTLR 4.10.1
+// Generated from src/main/resources/antlr4/PLCSTPARSER.g4 by ANTLR 4.10.1
 package antlr4;
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
@@ -1784,6 +1784,12 @@ public interface PLCSTPARSERVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitPrint_stmt_element(PLCSTPARSERParser.Print_stmt_elementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link PLCSTPARSERParser#assert_stmt}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitAssert_stmt(PLCSTPARSERParser.Assert_stmtContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code variableAssignExpression}
 	 * labeled alternative in {@link PLCSTPARSERParser#assign_stmt}.

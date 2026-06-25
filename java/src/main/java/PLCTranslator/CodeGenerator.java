@@ -74,6 +74,8 @@ public interface CodeGenerator {
 
     String emitPrintElement(String translatedExpr, boolean isString);
 
+    String emitAssert(String condAssignVar, String sourceExpr, int line);
+
 
     // ═══ 函数 / PROGRAM ═══
 
