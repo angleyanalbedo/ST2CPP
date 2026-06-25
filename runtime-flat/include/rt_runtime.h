@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "core/registry.h"
 #include "rt_plc.h"
 
 #include "core/constants.h"

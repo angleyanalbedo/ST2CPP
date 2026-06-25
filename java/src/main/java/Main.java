@@ -1,5 +1,4 @@
 import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
-import PLCTranslator.CodeGenerator;
 import PLCTranslator.FlatCodeGenerator;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERLexer;
@@ -79,7 +78,11 @@ public class Main {
         long startTime = System.currentTimeMillis();
 
         // 选择代码生成器（仅 Flat 后端）
-        CodeGenerator codeGen = new FlatCodeGenerator();
+        FlatCodeGenerator codeGen = new FlatCodeGenerator();
+        // 从输入文件名推导 fileId（如 "examples/test.st" → "test"）
+        String fileName = new File(inputFile).getName();
+        String fileId = fileName.endsWith(".st") ? fileName.substring(0, fileName.length() - 3) : fileName;
+        codeGen.setFileId(fileId);
 
         if (verbose) {
             System.out.println("[Input]  " + inputFile);
@@ -116,10 +119,7 @@ public class Main {
         long elapsed = System.currentTimeMillis() - startTime;
 
         // 输出 Flat 后端的 GVL 偏移量信息
-        if (codeGen instanceof FlatCodeGenerator) {
-            FlatCodeGenerator flatGen = (FlatCodeGenerator) codeGen;
-            System.out.println("\n" + flatGen.getOffsetDefinitions());
-        }
+        System.out.println("\n" + codeGen.getOffsetDefinitions());
 
         if (verbose) {
             int codeLines = fullCode != null ? fullCode.split("\n").length : 0;

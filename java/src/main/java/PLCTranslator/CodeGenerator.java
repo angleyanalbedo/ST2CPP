@@ -144,6 +144,24 @@ public interface CodeGenerator {
     String translateExpr(String expr);
 
 
+    // ═══ POU 注册表（编译器生成元数据，运行时决定调度） ═══
+
+    /**
+     * 生成 POU 注册函数，将当前文件中的所有 PROGRAM 注册到 POURegistry。
+     *
+     * 生成如：
+     *   void registerPOU_main(POURegistry& reg) {
+     *       reg.add("P", PROGRAM_P);
+     *       reg.add("MAIN", PROGRAM_MAIN);
+     *   }
+     *
+     * @param fileId   源文件标识（如 "main"、"io"），用于生成注册函数名
+     * @param progNames 当前文件中所有 PROGRAM 名称的列表
+     * @return 注册函数的 C++ 代码
+     */
+    String emitPOURegistration(String fileId, List<String> progNames);
+
+
     // ═══ 底层输出 ═══
 
     /** 直接输出代码片段（用于特殊情况） */

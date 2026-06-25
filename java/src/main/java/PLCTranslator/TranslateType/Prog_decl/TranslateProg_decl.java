@@ -14,6 +14,10 @@ public class TranslateProg_decl {
 
         // 生成 void PROGRAM_Name(GVL& gvl, ProcessImage& io, TIME dt) { ... }
         String progName = ctx.prog_type_name().identifier().getText();
+        // 收集 PROGRAM 名称到注册表
+        if (translatorNew.codeGen instanceof FlatCodeGenerator) {
+            ((FlatCodeGenerator)translatorNew.codeGen).addProgramName(progName);
+        }
         sb.append(translatorNew.codeGen.emitProgDeclBegin(progName));
 
         //翻译变量段

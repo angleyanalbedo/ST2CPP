@@ -61,6 +61,28 @@ public class FlatCodeGenerator implements CodeGenerator {
     // PLC_Struct_Value<ID> → struct 类型名映射
     private final Map<String, String> structTypeToName = new HashMap<>();
 
+    // ─── POU 注册表 ───
+    // 当前文件中所有 PROGRAM 名称的列表（多文件场景下每文件独立收集）
+    private final List<String> programNames = new ArrayList<>();
+    // 当前文件的标识符（用于生成注册函数名，如 "main" → registerPOU_main）
+    private String fileId = "";
+
+    public void addProgramName(String name) {
+        programNames.add(name);
+    }
+
+    public void setFileId(String id) {
+        this.fileId = id;
+    }
+
+    public String getFileId() {
+        return fileId.isEmpty() ? "unnamed" : fileId;
+    }
+
+    public List<String> getProgramNames() {
+        return Collections.unmodifiableList(programNames);
+    }
+
     // ─── FOR 循环 GVL 局部变量遮盖 ───
     // 被 FOR 循环局部变量遮盖的 GVL 变量名集合（O(1) 查询用）
     private final Set<String> shadowedGvlVars = new HashSet<>();
@@ -567,6 +589,21 @@ public class FlatCodeGenerator implements CodeGenerator {
     @Override
     public String emitCaseEnd() {
         return "\n\t\t}";
+    }
+
+    @Override
+    public String emitPOURegistration(String fileId, List<String> progNames) {
+        if (progNames == null || progNames.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n// ─── Auto-generated POU Registration (").append(fileId).append(") ───\n");
+        sb.append("void registerPOU_").append(fileId).append("(POURegistry& reg) {\n");
+        for (String name : progNames) {
+            sb.append("    reg.add(\"").append(name).append("\", PROGRAM_").append(name).append(");\n");
+        }
+        sb.append("}\n");
+        return sb.toString();
     }
 
     @Override

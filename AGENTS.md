@@ -195,7 +195,25 @@ test.bat myprog.st    # 指定输入
 4. `TranslateXxx` 类使用 `PLCTranslatorNew.codeGen` 代码生成器
 5. `FlatCodeGenerator.translateExpr()` 将中间表达式转换为原生 C++
 
+## 陷阱
+
+### Include 文件阴影（Shadow）
+
+`runtime-flat/` 目录下有旧版 `rt_runtime.h`（已删除），同名的 `runtime-flat/include/rt_runtime.h` 是正确版本。`#include "..."` 优先在同目录下查找，因此编译 `runtime_main.cpp` 时会找到错误的旧版头文件。旧版不含 `core/registry.h`，会导致 `POURegistry` not in scope。
+
+**修复**：删除旧版，确保 `-I runtime-flat/include` 下只有正确版本。
+
 ## 语法修改记录
+
+### 2025-06-25-3: POURegistry + 通用 runtime + 构建脚本（清理遗留文件）
+
+**完成内容**：
+1. POURegistry 类
+2. 编译器生成 `registerPOU_<fileId>()`
+3. runtime_main.cpp 重构为通用版（JSON 解析 + registry 查找）
+4. build.ps1 / build.bat 构建脚本
+5. tasks.json 配置文件
+6. **删除** `runtime-flat/generated_pou.cpp` 和 `runtime-flat/rt_runtime.h`（遗留旧版）
 
 ### 2025-06-24: 修复 ARRAY/STRUCT/CLASS 关键字识别
 
