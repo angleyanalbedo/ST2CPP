@@ -1233,6 +1233,7 @@ other_var_decls       //SC DONE        Bal 2022/5/16
                 : retain_var_decls
                 | no_retain_var_decls
                 | loc_partly_var_decl
+                | external_var_decls
                 ;
 
 no_retain_var_decls   //SC DONE        Bal 2022/5/16

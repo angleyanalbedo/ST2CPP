@@ -78,7 +78,7 @@ public class OscatLibraryTest {
                 compileFile(f);
                 passFiles.add(stem);
             } catch (ParseException e) {
-                parseErrors.add(stem + " | " + truncate(e.getMessage(), 120));
+                parseErrors.add(stem + " | " + truncate(e.getMessage(), 200));
             } catch (SemanticException e) {
                 semanticErrors.add(stem + " | " + truncate(e.getMessage(), 120));
             } catch (CodegenException e) {
@@ -202,7 +202,7 @@ public class OscatLibraryTest {
         System.out.println();
         System.out.println("--- Top Parse Errors ---");
         Map<String, Integer> parseCategories = categorize(parseErrors);
-        printTop(parseCategories, 10);
+        printTop(parseCategories, 20);
 
         System.out.println();
         System.out.println("--- Top Semantic Errors ---");
@@ -235,12 +235,13 @@ public class OscatLibraryTest {
 
     private String classifyError(String error) {
         String lower = error.toLowerCase();
+        if (lower.contains("no viable alternative")) {
+            return extractNoViableToken(error);
+        }
         if (lower.contains("mismatched input") && (lower.contains("function_block") || lower.contains("'function_block'")))
             return "FUNCTION_BLOCK keyword";
         if (lower.contains("mismatched input"))
             return "mismatched input (lowercase/unexpected token)";
-        if (lower.contains("no viable alternative"))
-            return "no viable alternative (unsupported syntax)";
         if (lower.contains("extraneous input"))
             return "extraneous input";
         if (lower.contains("missing"))
@@ -260,6 +261,59 @@ public class OscatLibraryTest {
         if (lower.contains("index") && lower.contains("out of bounds"))
             return "ArrayIndexOutOfBounds";
         return "other";
+    }
+
+    private String extractNoViableToken(String error) {
+        if (error.contains("VAR_EXTERNAL") || error.contains("'VAR_EXTERNAL'"))
+            return "no viable: VAR_EXTERNAL";
+        if (error.contains("VAR_ACCESS") || error.contains("'VAR_ACCESS'"))
+            return "no viable: VAR_ACCESS";
+        if (error.contains("VAR_CONFIG") || error.contains("'VAR_CONFIG'"))
+            return "no viable: VAR_CONFIG";
+        if (error.contains("CONFIGURATION") || error.contains("'CONFIGURATION'"))
+            return "no viable: CONFIGURATION";
+        if (error.contains("EXIT") || error.contains("'EXIT'"))
+            return "no viable: EXIT";
+        if (error.contains("CONTINUE") || error.contains("'CONTINUE'"))
+            return "no viable: CONTINUE";
+        if (error.contains("METHOD") || error.contains("'METHOD'"))
+            return "no viable: METHOD";
+        if (error.contains("CLASS") || error.contains("'CLASS'"))
+            return "no viable: CLASS";
+        if (error.contains("INTERFACE") || error.contains("'INTERFACE'"))
+            return "no viable: INTERFACE";
+        if (error.contains("NAMESPACE") || error.contains("'NAMESPACE'"))
+            return "no viable: NAMESPACE";
+        if (error.contains("RETAIN") || error.contains("'RETAIN'"))
+            return "no viable: RETAIN";
+        if (error.contains("CONSTANT") || error.contains("'CONSTANT'"))
+            return "no viable: CONSTANT";
+        if (error.contains("AT") || error.contains("'AT'"))
+            return "no viable: AT";
+        if (error.contains("REF_TO") || error.contains("'REF_TO'"))
+            return "no viable: REF_TO";
+        if (error.contains("ENUM") || error.contains("'ENUM'"))
+            return "no viable: ENUM";
+        if (error.contains("FUNCTION_BLOCK") || error.contains("'FUNCTION_BLOCK'"))
+            return "no viable: FUNCTION_BLOCK";
+        if (error.contains("EXTENDS") || error.contains("'EXTENDS'"))
+            return "no viable: EXTENDS";
+        if (error.contains("IMPLEMENTS") || error.contains("'IMPLEMENTS'"))
+            return "no viable: IMPLEMENTS";
+        if (error.contains("FINAL") || error.contains("'FINAL'") || error.contains("ABSTRACT"))
+            return "no viable: FINAL/ABSTRACT";
+        // 提取第一个 token 用于分析
+        int idx = error.indexOf("input '");
+        if (idx >= 0) {
+            int start = idx + 7;
+            int end = error.indexOf("'", start);
+            if (end > start) {
+                String token = error.substring(start, end);
+                if (token.length() > 60) token = token.substring(0, 60) + "...";
+                return "no viable: " + token;
+            }
+        }
+        return "no viable alternative";
     }
 
     private void printTop(Map<String, Integer> map, int n) {
