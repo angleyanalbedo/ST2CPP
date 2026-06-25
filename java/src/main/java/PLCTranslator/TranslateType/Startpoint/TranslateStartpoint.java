@@ -14,7 +14,7 @@ public class TranslateStartpoint {
 
     public String translateNode(PLCSTPARSERParser.StartpointContext ctx, PLCTranslatorNew translatorNew){
         StringBuilder sb = new StringBuilder();
-        // 使用 CodeGenerator 生成头文件（OOP 或 Flat）
+        // 使用 CodeGenerator 生成头文件
         sb.append(PLCTranslatorNew.codeGen.emitHeader());
         // 手动遍历子节点并拼接
         for (int i = 0; i < ctx.getChildCount(); i++) {

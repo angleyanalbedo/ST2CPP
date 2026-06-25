@@ -16,28 +16,33 @@ ST 源码 → ANTLR4 解析 → 静态语义分析 → 代码生成 → C++ → 
 ST2C-master/
 ├── java/                        # Java 编译器（ANTLR4 + 语义分析 + 代码生成）
 │   └── src/main/java/
-│       ├── Main.java            # 入口（支持 --backend oop|flat）
+│       ├── Main.java            # 入口（仅 Flat 后端）
 │       ├── antlr4/              # ANTLR 生成的 Lexer/Parser/Visitor
 │       ├── staticCheckVisitor/  # 语义检查 + 表达式预组装
-│       ├── PLCTranslator/       # 代码生成器（OOP/Flat 双后端）
+│       ├── PLCTranslator/       # 代码生成器（Flat 后端）
+│       │   ├── CodeGenerator.java       # 代码生成接口
+│       │   ├── FlatCodeGenerator.java   # Flat 后端实现（GVL 偏移量风格）
+│       │   └── TranslateType/           # 各语法节点的翻译器
 │       ├── PLCSymbolAndScope/   # 符号表 + 作用域栈
 │       ├── PLCTargetFileOutPut/ # 输出文件写入
 │       ├── PLCException/        # 异常体系
 │       └── JSON/                # JSON 工具
-├── runtime-flat/                # 新实时 Runtime（Flat 后端）
-│   ├── rt_plc.h                 # 类型系统 + 功能块 + 内置函数
-│   ├── rt_runtime.h             # 调度器 + GVL + PROGRAM 生命周期
+├── runtime-flat/                # 实时 Runtime（Flat 后端）
+│   ├── include/
+│   │   ├── rt_plc.h             # 类型系统 + 功能块 + 内置函数
+│   │   ├── rt_runtime.h         # 调度器 + GVL + PROGRAM 生命周期
+│   │   └── core/                # 核心实现（GVL, ErrorManager, 调度器）
 │   ├── runtime_main.cpp         # 运行时主程序（Scheduler 调度）
 │   ├── tests/                   # 测试用例
 │   │   ├── fibonacci.cpp        # 基础类型验证
 │   │   ├── multitask_demo.cpp   # 多任务调度演示
 │   │   └── framework_test.cpp   # 框架完整性测试（82 项）
 │   └── build/                   # CMake 构建输出
-├── runtime-oop/                 # 旧 OOP Runtime（PLC_Value 模型）
-│   └── ...
 ├── examples/                    # ST 示例程序
-│   └── test.st
-├── test-flat.bat                # Flat 后端测试脚本（编译器 + runtime 集成）
+│   ├── test.st                  # 原始测试（FOR 循环 + 函数调用）
+│   ├── test_struct.st           # STRUCT 类型测试
+│   └── test_arr_struct.st       # 数组 + STRUCT 测试
+├── test.bat                     # 一键测试脚本（编译器 + runtime 集成）
 ├── ST2C实时化改造方案.md         # 详细设计文档
 └── AGENTS.md                    # 本文件
 ```
@@ -66,18 +71,14 @@ C++17 标准，无外部依赖。
 cd java
 mvn compile
 
-# OOP 后端
-mvn exec:java -Dexec.mainClass="Main" -Dexec.args="--backend oop --input ../examples/test.st --output ../output/oop/main.cpp"
-
-# Flat 后端
-mvn exec:java -Dexec.mainClass="Main" -Dexec.args="--backend flat --input ../examples/test.st --output ../output/flat/main.cpp"
+mvn exec:java -Dexec.mainClass="Main" -Dexec.args="--input ../examples/test.st --output ../output/flat/main.cpp"
 ```
 
-### 集成测试（Flat 后端 + rt_runtime）
+### 集成测试（编译器 + rt_runtime）
 
 ```bash
-test-flat.bat              # 默认 examples\test.st
-test-flat.bat myprog.st    # 指定输入
+test.bat              # 默认 examples\test.st
+test.bat myprog.st    # 指定输入
 ```
 
 流程：编译 Java → Flat 翻译 → 编译 runtime_main + generated_pou → Scheduler 调度运行
@@ -115,19 +116,17 @@ test-flat.bat myprog.st    # 指定输入
 5. **多任务**：Cyclic（周期）/ Event（边沿触发）/ Freewheeling（连续）
 6. **冷/暖启动**：RETAIN 区域在暖启动时保留
 7. **错误不崩溃**：除零/越界/null 返回安全值 + 记录日志 + fatalMode → ERROR 状态
-8. **双后端**：OOP（PLC_Value 调试）和 Flat（GVL 偏移量产）
 
-### OOP vs Flat 后端对比
+### Flat 后端特征
 
-| 特性 | OOP 后端 | Flat 后端 |
-|------|---------|----------|
-| 头文件 | `PLC.h` | `rt_plc.h` + `rt_runtime.h` |
-| 变量 | `auto* A = new INT(10)` | GVL 偏移量分配 |
-| 函数 | `class FUN : public PLC_Function<INT>` | `INT FUN(INT X)` |
-| 表达式 | `*A + *B` | `gvl.read<INT>(0) + gvl.read<INT>(2)` |
-| 返回值 | `*this->returnValue = expr` | `return expr` |
-| 调度 | `main()` 直接调用 | `Scheduler::tick()` 多任务调度 |
-| 用途 | 调试/教学 | 生产/实时 |
+| 特性 | 说明 |
+|------|------|
+| 头文件 | `rt_plc.h` + `rt_runtime.h` |
+| 变量 | GVL 偏移量分配 |
+| 函数 | `INT FUN(INT X)` |
+| 表达式 | `gvl.read<INT>(0) + gvl.read<INT>(2)` |
+| 返回值 | `return expr` |
+| 调度 | `Scheduler::tick()` 多任务调度 |
 
 ## TODO 列表
 
@@ -161,7 +160,7 @@ test-flat.bat myprog.st    # 指定输入
 - [x] **RETAIN 区域标记**：编译器生成 `setRetainRegion()` 调用
 - [x] **ARRAY 类型支持**：Flat 模式支持 `VAR` 内联数组声明和元素访问
 - [ ] **FB（功能块）翻译**：当前仅支持 FUNCTION 和 PROGRAM
-- [x] **STRUCT 类型支持**：Flat 模式下 STRUCT 声明生成 C++ struct（对齐偏移），支持 `STRUCT.FIELD` 和 `ARR[I].FIELD`（读/写）
+- [x] **STRUCT 类型支持**：STRUCT 声明生成 C++ struct（对齐偏移），支持 `STRUCT.FIELD` 和 `ARR[I].FIELD`（读/写）
 - [x] **FOR 循环 GVL 局部阴影**：FOR 循环控制变量使用局部副本，循环体引用跳过 GVL 替换，循环结束后写回 GVL
 
 ## 开发指南
@@ -191,10 +190,10 @@ test-flat.bat myprog.st    # 指定输入
 参考 `ST2C实时化改造方案.md`：
 
 1. `CodeGenerator` 接口定义后端行为（`emitHeader`, `emitAssign`, `emitForBegin` 等）
-2. `OOPCodeGenerator` / `FlatCodeGenerator` 实现具体后端
+2. `FlatCodeGenerator` 实现具体后端
 3. `PLCTranslatorNew`（Visitor 调度器）遍历语法树，调用 `TranslateXxx`
-4. `TranslateXxx` 类根据 `translatorNew.codeGen` 类型选择 OOP/Flat 代码生成路径
-5. `FlatCodeGenerator.translateExpr()` 将 OOP 风格表达式转换为原生 C++
+4. `TranslateXxx` 类使用 `PLCTranslatorNew.codeGen` 代码生成器
+5. `FlatCodeGenerator.translateExpr()` 将中间表达式转换为原生 C++
 
 ## 语法修改记录
 

@@ -3,11 +3,9 @@ package PLCTranslator;
 import java.util.List;
 
 /**
- * 代码生成器接口 — 支持 OOP 和 Flat 两种后端
+ * 代码生成器接口 — Flat 后端
  *
- * OOP 后端：生成 PLC_Value 风格代码（调试/教学用）
- * Flat 后端：生成 GVL 偏移量风格代码（生产/性能用）
- *
+ * 生成 GVL 偏移量风格代码（生产/性能用）。
  * 所有 emit 方法返回生成的代码字符串（而非直接写文件），
  * 由顶层调度器统一收集后一次性写入文件。
  */
@@ -26,15 +24,11 @@ public interface CodeGenerator {
 
     /**
      * 生成局部变量声明
-     * OOP:  auto* x = new INT(0);
-     * Flat: // 偏移量已分配，无需声明
      */
     String emitVarDecl(String name, String typeName, String assignVar);
 
     /**
      * 生成全局变量声明
-     * OOP:  auto* x = new INT(0);
-     * Flat: // 偏移量已分配，无需声明
      */
     String emitGlobalVarDecl(String name, String typeName, String assignVar, String varSection);
 
@@ -48,15 +42,11 @@ public interface CodeGenerator {
 
     /**
      * 生成变量赋值
-     * OOP:  counter = counter + 1;
-     * Flat: gvl.write<INT>(0, gvl.read<INT>(0) + 1);
      */
     String emitAssign(String varName, String exprAssignVar);
 
     /**
      * 生成函数返回值赋值
-     * OOP:  *this->returnValue = expr;
-     * Flat: return expr;
      */
     String emitFuncReturnAssign(String exprAssignVar);
 
@@ -89,8 +79,6 @@ public interface CodeGenerator {
 
     /**
      * 生成函数声明开始
-     * OOP:  class FuncName : public PLC_Function<ReturnType> {
-     * Flat: ReturnType FuncName(参数列表) {
      */
     String emitFuncDeclBegin(String funcName, String returnType, String params);
 
@@ -107,15 +95,11 @@ public interface CodeGenerator {
 
     /**
      * 生成函数调用
-     * OOP:  FuncName::callFunc(...)
-     * Flat: FuncName(...)
      */
     String emitFuncCall(String funcName, List<String> params);
 
     /**
      * 生成 PROGRAM 声明开始
-     * OOP:  int main() { initFunc();
-     * Flat: void PROGRAM_Name(GVL& gvl, ProcessImage& io, TIME dt) {
      */
     String emitProgDeclBegin(String progName);
 
@@ -146,25 +130,18 @@ public interface CodeGenerator {
     // ═══ 表达式转换 ═══
 
     /**
-     * 将静态检查层生成的 OOP 风格表达式转换为当前后端的表达式。
+     * 将静态检查层生成的中间表达式转换为 Flat 后端的表达式。
      *
-     * OOP 风格的 assignVar 示例：
-     *   - 字面量：(*(new INT(2)))
-     *   - 变量引用：(*::PLC::RFM->getSymbolByID<TYPE*>(symbolId))
-     *   - 函数调用：*::PLC::RFM->getSymbolByID<FUN*>(id)->callFunc(&p1, &p2)
-     *   - 复合表达式：((*(new INT(1))) + (*(new INT(2))))
-     *
-     * OOP 后端：直接返回原字符串（直通）
-     * Flat 后端：转换为原生 C++ 表达式
-     *   - 字面量：2
+     * 中间表达式示例：
+     *   - 字面量：(*(new INT(2))) → 2
      *   - 变量引用：gvl.read<TYPE>(offset)
      *   - 函数调用：FUN(p1, p2)
      *   - 复合表达式：(1 + 2)
      *
-     * @param oopExpr 静态检查层生成的 OOP 风格表达式
-     * @return 当前后端风格的表达式
+     * @param expr 静态检查层生成的中间表达式
+     * @return Flat 后端的表达式
      */
-    String translateExpr(String oopExpr);
+    String translateExpr(String expr);
 
 
     // ═══ 底层输出 ═══

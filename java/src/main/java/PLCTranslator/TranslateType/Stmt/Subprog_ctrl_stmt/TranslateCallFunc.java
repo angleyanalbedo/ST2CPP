@@ -15,11 +15,9 @@ public class TranslateCallFunc {
                 PLCVariable plcVariable =(PLCVariable) PLCTranslatorNew.properties.get(param_assignContext).get(0);
                 String typeName = plcVariable.getRuntimeTypeName();
                 if (typeName == null || typeName.isEmpty()) {
-                    typeName = "INT"; // 默认类型
+                    typeName = "INT";
                 }
-                if (translatorNew.codeGen instanceof PLCTranslator.FlatCodeGenerator) {
-                    typeName = ((PLCTranslator.FlatCodeGenerator) translatorNew.codeGen).toNativeType(typeName);
-                }
+                typeName = ((PLCTranslator.FlatCodeGenerator) translatorNew.codeGen).toNativeType(typeName);
                 sb.append("\n\t\t" + typeName + " " + plcVariable.getRuntimeName() + "=" + translatorNew.codeGen.translateExpr(plcVariable.getAssignVar()) + ";");
 
             }

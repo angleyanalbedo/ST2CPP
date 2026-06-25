@@ -1,7 +1,6 @@
 import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
 import PLCTranslator.CodeGenerator;
 import PLCTranslator.FlatCodeGenerator;
-import PLCTranslator.OOPCodeGenerator;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERLexer;
 import antlr4.PLCSTPARSERParser;
@@ -19,10 +18,7 @@ import java.io.FileWriter;
 import java.util.ArrayList;
 
 /**
- * ST2C++ 编译器入口
- *
- * 支持多进程隔离：每个进程独立选择 OOP 或 Flat 后端模式。
- * 同一进程内多线程共享同一模式（通过 static codeGen）。
+ * ST2C++ 编译器入口（Flat 后端）
  */
 public class Main {
 
@@ -30,7 +26,7 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
         // 默认参数
-        String backend = "oop";
+        String backend = "flat";
         String inputFile = "src/main/resources/input/input.st";
         String outputFile = "src/main/resources/output/main.cpp";
         boolean verbose = false;
@@ -66,13 +62,6 @@ public class Main {
             }
         }
 
-        // 验证后端模式
-        backend = backend.toLowerCase();
-        if (!backend.equals("oop") && !backend.equals("flat")) {
-            System.err.println("Error: Unknown backend '" + backend + "'. Use 'oop' or 'flat'.");
-            System.exit(1);
-        }
-
         // 验证输入文件存在
         File input = new File(inputFile);
         if (!input.exists()) {
@@ -89,19 +78,8 @@ public class Main {
 
         long startTime = System.currentTimeMillis();
 
-        // 选择代码生成器
-        CodeGenerator codeGen;
-        switch (backend) {
-            case "flat":
-                codeGen = new FlatCodeGenerator();
-                if (verbose) System.out.println("[Backend] Flat (rt_plc.h + rt_runtime.h)");
-                break;
-            case "oop":
-            default:
-                codeGen = new OOPCodeGenerator();
-                if (verbose) System.out.println("[Backend] OOP (PLC.h)");
-                break;
-        }
+        // 选择代码生成器（仅 Flat 后端）
+        CodeGenerator codeGen = new FlatCodeGenerator();
 
         if (verbose) {
             System.out.println("[Input]  " + inputFile);
@@ -161,17 +139,12 @@ public class Main {
         System.out.println("Options:");
         System.out.println("  -h, --help           Show this help message and exit");
         System.out.println("  -v, --version        Show version information and exit");
-        System.out.println("  --backend <mode>     Code generator backend: oop | flat (default: oop)");
+        System.out.println("  --backend <mode>     Reserved, only 'flat' is supported");
         System.out.println("  --input <file>       Input ST source file (default: src/main/resources/input/input.st)");
         System.out.println("  --output <file>      Output C++ file (default: src/main/resources/output/main.cpp)");
         System.out.println("  --verbose            Print detailed translation statistics");
         System.out.println();
-        System.out.println("Backends:");
-        System.out.println("  oop   - PLC_Value style, heap objects, debugging-friendly");
-        System.out.println("  flat  - GVL offset style, zero heap, performance-oriented");
-        System.out.println();
         System.out.println("Examples:");
-        System.out.println("  java Main --backend flat --input program.st --output out.cpp");
-        System.out.println("  java Main --backend oop --verbose");
+        System.out.println("  java Main --input program.st --output out.cpp");
     }
 }

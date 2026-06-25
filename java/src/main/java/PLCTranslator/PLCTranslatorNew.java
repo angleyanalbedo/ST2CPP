@@ -55,12 +55,12 @@ import org.antlr.v4.runtime.tree.ParseTreeProperty;
 public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     //树节点信息
     static public ParseTreeProperty<java.util.ArrayList<PLCSymbol>> properties = new ParseTreeProperty<>();
-    //代码生成器（OOP 或 Flat）
+    //代码生成器（仅 Flat 后端）
     static public CodeGenerator codeGen;
 
     public PLCTranslatorNew(ParseTreeProperty<java.util.ArrayList<PLCSymbol>> properties) {
         PLCTranslatorNew.properties = properties;
-        PLCTranslatorNew.codeGen = new OOPCodeGenerator(); // 默认 OOP
+        PLCTranslatorNew.codeGen = new FlatCodeGenerator(); // 默认 Flat
     }
 
     public PLCTranslatorNew(ParseTreeProperty<java.util.ArrayList<PLCSymbol>> properties, CodeGenerator codeGenerator) {
@@ -535,18 +535,13 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
      * @return 生成的代码字符串
      */
     @Override public String visitStruct_type_decl(PLCSTPARSERParser.Struct_type_declContext ctx) {
-        if (codeGen instanceof FlatCodeGenerator flatGen) {
-            return translateStructTypeDeclFlat(ctx, flatGen);
-        }
-        // OOP 后端：使用旧有的 TranslateStruct_type_decl
-        TranslateStruct_type_decl translateStruct_type_decl = new TranslateStruct_type_decl();
-        return translateStruct_type_decl.translateNode(ctx, this);
+        return translateStructTypeDeclFlat(ctx, (FlatCodeGenerator) codeGen);
     }
 
     private String translateStructTypeDeclFlat(PLCSTPARSERParser.Struct_type_declContext ctx, FlatCodeGenerator flatGen) {
         PLCStructDeclSymbol structSymbol = (PLCStructDeclSymbol) properties.get(ctx).get(0);
         String structName = structSymbol.getName();
-        String oopTypeName = "PLC_Struct_Value<" + structSymbol.getTypeId() + ">";
+        String runtimeType = "PLC_Struct_Value<" + structSymbol.getTypeId() + ">";
 
         StringBuilder sb = new StringBuilder();
         sb.append("\nstruct ").append(structName).append(" {");
@@ -569,7 +564,7 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
 
         FlatCodeGenerator.StructLayout layout = new FlatCodeGenerator.StructLayout(
                 structName, fields, currentOffset);
-        flatGen.registerStructType(structName, oopTypeName, layout);
+        flatGen.registerStructType(structName, runtimeType, layout);
 
         // 注册 GVL 变量映射（以便表达式翻译）
         flatGen.registerVariable(structName, String.valueOf(structSymbol.getSymbolId()));

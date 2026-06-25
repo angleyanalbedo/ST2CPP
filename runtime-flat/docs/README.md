@@ -4,7 +4,7 @@
 
 `runtime-flat` 是 ST2C 项目的实时运行时，采用平坦内存模型（Flat Memory Model），面向工业 PLC 控制场景。所有变量存储在一块 64KB 的 `GVL.memory` 数组中，编译器计算偏移量，运行时通过 `ptr<T>(offset)` 一次解引用访问，实现零额外开销。
 
-与旧版 OOP Runtime（`Runtime/lib/`，Type-Value 包装模型）相比，Flat 后端牺牲调试便利性换取生产级实时性能。
+采用平坦内存模型（Flat Memory Model），编译器计算偏移量，运行时通过 `ptr<T>(offset)` 一次解引用，零额外开销。
 
 ## 目录结构
 

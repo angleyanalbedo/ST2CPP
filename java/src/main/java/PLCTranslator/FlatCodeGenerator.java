@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
  *
  * 所有 emit 方法返回代码字符串（不再直接写文件）。
  * 所有接收表达式参数的 emit 方法会自动调用 translateExpr() 将
- * OOP 风格的 assignVar 转换为原生 C++ 表达式。
+ * 中间表达式转换为原生 C++ 表达式。
  */
 public class FlatCodeGenerator implements CodeGenerator {
 
@@ -59,7 +59,7 @@ public class FlatCodeGenerator implements CodeGenerator {
     private final Map<String, StructLayout> structLayoutMap = new HashMap<>();
 
     // PLC_Struct_Value<ID> → struct 类型名映射
-    private final Map<String, String> oopStructTypeToName = new HashMap<>();
+    private final Map<String, String> structTypeToName = new HashMap<>();
 
     // ─── FOR 循环 GVL 局部变量遮盖 ───
     // 被 FOR 循环局部变量遮盖的 GVL 变量名集合（O(1) 查询用）
@@ -74,13 +74,13 @@ public class FlatCodeGenerator implements CodeGenerator {
     /**
      * 注册一个 struct 类型
      * @param typeName    C++ struct 名（如 "MyStruct"）
-     * @param oopTypeName PLC_Struct_Value<ID> 字符串
+     * @param runtimeType 运行时类型名（PLC_Struct_Value<ID>）
      * @param layout      struct 布局信息
      */
-    public void registerStructType(String typeName, String oopTypeName, StructLayout layout) {
+    public void registerStructType(String typeName, String runtimeType, StructLayout layout) {
         structLayoutMap.put(typeName, layout);
-        // 注册 OOP 类型名 → C++ struct 名的映射
-        oopStructTypeToName.put(oopTypeName, typeName);
+        // 注册运行时类型名 → C++ struct 名的映射
+        structTypeToName.put(runtimeType, typeName);
         // 注册到 SIZE_MAP 用于偏移量计算
         SIZE_MAP.put(typeName, layout.totalSize);
     }
@@ -150,8 +150,8 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     public String toNativeType(String typeName) {
         if (typeName == null) return typeName;
-        // 优先查实例级 OOP struct 映射
-        String mapped = oopStructTypeToName.get(typeName);
+        // 优先查运行时类型名 → C++ struct 映射
+        String mapped = structTypeToName.get(typeName);
         if (mapped != null) return mapped;
         // 再查静态类型映射
         mapped = TYPE_MAP.get(typeName);
@@ -202,7 +202,7 @@ public class FlatCodeGenerator implements CodeGenerator {
      * 获取变量的 GVL 读取表达式
      */
     private String readExpr(String varName) {
-        // 去掉 OOP 模式的解引用星号前缀
+        // 去掉解引用星号前缀
         String cleanName = varName.startsWith("*") ? varName.substring(1) : varName;
 
         // 检测数组元素访问：ARR[I] 或 (ARR[I])
@@ -238,9 +238,9 @@ public class FlatCodeGenerator implements CodeGenerator {
      * 获取变量的 GVL 写入语句
      */
     private String writeExpr(String varName, String valueExpr) {
-        // 去掉 OOP 模式的解引用星号前缀
+        // 去掉解引用星号前缀
         String cleanName = varName.startsWith("*") ? varName.substring(1) : varName;
-        // 处理 OOP 函数返回值：*this->returnValue → return
+        // 处理函数返回值：*this->returnValue → return
         if (cleanName.trim().equals("this->returnValue")) {
             return "return " + valueExpr;
         }
@@ -480,7 +480,7 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     @Override
     public String emitForBegin(String controlVar, String fromAssignVar, String toAssignVar, String stepAssignVar) {
-        // 去掉 OOP 模式的解引用星号前缀
+        // 去掉解引用星号前缀
         String cleanVar = controlVar.startsWith("*") ? controlVar.substring(1) : controlVar;
         StringBuilder sb = new StringBuilder();
 
@@ -666,14 +666,12 @@ public class FlatCodeGenerator implements CodeGenerator {
     // ═══ 表达式转换 ═══
 
     /**
-     * OOP→Flat 表达式转换器
-     *
-     * 将静态检查层生成的 OOP 风格 assignVar 转换为原生 C++ 表达式。
+     * 表达式转换器：将静态检查层生成的中间表达式转换为原生 C++ 表达式。
      *
      * 转换规则：
      * 1. 字面量：(*(new INT(2))) → (2)
-     * 2. 变量引用：(*::PLC::RFM->getSymbolByID<TYPE*>(id)) → gvl.read<TYPE>(offset) 或 varName
-     * 3. 函数调用：*::PLC::RFM->getSymbolByID<FUN*>(id)->callFunc(&p1, &p2) → FUN(p1, p2)
+     * 2. 变量引用 → gvl.read<TYPE>(offset) 或 varName
+     * 3. 函数调用 → FUN(p1, p2)
      * 4. 清理残余的解引用星号
      */
     private static final Pattern LITERAL_PATTERN =
@@ -689,12 +687,12 @@ public class FlatCodeGenerator implements CodeGenerator {
             Pattern.compile("::PLC::RFM->getSymbolByID<(\\w+)\\*>\\s*\\(\\s*(\\d+)\\s*\\)");
 
     @Override
-    public String translateExpr(String oopExpr) {
-        if (oopExpr == null || oopExpr.isEmpty()) {
-            return oopExpr;
+    public String translateExpr(String expr) {
+        if (expr == null || expr.isEmpty()) {
+            return expr;
         }
 
-        String result = oopExpr;
+        String result = expr;
         boolean changed = true;
         int maxRounds = 10;
         while (changed && maxRounds-- > 0) {
@@ -806,9 +804,8 @@ public class FlatCodeGenerator implements CodeGenerator {
             if (!changed && result.equals(prev)) break;
         }
 
-        // 6. 清理残余的 OOP 解引用星号
-        // OOP 模式下变量是指针，使用 *varName 解引用
-        // Flat 模式下变量是值类型，不需要解引用
+        // 6. 清理残余的解引用星号
+        // 变量是值类型，不需要解引用
         // 匹配独立的 *varName（不在运算符上下文中）
         // 策略：替换 (*varName) 为 (varName)，以及独立的 *varName 为 varName
         result = result.replaceAll("\\(\\*([A-Za-z_]\\w*)\\)", "($1)");
@@ -817,8 +814,8 @@ public class FlatCodeGenerator implements CodeGenerator {
         // 清理 ( 后面紧跟的 *
         result = result.replace("( *", "(");
 
-        // 6. 清理 OOP 运行时特有的表达式
-        // *this->returnValue → returnValue（Flat 模式下用局部变量替代）
+        // 清理遗留的 *this->returnValue 模式
+        // *this->returnValue → returnValue
         result = result.replace("*this->returnValue", "returnValue");
 
         // 7. GVL 变量替换：简单变量名 → gvl.read<TYPE>(offset)
