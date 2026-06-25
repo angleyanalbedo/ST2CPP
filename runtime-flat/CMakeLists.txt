@@ -58,6 +58,26 @@ target_link_libraries(multitask_demo rt_scheduler)
 add_executable(framework_test tests/framework_test.cpp)
 target_link_libraries(framework_test rt_scheduler)
 
+# GVL 单元测试
+add_executable(gvl_test tests/gvl_test.cpp)
+target_link_libraries(gvl_test rt_core)
+
+# ErrorManager 单元测试
+add_executable(error_manager_test tests/error_manager_test.cpp)
+target_link_libraries(error_manager_test rt_core)
+
+# 标准功能块单元测试
+add_executable(fb_test tests/fb_test.cpp)
+target_link_libraries(fb_test rt_core)
+
+# 类型转换 & 字符串操作单元测试
+add_executable(type_conversion_test tests/type_conversion_test.cpp)
+target_link_libraries(type_conversion_test rt_core)
+
+# POURegistry & ProgramInstance 单元测试
+add_executable(registry_test tests/registry_test.cpp)
+target_link_libraries(registry_test rt_core)
+
 # 运行时主程序（编译器生成代码 + 调度器）
 add_executable(runtime_main runtime_main.cpp)
 target_link_libraries(runtime_main rt_scheduler)
