@@ -26,10 +26,10 @@
 
 - [x] **24 处无保护的 PLCVariable 强转**：多个 TranslateXxx 中 `(PLCVariable) properties.get(ctx).get(0)` 未检查类型，若 properties 含 PLCTypeDeclSymbol 等会 ClassCastException
   - 涉及文件：TranslateCase_stmt, TranslateAssert_stmt, TranslateFunc_call, TranslateCallFunc, TranslateStruct_elem_decl, TranslateElsif_stmt, TranslateIf_stmt, TranslateWhile_stmt, TranslateRepeat_stmt, TranslateFor_stmt, TranslateVariableAssignExpression, TranslateInvocation1/2
-- [ ] **多文件同名 PROGRAM 链接冲突**：多个 .st 定义同名 PROGRAM 导致 multiple definition 错误
+- [x] **多文件同名 PROGRAM 链接冲突**：多个 .st 定义同名 PROGRAM 导致 multiple definition 错误
   - 需要：同名时编译器报出重定义错误
-- [ ] **runtime_main 链接失败**：CMake 的 `runtime_main` 目标未链接 `pou_registry.gen.cpp`，`registerAllPOUs` 未定义
-  - 需要：CMakeLists.txt 中 `runtime_main` 目标添加 `${POU_REGISTRY}` 依赖
+- [x] **runtime_main 链接失败**：CMake 的 `runtime_main` 目标未链接 `pou_registry.gen.cpp`，`registerAllPOUs` 未定义
+  - 修复：`runtime_main` 使用 `RUNTIME_MAIN_STANDALONE` 定义空 stub；完整版用 `runtime` 目标
 
 ### 编译器功能缺失
 

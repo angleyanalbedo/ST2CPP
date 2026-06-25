@@ -71,14 +71,10 @@ target_link_libraries(unit_test rt_core)
 target_include_directories(unit_test PRIVATE ${RT_INCLUDE_DIR} tests)
 target_link_options(unit_test PRIVATE -mconsole)
 
-# 运行时主程序（编译器生成代码 + 调度器）
-add_executable(runtime_main runtime_main.cpp)
-target_link_libraries(runtime_main rt_scheduler)
-
 # ═══ 可执行文件：runtime（集成生成的 POU 代码） ═══
 
 # 编译器生成的 .cpp 目录（由 Java 编译器产出，CMake 不参与 ST 编译）
-set(GEN_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../output/flat/build"
+set(GEN_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../output/flat/"
     CACHE PATH "Directory containing generated POU .cpp files from Java compiler")
 file(GLOB GEN_POU_FILES "${GEN_CPP_DIR}/*.cpp")
 
@@ -100,6 +96,11 @@ foreach(F ${GEN_POU_FILES})
 endforeach()
 
 file(APPEND "${POU_REGISTRY}" "${POU_EXTERNS}\nvoid registerAllPOUs(POURegistry& reg) {\n${POU_CALLS}}\n")
+
+# 运行时主程序（独立可运行，POU 注册表为空；完整版用 runtime 目标）
+add_executable(runtime_main runtime_main.cpp)
+target_link_libraries(runtime_main rt_scheduler)
+target_compile_definitions(runtime_main PRIVATE RUNTIME_MAIN_STANDALONE)
 
 if(GEN_POU_FILES)
     add_executable(runtime
