@@ -30,7 +30,7 @@ public class VisitBy_list implements Strategy {
             }
         }catch(PLCSemanticException e){
             System.err.println(e.getMessage());
-            System.exit(-1);
+            throw new RuntimeException("ST2C: unsupported construct");
         }
         return visitor.packSymbols(exprSymbol);
     }

@@ -52,7 +52,7 @@ public class VisitFor_stmt implements Strategy {
         }catch(PLCSemanticException e){
             System.err.println(e.getMessage());
             e.printStackTrace();
-            System.exit(-1);
+            throw new RuntimeException("ST2C: unsupported construct");
         }
         return null;
     }

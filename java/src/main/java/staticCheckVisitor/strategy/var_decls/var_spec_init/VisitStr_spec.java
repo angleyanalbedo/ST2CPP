@@ -43,7 +43,7 @@ public class VisitStr_spec implements Strategy {
             }
             catch(PLCSemanticException e){
                 System.err.println(e.getMessage());
-                System.exit(-1);
+                throw new RuntimeException("ST2C: unsupported construct");
             }
 
         }

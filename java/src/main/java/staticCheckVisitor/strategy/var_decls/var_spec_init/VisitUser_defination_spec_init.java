@@ -48,7 +48,7 @@ public class VisitUser_defination_spec_init implements Strategy {
                 userDefinationVar.setAssignVar(constExpr.getAssignVar());
             }catch(PLCSemanticException e){
                 System.err.println(e.getMessage());
-                System.exit(-1);
+                throw new RuntimeException("ST2C: unsupported construct");
             }
         }
 

@@ -38,7 +38,7 @@ public class VisitSubrange implements Strategy {
         }catch(PLCSemanticException e){
             System.err.println(e.getMessage());
             e.printStackTrace();
-            System.exit(-1);
+            throw new RuntimeException("ST2C: unsupported construct");
         }
         PLCSubrangeDeclSymbol targetSymbol = new PLCSubrangeDeclSymbol();
         targetSymbol.setLowerLimit(constSymbol.getAssignVar());

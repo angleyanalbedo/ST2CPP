@@ -27,7 +27,7 @@ public class VisitWhile_stmt implements Strategy {
             }
         }catch(PLCSemanticException e){
             System.err.println(e.getMessage());
-            System.exit(-1);
+            throw new RuntimeException("ST2C: unsupported construct");
         }
         //stmt_list
         visitor.visit(ctx.stmt_list());

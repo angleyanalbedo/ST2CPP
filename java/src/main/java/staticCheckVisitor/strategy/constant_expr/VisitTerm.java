@@ -46,7 +46,7 @@ public class VisitTerm implements Strategy {
                     }
                 }catch (PLCSemanticException e){
                     System.err.println(e.getMessage());
-                    System.exit(-1);
+                    throw new RuntimeException("ST2C: unsupported construct");
                 }
 
                 //拼接字符串

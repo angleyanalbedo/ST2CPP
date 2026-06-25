@@ -45,7 +45,7 @@ public class VisitStr_spec_init implements Strategy {
                 strInitVar.setAssignVar(constType.getAssignVar());
             }catch(PLCSemanticException e){
                 System.err.println(e.getMessage());
-                System.exit(-1);
+                throw new RuntimeException("ST2C: unsupported construct");
             }
         }
 
