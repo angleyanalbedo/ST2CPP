@@ -80,12 +80,32 @@ public class OscatLibraryTest {
             } catch (ParseException e) {
                 parseErrors.add(stem + " | " + truncate(e.getMessage(), 200));
             } catch (SemanticException e) {
-                semanticErrors.add(stem + " | " + truncate(e.getMessage(), 120));
+                String msg = e.getMessage() != null ? e.getMessage() : "";
+                // 提取 NPE 位置
+                String loc = extractLocation(e);
+                if (!loc.isEmpty()) msg = "NPE@" + loc + " | " + truncate(msg, 60);
+                semanticErrors.add(stem + " | " + truncate(msg, 120));
             } catch (CodegenException e) {
-                codegenErrors.add(stem + " | " + truncate(e.getMessage(), 120));
+                String msg = e.getMessage() != null ? e.getMessage() : "";
+                String loc = extractLocation(e);
+                if (!loc.isEmpty()) msg = "NPE@" + loc + " | " + truncate(msg, 60);
+                codegenErrors.add(stem + " | " + truncate(msg, 120));
             } catch (Exception e) {
                 String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
-                parseErrors.add(stem + " | " + truncate(msg, 120));
+                // 捕获 NPE 的堆栈信息
+                if (e instanceof NullPointerException) {
+                    StackTraceElement[] st = e.getStackTrace();
+                    String loc = "";
+                    for (StackTraceElement s : st) {
+                        if (s.getClassName().contains("staticCheckVisitor") || s.getClassName().contains("PLCTranslator")) {
+                            loc = s.getClassName().substring(s.getClassName().lastIndexOf('.') + 1) + ":" + s.getLineNumber();
+                            break;
+                        }
+                    }
+                    semanticErrors.add(stem + " | NPE at " + loc + " | " + truncate(msg, 80));
+                } else {
+                    semanticErrors.add(stem + " | " + truncate(msg, 120));
+                }
             }
         }
 
@@ -164,7 +184,7 @@ public class OscatLibraryTest {
         try {
             visitor.visit(tree);
         } catch (Exception e) {
-            throw new SemanticException(unwrap(e));
+            throw new SemanticException(unwrap(e), e);
         }
 
         // Phase 3: Codegen
@@ -176,7 +196,7 @@ public class OscatLibraryTest {
             String code = translator.visit(tree);
             if (code == null) throw new CodegenException("codegen returned null");
         } catch (Exception e) {
-            throw new CodegenException(unwrap(e));
+            throw new CodegenException(unwrap(e), e);
         }
     }
 
@@ -208,6 +228,9 @@ public class OscatLibraryTest {
         System.out.println("--- Top Semantic Errors ---");
         Map<String, Integer> semanticCategories = categorize(semanticErrors);
         printTop(semanticCategories, 10);
+        System.out.println();
+        System.out.println("--- Top NPE Locations ---");
+        printTopNpeLocations(semanticErrors, 10);
 
         System.out.println();
         System.out.println("--- Top Codegen Errors ---");
@@ -254,7 +277,7 @@ public class OscatLibraryTest {
             return "symbol not found";
         if (lower.contains("return") && lower.contains("function"))
             return "missing RETURN";
-        if (lower.contains("null") || lower.contains("nullpointer"))
+        if (lower.contains("null") || lower.contains("nullpointer") || lower.contains("npe@"))
             return "NPE / null";
         if (lower.contains("classcast"))
             return "ClassCastException";
@@ -316,6 +339,24 @@ public class OscatLibraryTest {
         return "no viable alternative";
     }
 
+    private void printTopNpeLocations(List<String> errors, int n) {
+        Map<String, Integer> map = new LinkedHashMap<>();
+        for (String e : errors) {
+            if (e.contains("NPE@")) {
+                int start = e.indexOf("NPE@") + 4;
+                int end = e.indexOf(" |", start);
+                if (end > start) {
+                    String loc = e.substring(start, end);
+                    map.put(loc, map.getOrDefault(loc, 0) + 1);
+                }
+            }
+        }
+        map.entrySet().stream()
+            .sorted((a, b) -> b.getValue() - a.getValue())
+            .limit(n)
+            .forEach(e -> System.out.printf("  %3dx  %s%n", e.getValue(), e.getKey()));
+    }
+
     private void printTop(Map<String, Integer> map, int n) {
         map.entrySet().stream()
             .sorted((a, b) -> b.getValue() - a.getValue())
@@ -354,6 +395,18 @@ public class OscatLibraryTest {
             });
     }
 
+    private static String extractLocation(Exception e) {
+        Throwable t = e;
+        while (t.getCause() != null && t.getCause() != t) t = t.getCause();
+        for (StackTraceElement s : t.getStackTrace()) {
+            String cn = s.getClassName();
+            if (cn.contains("staticCheckVisitor.strategy") || cn.contains("PLCTranslator.TranslateType")) {
+                return cn.substring(cn.lastIndexOf('.') + 1) + ":" + s.getLineNumber();
+            }
+        }
+        return "";
+    }
+
     private static List<File> collectStFiles(File dir) {
         List<File> result = new ArrayList<>();
         File[] files = dir.listFiles();
@@ -388,10 +441,12 @@ public class OscatLibraryTest {
 
     private static class SemanticException extends Exception {
         SemanticException(String msg) { super(msg); }
+        SemanticException(String msg, Throwable cause) { super(msg, cause); }
     }
 
     private static class CodegenException extends Exception {
         CodegenException(String msg) { super(msg); }
+        CodegenException(String msg, Throwable cause) { super(msg, cause); }
     }
 
     // ─── ANTLR error listener that throws ───

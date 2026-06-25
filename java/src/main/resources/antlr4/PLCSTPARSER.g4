@@ -16,11 +16,10 @@ PROG
 
 */
 startpoint
-          : ( func_decl           
+          : ( fb_decl
+            | func_decl           
             | config_decl          
             | prog_decl          
-            | pou_decl
-            | fb_decl
             | pou_decl
             )+ EOF
           ;

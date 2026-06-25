@@ -33,11 +33,11 @@
 
 ### 编译器功能缺失
 
-- [ ] **FB（功能块）翻译**：当前仅支持 FUNCTION 和 PROGRAM，无法翻译 FUNCTION_BLOCK 声明和实例化
-- [ ] **ENUM 类型声明**：TYPE...END_TYPE 中的 ENUM 在 PROGRAM 变量段输出 `// TODO` 注释
-- [ ] **VAR_INPUT/VAR_OUTPUT/VAR_IN_OUT**：PROGRAM 的 IO 参数声明未正确处理
-- [ ] **标准 FB 调用集成**：运行时有 TON/CTU/CTD/R_TRIG/F_TRIG 实现，但编译器不会生成调用代码
-- [ ] **FB 实例化**：无法 `VAR btn : TON; END_VAR` 声明 FB 实例
+- [x] **FB（功能块）翻译**：当前仅支持 FUNCTION 和 PROGRAM，无法翻译 FUNCTION_BLOCK 声明和实例化
+- [x] **ENUM 类型声明**：TYPE...END_TYPE 中的 ENUM 在 PROGRAM 变量段输出 `// TODO` 注释
+- [x] **VAR_INPUT/VAR_OUTPUT/VAR_IN_OUT**：PROGRAM 的 IO 参数声明未正确处理
+- [x] **标准 FB 调用集成**：运行时有 TON/CTU/CTD/R_TRIG/F_TRIG 实现，但编译器不会生成调用代码
+- [x] **FB 实例化**：无法 `VAR btn : TON; END_VAR` 声明 FB 实例
 
 ## 🟡 中优先级（可观测性 + 质量）
 
