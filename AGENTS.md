@@ -218,6 +218,41 @@ test.bat myprog.st    # 指定输入
 
 **待修复**：静态检查器 `VisitVariableAssignExpression` 需要支持数组元素访问的类型推断。
 
+### 2025-06-25-2: PRINT 语句 + 外部函数声明 + 字符串字面量 lexer 修复
+
+**PRINT 功能**：
+1. PRINT 语句语法（`PRINT(elem + elem ...)`），每个元素可以是标识符或字符串字面量
+2. 静态检查 `VisitPrint_stmt_element.java`：标识符 → `assignVar=变量名`（代码生成 step 7 转 GVL 读），字符串 → 创建 `sort=STRING` 的变量
+3. 代码生成 `TranslatePrint_stmt.java`：逐元素调用 `emitPrintElement`，末尾加 `\n`；字符串跳过 `translateExpr` 避免 step 7 误替换
+4. `FlatCodeGenerator.emitPrintElement`：字符串输出 `printf(literal)`，整型输出 `printf("%d", (int)(expr))`
+
+**外部函数声明**：
+1. `VisitFunc_decl.java`：检查 `func_body` 是否含实际语句（ANTLR 空 `stmt_list` 视为无 body），无 body 时不要求 RETURN
+2. `TranslateFunc_decl.java`：同样检测有 body 才生成完整函数，否则生成 C++ 原型（`RET_TYPE FUNC(PARAMS);`）
+
+**字符串字面量 lexer 修复**：
+- **问题**：`Identifier` 在 `S_byte_char_value`/`D_byte_char_value` 之前定义，导致 `"hello"` 中字母被 lex 为 `Identifier` 而非字符串内容 token，字符串字面量无法解析
+- **方案**：添加 `StringLiteralD`/`StringLiteralS` 完整字符串 lexer token（含引号），定义在 `Identifier` 之前
+- 替换 `s_byte_char`/`D_byte_char` 解析器规则为单 token 匹配，删弃 `d_byte_char_value` 旧规则
+- ANTLR 4.10.1 重新生成
+
+**修改文件**：
+1. `java/src/main/resources/antlr4/PLCSTLEXER.g4` — 新增 `StringLiteralS`/`StringLiteralD` 在 `Identifier` 之前
+2. `java/src/main/resources/antlr4/PLCSTPARSER.g4` — 简化 `s_byte_char`/`D_byte_char`，恢复 `print_stmt_element` 三路选择，删 `d_byte_char_value`
+3. `java/src/main/java/staticCheckVisitor/strategy/pou_decl/VisitFunc_decl.java` — 修正空 func_body 检测
+4. `java/src/main/java/PLCTranslator/TranslateType/Func_decl/TranslateFunc_decl.java` — 同上
+5. `java/src/main/java/staticCheckVisitor/strategy/fb_body/VisitPrint_stmt_element.java` — 字符串 + 标识符处理
+6. `java/src/main/java/PLCTranslator/TranslateType/Stmt/Print_stmt/TranslatePrint_stmt.java` — 字符串跳过 translateExpr
+7. `java/src/main/java/PLCTranslator/CodeGenerator.java` — `emitPrintStmt` → `emitPrintElement`
+8. `java/src/main/java/PLCTranslator/FlatCodeGenerator.java` — `emitPrintElement` 实现，移除 `emitMain`/`programNames`
+
+**测试**：
+- `examples/test_print.st` — PRINT(字符串) + PRINT(变量) + 外部函数 PRINTF ✅
+- `examples/test.st` — FOR 循环 + 函数调用 ✅
+- `examples/test_struct.st` — STRUCT ✅
+- `examples/test_arr_struct.st` — 数组 + STRUCT + FOR ✅
+- Framework tests 112/112 PASS ✅
+
 ### 2025-06-25: 实现 STRUCT 完整支持 + FOR 循环 GVL 局部阴影
 
 **完成内容**：
