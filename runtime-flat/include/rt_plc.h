@@ -541,6 +541,7 @@ struct TOF {
     BOOL  output  = FALSE;
 
     void update(BOOL IN, TIME PT, TIME cycleTimeUs) {
+        preset = PT;
         if (IN) {
             elapsed = 0;
             output  = TRUE;
