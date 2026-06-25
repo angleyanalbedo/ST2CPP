@@ -829,7 +829,7 @@ var_decl_init                                   //SC DONE
                     | user_defination_spec_init
                     | ref_spec_init             
                     | array_var_decl_init       
-//                    | struct_var_decl_init      //
+                    | struct_spec_init           //
                     | fb_decl_init              //
                     ))                          #vardeclinit
                    | variable_name ?  
