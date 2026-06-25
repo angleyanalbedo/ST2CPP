@@ -27,6 +27,66 @@ public class FlatCodeGenerator implements CodeGenerator {
     // 变量名 → symbolId 映射（反向查找）
     private final Map<String, String> nameToSymbolIdMap = new LinkedHashMap<>();
 
+    // ─── Struct 类型支持 ───
+
+    /**
+     * Struct 字段信息
+     */
+    public static class StructField {
+        String name;
+        String type;
+        int offset;
+        public StructField(String name, String type, int offset) {
+            this.name = name; this.type = type; this.offset = offset;
+        }
+    }
+
+    /**
+     * Struct 布局信息
+     */
+    public static class StructLayout {
+        String structName;
+        List<StructField> fields;
+        int totalSize;
+        public StructLayout(String structName, List<StructField> fields, int totalSize) {
+            this.structName = structName;
+            this.fields = fields;
+            this.totalSize = totalSize;
+        }
+    }
+
+    // struct 类型名 → 布局（如 "MyStruct" → layout）
+    private final Map<String, StructLayout> structLayoutMap = new HashMap<>();
+
+    // PLC_Struct_Value<ID> → struct 类型名映射
+    private final Map<String, String> oopStructTypeToName = new HashMap<>();
+
+    /**
+     * 注册一个 struct 类型
+     * @param typeName    C++ struct 名（如 "MyStruct"）
+     * @param oopTypeName PLC_Struct_Value<ID> 字符串
+     * @param layout      struct 布局信息
+     */
+    public void registerStructType(String typeName, String oopTypeName, StructLayout layout) {
+        structLayoutMap.put(typeName, layout);
+        // 注册 OOP 类型名 → C++ struct 名的映射
+        oopStructTypeToName.put(oopTypeName, typeName);
+        // 注册到 SIZE_MAP 用于偏移量计算
+        SIZE_MAP.put(typeName, layout.totalSize);
+    }
+
+    /**
+     * 获取 struct 字段在结构体内的偏移量
+     */
+    public Integer getStructFieldOffset(String structTypeName, String fieldName) {
+        StructLayout layout = structLayoutMap.get(structTypeName);
+        if (layout == null) return null;
+        for (StructField f : layout.fields) {
+            if (f.name.equals(fieldName)) return f.offset;
+        }
+        return null;
+    }
+
     // ST 类型名 → 原生 C++ 类型名
     private static final Map<String, String> TYPE_MAP = new HashMap<>();
     static {
@@ -79,13 +139,22 @@ public class FlatCodeGenerator implements CodeGenerator {
     }
 
     public String toNativeType(String typeName) {
-        String mapped = TYPE_MAP.get(typeName);
+        if (typeName == null) return typeName;
+        // 优先查实例级 OOP struct 映射
+        String mapped = oopStructTypeToName.get(typeName);
+        if (mapped != null) return mapped;
+        // 再查静态类型映射
+        mapped = TYPE_MAP.get(typeName);
         return mapped != null ? mapped : typeName;
     }
 
-    private int getTypeSize(String nativeType) {
+    public int getTypeSize(String nativeType) {
+        if (nativeType == null) return 4;
         Integer size = SIZE_MAP.get(nativeType);
-        return size != null ? size : 4; // 默认 4 字节
+        if (size != null) return size;
+        // 检查是否已注册的 struct 类型
+        StructLayout layout = structLayoutMap.get(nativeType);
+        return layout != null ? layout.totalSize : 4;
     }
 
     /**
@@ -187,10 +256,36 @@ public class FlatCodeGenerator implements CodeGenerator {
             }
         }
 
-        String type = typeMap.get(cleanName.trim());
-        Integer offset = offsetMap.get(cleanName.trim());
+        // 检测 struct 字段写入：MY_STRUCT.FIELD = value → gvl.write<FIELD_TYPE>(offset + fieldOffset, value)
+        String trimmed = cleanName.trim();
+        // 去掉外层括号，如 (MY_STRUCT.FIELD) → MY_STRUCT.FIELD
+        String stripped = trimmed;
+        if (stripped.startsWith("(") && stripped.endsWith(")")) {
+            stripped = stripped.substring(1, stripped.length() - 1).trim();
+        }
+        int dotIdx = stripped.indexOf('.');
+        if (dotIdx > 0) {
+            String baseVar = stripped.substring(0, dotIdx);
+            String fieldPart = stripped.substring(dotIdx + 1);
+            Integer baseOffset = offsetMap.get(baseVar);
+            String baseTypeName = typeMap.get(baseVar);
+            if (baseOffset != null && baseTypeName != null) {
+                StructLayout layout = structLayoutMap.get(baseTypeName);
+                if (layout != null) {
+                    // 处理单层字段访问：STRUCT.FIELD
+                    for (StructField f : layout.fields) {
+                        if (f.name.equals(fieldPart)) {
+                            return "gvl.write<" + f.type + ">(" + (baseOffset + f.offset) + ", " + valueExpr + ")";
+                        }
+                    }
+                }
+            }
+        }
+
+        String type = typeMap.get(trimmed);
+        Integer offset = offsetMap.get(trimmed);
         if (type == null || offset == null) {
-            return cleanName.trim() + " = " + valueExpr;
+            return trimmed + " = " + valueExpr;
         }
         return "gvl.write<" + type + ">(" + offset + ", " + valueExpr + ")";
     }

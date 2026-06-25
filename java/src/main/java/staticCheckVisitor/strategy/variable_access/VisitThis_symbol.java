@@ -95,7 +95,53 @@ public class VisitThis_symbol implements Strategy {
             }
         }
 
-        // struct_variable 访问暂未实现
+        // 处理 struct 成员访问：STRUCT.FIELD
+        for (PLCSTPARSERParser.Struct_variableContext structVarCtx : ctx.struct_variable()) {
+            // 获取字段名：struct_variable → '.' struct_elem_select → var_access → variable_name → identifier
+            String fieldName = structVarCtx.struct_elem_select().var_access().variable_name().identifier().getText();
+
+            // 获取当前变量的类型
+            int currentTypeId = tempFoundSymbol.getTypeId();
+            PLCTypeDeclSymbol typeSymbol = PLCTotalSymbolTable.getTypeByTypeID(currentTypeId);
+
+            if (typeSymbol instanceof PLCStructDeclSymbol structType) {
+                // 在 struct 的变量列表中查找字段
+                PLCVariable fieldVar = null;
+                for (PLCVariable var : structType.getVariables()) {
+                    if (var.getName().equals(fieldName)) {
+                        fieldVar = var;
+                        break;
+                    }
+                }
+                if (fieldVar == null) {
+                    throw new PLCSemanticException("struct " + typeSymbol.getName()
+                            + " has no member named " + fieldName + " FROM : " + ctx.getText());
+                }
+
+                // 更新为字段的类型信息
+                tempFoundSymbol.setTypeId(fieldVar.getTypeId());
+                tempFoundSymbol.setSort(fieldVar.getSort());
+                tempFoundSymbol.setRuntimeTypeName(fieldVar.getRuntimeTypeName());
+
+                // 更新名称和 assignVar：处理嵌套 (A.B).C
+                String currentName = tempFoundSymbol.getName();
+                if (currentName.startsWith("*")) {
+                    currentName = currentName.substring(1);
+                }
+                tempFoundSymbol.setName("*(" + currentName + "." + fieldName + ")");
+                if (tempFoundSymbol instanceof PLCVariable) {
+                    PLCVariable tempVar = (PLCVariable) tempFoundSymbol;
+                    tempVar.setAssignVar("(" + currentName + "." + fieldName + ")");
+                    tempVar.setDeclSymbol(fieldVar.getDeclSymbol());
+                }
+            } else if (typeSymbol == null) {
+                throw new PLCSemanticException("variable " + tempFoundSymbol.getName()
+                        + " has unknown type (typeId=" + currentTypeId + ") FROM : " + ctx.getText());
+            } else {
+                throw new PLCSemanticException("variable " + tempFoundSymbol.getName()
+                        + " is not a struct type FROM : " + ctx.getText());
+            }
+        }
 
         return visitor.packSymbols(tempFoundSymbol);
     }

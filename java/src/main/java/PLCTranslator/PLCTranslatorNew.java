@@ -1,7 +1,11 @@
 package PLCTranslator;
 
 import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
+import PLCSymbolAndScope.PLCSymbols.PLCStructDeclSymbol;
+import PLCSymbolAndScope.PLCSymbols.PLCVariable;
 import PLCTranslator.TranslateType.Class_decl.TranslateClass_decl;
+import java.util.List;
+import java.util.ArrayList;
 import PLCTranslator.TranslateType.Fb_body.TranslateFb_body;
 import PLCTranslator.TranslateType.Func_decl.TranslateFunc_decl;
 import PLCTranslator.TranslateType.Interface_decl.TranslateInterface_decl;
@@ -531,9 +535,46 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
      * @return 生成的代码字符串
      */
     @Override public String visitStruct_type_decl(PLCSTPARSERParser.Struct_type_declContext ctx) {
-//        TranslateStruct_type_decl translateStruct_type_decl = new TranslateStruct_type_decl();
-//        return translateStruct_type_decl.translateNode(ctx, this);
-        return "";
+        if (codeGen instanceof FlatCodeGenerator flatGen) {
+            return translateStructTypeDeclFlat(ctx, flatGen);
+        }
+        // OOP 后端：使用旧有的 TranslateStruct_type_decl
+        TranslateStruct_type_decl translateStruct_type_decl = new TranslateStruct_type_decl();
+        return translateStruct_type_decl.translateNode(ctx, this);
+    }
+
+    private String translateStructTypeDeclFlat(PLCSTPARSERParser.Struct_type_declContext ctx, FlatCodeGenerator flatGen) {
+        PLCStructDeclSymbol structSymbol = (PLCStructDeclSymbol) properties.get(ctx).get(0);
+        String structName = structSymbol.getName();
+        String oopTypeName = "PLC_Struct_Value<" + structSymbol.getTypeId() + ">";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("\nstruct ").append(structName).append(" {");
+
+        List<FlatCodeGenerator.StructField> fields = new ArrayList<>();
+        int currentOffset = 0;
+
+        for (PLCVariable fieldVar : structSymbol.getVariables()) {
+            String fieldName = fieldVar.getName();
+            String fieldType = flatGen.toNativeType(fieldVar.getRuntimeTypeName());
+            int fieldSize = flatGen.getTypeSize(fieldType);
+            // 对齐
+            int aligned = fieldSize <= 1 ? currentOffset : (currentOffset + fieldSize - 1) / fieldSize * fieldSize;
+            fields.add(new FlatCodeGenerator.StructField(fieldName, fieldType, aligned));
+            sb.append("\n    ").append(fieldType).append(" ").append(fieldName).append(";");
+            currentOffset = aligned + fieldSize;
+        }
+
+        sb.append("\n};\n");
+
+        FlatCodeGenerator.StructLayout layout = new FlatCodeGenerator.StructLayout(
+                structName, fields, currentOffset);
+        flatGen.registerStructType(structName, oopTypeName, layout);
+
+        // 注册 GVL 变量映射（以便表达式翻译）
+        flatGen.registerVariable(structName, String.valueOf(structSymbol.getSymbolId()));
+
+        return sb.toString();
     }
 
     /**
