@@ -64,11 +64,16 @@ public class FlatCodeGenerator implements CodeGenerator {
     // ─── POU 注册表 ───
     // 当前文件中所有 PROGRAM 名称的列表（多文件场景下每文件独立收集）
     private final List<String> programNames = new ArrayList<>();
+    private final java.util.Set<String> programNameSet = new java.util.HashSet<>();
     // 当前文件的标识符（用于生成注册函数名，如 "main" → registerPOU_main）
     private String fileId = "";
 
     public void addProgramName(String name) {
+        if (programNameSet.contains(name)) {
+            throw new RuntimeException("Duplicate PROGRAM definition: " + name);
+        }
         programNames.add(name);
+        programNameSet.add(name);
     }
 
     public void setFileId(String id) {

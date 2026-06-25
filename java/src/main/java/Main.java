@@ -15,6 +15,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * ST2C++ 编译器入口（Flat 后端）
@@ -26,7 +27,7 @@ public class Main {
     public static void main(String[] args) throws Exception {
         // 默认参数
         String backend = "flat";
-        String inputFile = "pou.st";
+        List<String> inputFiles = new ArrayList<>();
         String outputFile = null;
         String outputDir = null;
         String fileId = null;
@@ -48,7 +49,12 @@ public class Main {
                     if (i + 1 < args.length) backend = args[++i];
                     break;
                 case "--input":
-                    if (i + 1 < args.length) inputFile = args[++i];
+                    if (i + 1 < args.length) {
+                        inputFiles.add(args[++i]);
+                    } else {
+                        System.err.println("Error: --input requires a file path");
+                        System.exit(1);
+                    }
                     break;
                 case "--output":
                     if (i + 1 < args.length) outputFile = args[++i];
@@ -69,11 +75,18 @@ public class Main {
             }
         }
 
+        // 如果没有指定输入文件，使用默认文件名
+        if (inputFiles.isEmpty()) {
+            inputFiles.add("pou.st");
+        }
+
         // 解析输出文件路径
         if (outputDir != null) {
-            // --output-dir: 自动命名 DER/<stem>.cpp
-            String baseName = new File(inputFile).getName();
-            String stem = baseName.endsWith(".st") ? baseName.substring(0, baseName.length() - 3) : baseName;
+            // --output-dir: 如果是单个输入，保持同名；否则默认 main.cpp
+            String baseName = new File(inputFiles.get(0)).getName();
+            String stem = inputFiles.size() == 1
+                    ? (baseName.endsWith(".st") ? baseName.substring(0, baseName.length() - 3) : baseName)
+                    : "main";
             outputFile = new File(outputDir, stem + ".cpp").getPath();
         } else if (outputFile == null) {
             outputFile = "main.cpp";
@@ -81,15 +94,21 @@ public class Main {
 
         // 推导 fileId（从输入文件名派生，去掉 .st 后缀）
         if (fileId == null) {
-            String inputName = new File(inputFile).getName();
-            fileId = inputName.endsWith(".st") ? inputName.substring(0, inputName.length() - 3) : inputName;
+            if (inputFiles.size() == 1) {
+                String inputName = new File(inputFiles.get(0)).getName();
+                fileId = inputName.endsWith(".st") ? inputName.substring(0, inputName.length() - 3) : inputName;
+            } else {
+                fileId = "combined";
+            }
         }
 
         // 验证输入文件存在
-        File input = new File(inputFile);
-        if (!input.exists()) {
-            System.err.println("Error: Input file not found: " + inputFile);
-            System.exit(1);
+        for (String inputPath : inputFiles) {
+            File input = new File(inputPath);
+            if (!input.exists()) {
+                System.err.println("Error: Input file not found: " + inputPath);
+                System.exit(1);
+            }
         }
 
         // 自动创建输出目录
@@ -106,33 +125,47 @@ public class Main {
         codeGen.setFileId(fileId);
 
         if (verbose) {
-            System.out.println("[Input]  " + inputFile);
+            System.out.println("[Input]  " + String.join(", ", inputFiles));
             System.out.println("[Output] " + outputFile);
         }
 
         // 注册访问策略
         new Registrant().autoRegister();
 
-        // 读取文件获得语法树
-        CharStream charStream = CharStreams.fromFileName(inputFile);
-        PLCSTPARSERLexer plcLexer = new PLCSTPARSERLexer(charStream);
-        CommonTokenStream commonTokenStream = new CommonTokenStream(plcLexer);
-        PLCSTPARSERParser helloParser = new PLCSTPARSERParser(commonTokenStream);
+        StringBuilder fullCodeBuilder = new StringBuilder();
 
-        ParseTree parseTree = helloParser.startpoint();
+        for (int fileIndex = 0; fileIndex < inputFiles.size(); fileIndex++) {
+            String inputPath = inputFiles.get(fileIndex);
+            if (fileIndex > 0) {
+                fullCodeBuilder.append("\n");
+            }
 
-        ParseTreeProperty<ArrayList<PLCSymbol>> property = new ParseTreeProperty<>();
-        PLCVisitor plcVisitor = new PLCVisitor(property);
+            CharStream charStream = CharStreams.fromFileName(inputPath);
+            PLCSTPARSERLexer plcLexer = new PLCSTPARSERLexer(charStream);
+            CommonTokenStream commonTokenStream = new CommonTokenStream(plcLexer);
+            PLCSTPARSERParser helloParser = new PLCSTPARSERParser(commonTokenStream);
 
-        plcVisitor.visit(parseTree);
+            ParseTree parseTree = helloParser.startpoint();
+            ParseTreeProperty<ArrayList<PLCSymbol>> property = new ParseTreeProperty<>();
+            PLCVisitor plcVisitor = new PLCVisitor(property);
+            plcVisitor.visit(parseTree);
 
-        // 使用选择的后端创建翻译器
-        PLCTranslatorNew translatorNew = new PLCTranslatorNew(property, codeGen);
-
-        // visit 返回完整的代码字符串（不再在内部写文件）
-        String fullCode = translatorNew.visit(parseTree);
+            PLCTranslatorNew translatorNew = new PLCTranslatorNew(property, codeGen);
+            translatorNew.setEmitHeader(fileIndex == 0);
+            translatorNew.setEmitPOURegistration(false);
+            String fileCode = translatorNew.visit(parseTree);
+            if (fileCode != null) {
+                fullCodeBuilder.append(fileCode);
+            }
+        }
 
         // 统一一次性写入文件
+        if (codeGen instanceof FlatCodeGenerator) {
+            fullCodeBuilder.append("\n");
+            fullCodeBuilder.append(((FlatCodeGenerator) codeGen).emitPOURegistration(codeGen.getFileId(), codeGen.getProgramNames()));
+        }
+
+        String fullCode = fullCodeBuilder.toString();
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
             writer.write(fullCode != null ? fullCode : "");
         }

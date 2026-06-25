@@ -1,0 +1,5 @@
+PROGRAM P1
+    VAR
+        C : INT := 3;
+    END_VAR
+END_PROGRAM

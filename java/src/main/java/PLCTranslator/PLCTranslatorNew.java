@@ -59,6 +59,9 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     //代码生成器（仅 Flat 后端）
     static public CodeGenerator codeGen;
 
+    private boolean emitHeader = true;
+    private boolean emitPOURegistration = true;
+
     public PLCTranslatorNew(ParseTreeProperty<java.util.ArrayList<PLCSymbol>> properties) {
         PLCTranslatorNew.properties = properties;
         PLCTranslatorNew.codeGen = new FlatCodeGenerator(); // 默认 Flat
@@ -67,6 +70,22 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     public PLCTranslatorNew(ParseTreeProperty<java.util.ArrayList<PLCSymbol>> properties, CodeGenerator codeGenerator) {
         PLCTranslatorNew.properties = properties;
         PLCTranslatorNew.codeGen = codeGenerator;
+    }
+
+    public void setEmitHeader(boolean emitHeader) {
+        this.emitHeader = emitHeader;
+    }
+
+    public void setEmitPOURegistration(boolean emitPOURegistration) {
+        this.emitPOURegistration = emitPOURegistration;
+    }
+
+    public boolean shouldEmitHeader() {
+        return emitHeader;
+    }
+
+    public boolean shouldEmitPOURegistration() {
+        return emitPOURegistration;
     }
 
     /**

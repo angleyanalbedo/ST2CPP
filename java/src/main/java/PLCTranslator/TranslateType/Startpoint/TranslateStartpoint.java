@@ -16,7 +16,9 @@ public class TranslateStartpoint {
     public String translateNode(PLCSTPARSERParser.StartpointContext ctx, PLCTranslatorNew translatorNew){
         StringBuilder sb = new StringBuilder();
         // 使用 CodeGenerator 生成头文件
-        sb.append(PLCTranslatorNew.codeGen.emitHeader());
+        if (translatorNew.shouldEmitHeader()) {
+            sb.append(PLCTranslatorNew.codeGen.emitHeader());
+        }
         // 手动遍历子节点并拼接
         for (int i = 0; i < ctx.getChildCount(); i++) {
             String result = translatorNew.visit(ctx.getChild(i));
@@ -25,7 +27,7 @@ public class TranslateStartpoint {
             }
         }
         // 尾部追加 POU 注册表（编译器只需描述「有哪些 PROGRAM」）
-        if (PLCTranslatorNew.codeGen instanceof FlatCodeGenerator) {
+        if (translatorNew.shouldEmitPOURegistration() && PLCTranslatorNew.codeGen instanceof FlatCodeGenerator) {
             FlatCodeGenerator flatGen = (FlatCodeGenerator) PLCTranslatorNew.codeGen;
             sb.append(flatGen.emitPOURegistration(flatGen.getFileId(), flatGen.getProgramNames()));
         }
