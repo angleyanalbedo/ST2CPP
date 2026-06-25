@@ -537,8 +537,6 @@ flowchart LR
 
 ## 10. 待完善项
 
-- [ ] `pou_registry.gen.cpp` 构建脚本（汇总所有 `registerPOU_*` 调用）
-- [ ] `GEN_CPP_DIR` 路径对齐（CMake 默认 `output/flat/build`，编译器输出到 `output/flat/`）
 - [ ] 完整 PROGRAM 生命周期（Init/Pre/Cyclic/Post 回调，当前仅用 POUFunc 路径）
 - [ ] FB（功能块）翻译
 - [ ] RETAIN 区域标记（编译器生成 `setRetainRegion()` 调用）

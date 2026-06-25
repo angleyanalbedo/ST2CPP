@@ -27,7 +27,9 @@ public class Main {
         // 默认参数
         String backend = "flat";
         String inputFile = "pou.st";
-        String outputFile = "main.cpp";
+        String outputFile = null;
+        String outputDir = null;
+        String fileId = null;
         boolean verbose = false;
 
         // 解析命令行参数
@@ -51,6 +53,12 @@ public class Main {
                 case "--output":
                     if (i + 1 < args.length) outputFile = args[++i];
                     break;
+                case "--output-dir":
+                    if (i + 1 < args.length) outputDir = args[++i];
+                    break;
+                case "--file-id":
+                    if (i + 1 < args.length) fileId = args[++i];
+                    break;
                 case "--verbose":
                     verbose = true;
                     break;
@@ -59,6 +67,22 @@ public class Main {
                     System.err.println("Use --help for usage information.");
                     System.exit(1);
             }
+        }
+
+        // 解析输出文件路径
+        if (outputDir != null) {
+            // --output-dir: 自动命名 DER/<stem>.cpp
+            String baseName = new File(inputFile).getName();
+            String stem = baseName.endsWith(".st") ? baseName.substring(0, baseName.length() - 3) : baseName;
+            outputFile = new File(outputDir, stem + ".cpp").getPath();
+        } else if (outputFile == null) {
+            outputFile = "main.cpp";
+        }
+
+        // 推导 fileId
+        if (fileId == null) {
+            String outputName = new File(outputFile).getName();
+            fileId = outputName.endsWith(".cpp") ? outputName.substring(0, outputName.length() - 4) : outputName;
         }
 
         // 验证输入文件存在
@@ -70,18 +94,15 @@ public class Main {
 
         // 自动创建输出目录
         File outputFileObj = new File(outputFile);
-        File outputDir = outputFileObj.getParentFile();
-        if (outputDir != null && !outputDir.exists()) {
-            outputDir.mkdirs();
+        File outputParentDir = outputFileObj.getParentFile();
+        if (outputParentDir != null && !outputParentDir.exists()) {
+            outputParentDir.mkdirs();
         }
 
         long startTime = System.currentTimeMillis();
 
         // 选择代码生成器（仅 Flat 后端）
         FlatCodeGenerator codeGen = new FlatCodeGenerator();
-        // 从输入文件名推导 fileId（如 "examples/test.st" → "test"）
-        String fileName = new File(inputFile).getName();
-        String fileId = fileName.endsWith(".st") ? fileName.substring(0, fileName.length() - 3) : fileName;
         codeGen.setFileId(fileId);
 
         if (verbose) {
@@ -140,11 +161,14 @@ public class Main {
         System.out.println("  -h, --help           Show this help message and exit");
         System.out.println("  -v, --version        Show version information and exit");
         System.out.println("  --backend <mode>     Reserved, only 'flat' is supported");
-        System.out.println("  --input <file>       Input ST source file ");
-        System.out.println("  --output <file>      Output C++ file ");
+        System.out.println("  --input <file>       Input ST source file (.st)");
+        System.out.println("  --output <file>      Output C++ file (.cpp)");
+        System.out.println("  --output-dir <dir>   Auto-name output as <dir>/<stem>.cpp");
+        System.out.println("  --file-id <id>       POU registration ID (default: output stem)");
         System.out.println("  --verbose            Print detailed translation statistics");
         System.out.println();
         System.out.println("Examples:");
-        System.out.println("  java Main --input program.st --output out.cpp");
+        System.out.println("  java -jar st2c.jar --input program.st --output out.cpp");
+        System.out.println("  java -jar st2c.jar --input test.st --output-dir output/flat/build");
     }
 }

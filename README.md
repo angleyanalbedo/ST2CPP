@@ -198,17 +198,17 @@ ST2C-master/
 - 基本类型：BOOL, INT, REAL, STRING, TIME
 - STRUCT 类型定义与字段访问
 - ARRAY 类型与元素访问
-- FOR / IF / ELSE 控制流
+- FOR / IF / ELSIF / ELSE / WHILE / REPEAT / CASE 控制流
 - 赋值、算术运算、比较运算
 - PRINT 调试输出
+- ASSERT 断言
 - 外部函数声明（无 body）
 
 **未支持**：
 - FUNCTION_BLOCK（FB）
-- WHILE / REPEAT / CASE 控制流
-- ENUM 类型
+- ENUM 类型声明
 - VAR_INPUT / VAR_OUTPUT / VAR_IN_OUT
-- RETAIN 变量区域标记
+- RETAIN 变量区域标记（编译器有收集但 `setRetainRegion` 调用待验证）
 - 在线下载与热更新
 
 ## 文档导航

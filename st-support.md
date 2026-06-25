@@ -99,9 +99,9 @@ IEC 61131-3 结构化文本（ST）特性在 ST2C++ 中的支持状态。
 |------|------|------|
 | IF / THEN / ELSIF / ELSE / END_IF | ✅ | 原生 C++ `if/else if/else` |
 | FOR / TO / BY / DO / END_FOR | ✅ | GVL 变量遮盖 + 循环后写回 |
-| WHILE / END_WHILE | 🔲 | 语法解析，代码生成未实现 |
-| REPEAT / END_REPEAT | 🔲 | 语法解析，代码生成未实现 |
-| CASE / END_CASE | 🔲 | 语法解析，代码生成未实现 |
+| WHILE / END_WHILE | ✅ | 原生 C++ `while()` |
+| REPEAT / END_REPEAT | ✅ | 原生 C++ `do{}while()` |
+| CASE / END_CASE | ⚠️ | 翻译为 if/else if 链，部分 case_list_elem 未走 translateExpr |
 | EXIT（循环跳出） | 🔲 | — |
 | RETURN | ✅ | 函数内 `return` |
 | GOTO / LABEL | ❌ | 不计划支持 |

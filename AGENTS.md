@@ -81,27 +81,52 @@ CMake 变量：
 
 ### Java 编译器（独立步骤）
 
-CMake 不管理 ST 编译。需先独立运行 Java 编译器：
+CMake 不管理 ST 编译。先构建编译器 JAR（只需一次）：
 
 ```bash
 cd java
-mvn compile
-java -cp "target/classes;lib/antlr4-runtime-4.10.1.jar;lib/slf4j-api-1.7.32.jar;lib/slf4j-simple-1.7.32.jar" \
-  Main --input ../examples/test.st --output ../output/flat/build/test.cpp
+mvn package -DskipTests
+# 产出: target/st2c-jar-with-dependencies.jar
 ```
 
-生成多个 `.st` 文件时，每个文件独立调用一次 `Main`。
+然后使用 JAR 编译 ST 文件：
+
+```bash
+# 方式一：指定输出文件
+java -jar java/target/st2c-jar-with-dependencies.jar \
+  --input examples/test.st --output output/flat/build/test.cpp
+
+# 方式二：指定输出目录（自动命名）
+java -jar java/target/st2c-jar-with-dependencies.jar \
+  --input examples/test.st --output-dir output/flat/build
+```
+
+选项：
+
+| 参数 | 说明 |
+|------|------|
+| `--input <file>` | 输入 ST 源文件 |
+| `--output <file>` | 输出 C++ 文件路径 |
+| `--output-dir <dir>` | 输出目录，自动命名 `<dir>/<stem>.cpp` |
+| `--file-id <id>` | POU 注册 ID（默认使用输出文件名 stem） |
+| `--verbose` | 打印详细统计信息 |
+
+生成多个 `.st` 文件时，每个文件独立调用一次 JAR。
 
 ### 集成运行
 
 ```bash
-# 1. ST → C++（Java 编译器）
-cd java && mvn compile && java -cp ... Main --input ../examples/test.st --output ../output/flat/build/test.cpp
+# 1. 构建 JAR（首次）
+cd java && mvn package -DskipTests
 
-# 2. CMake 构建 C++
+# 2. ST → C++
+java -jar java/target/st2c-jar-with-dependencies.jar \
+  --input examples/test.st --output-dir output/flat/build
+
+# 3. CMake 构建 C++
 cd runtime-flat/build && cmake .. -G "MinGW Makefiles" -DGEN_CPP_DIR=../../output/flat/build && cmake --build .
 
-# 3. 运行
+# 4. 运行
 ./build/runtime.exe                    # 读取 tasks.json（默认）
 ./build/runtime.exe my_config.json     # 自定义配置
 ```
@@ -164,10 +189,10 @@ test.bat myprog.st    # 指定输入
 
 ### 高优先级（代码安全）
 
-- [ ] **GVL 偏移量越界检查**：`GVL::read<T>()` / `write<T>()` 添加 `offset + sizeof(T) <= GVL_SIZE` 断言
-- [ ] **ProcessImage 偏移量检查**：`readInput<T>()` / `writeOutput<T>()` 添加边界校验
-- [ ] **参数校验增强**：`Task::interval` 正值检查、`priority` 范围检查、`offset` 有效性检查
-- [ ] **除零/溢出错误码细化**：当前 `safeDiv()` 仅返回 0，需记录具体错误上下文
+- [x] **GVL 偏移量越界检查**：`GVL::read<T>()` / `write<T>()` 已有边界检查（framework_test #13）
+- [x] **ProcessImage 偏移量检查**：`readInput<T>()` / `writeOutput<T>()` 已有边界检查（framework_test #14）
+- [x] **参数校验增强**：`Task::interval` / `priority` 已有 clamp 和校验（framework_test #15）
+- [x] **除零/溢出错误码细化**：`safeDiv()` / `safeMod()` 已记录操作数（framework_test #16）
 
 ### 中优先级（可观测性）
 
@@ -189,11 +214,17 @@ test.bat myprog.st    # 指定输入
 
 - [x] **临时变量类型推断**：`auto _X0=A` 改为具体类型 `INT _X0=A`
 - [x] **GVL 变量在表达式中的转换**：`(A)` 改为 `(gvl.read<INT>(0))`
-- [x] **RETAIN 区域标记**：编译器生成 `setRetainRegion()` 调用
+- [x] **RETAIN 区域标记**：编译器收集 RETAIN 变量并生成 `setRetainRegion()` 调用
 - [x] **ARRAY 类型支持**：Flat 模式支持 `VAR` 内联数组声明和元素访问
-- [ ] **FB（功能块）翻译**：当前仅支持 FUNCTION 和 PROGRAM
 - [x] **STRUCT 类型支持**：STRUCT 声明生成 C++ struct（对齐偏移），支持 `STRUCT.FIELD` 和 `ARR[I].FIELD`（读/写）
 - [x] **FOR 循环 GVL 局部阴影**：FOR 循环控制变量使用局部副本，循环体引用跳过 GVL 替换，循环结束后写回 GVL
+- [x] **WHILE / REPEAT 控制流**：翻译为原生 C++ `while()` / `do{}while()`
+- [x] **CASE 控制流**：翻译为 if/else if 链（⚠️ 部分 case_list_elem 未走 translateExpr）
+- [x] **ASSERT 断言**：翻译为条件检查 + 错误输出
+- [ ] **FB（功能块）翻译**：当前仅支持 FUNCTION 和 PROGRAM
+- [ ] **ENUM 类型声明**：TYPE...END_TYPE 中的 ENUM 在 PROGRAM 变量段输出 `// TODO` 注释
+- [ ] **CASE 翻译修复**：`TranslateCase_stmt.java` 中部分 case_list_elem 直接拼接原始文本，未调用 `translateExpr()`
+- [ ] **数组下标变量 GVL 替换**：非 FOR 循环场景下数组下标中的 GVL 变量未被替换为 `gvl.read<T>(offset)`（如 `test_array_simple.st`）
 
 ## 开发指南
 
