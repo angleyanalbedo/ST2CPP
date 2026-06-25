@@ -1,4 +1,4 @@
-// Generated from src/main/resources/antlr4/PLCSTPARSER.g4 by ANTLR 4.10.1
+// Generated from D:\source\Project\ST2C-master\java\src\main\resources\antlr4\PLCSTPARSER.g4 by ANTLR 4.10.1
 package antlr4;
 import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
@@ -48,12 +48,11 @@ public class PLCSTPARSERParser extends Parser {
 		OVERRIDE=172, RETAINORNONRETAIN=173, CONSTANT=174, EXITORCONTINUE=175, 
 		ARRAY_KW=176, OF_KW=177, STRUCT_KW=178, END_STRUCT_KW=179, OVERLAP_KW=180, 
 		TYPE_KW=181, END_TYPE_KW=182, REF_TO_KW=183, REF_KW=184, THIS_KW=185, 
-		ASSERT_KW=186, StringLiteralS=187, StringLiteralD=188, Identifier=189, 
-		IdentifierStart=190, IdentifierPart=191, Digit=192, Bit=193, Octal_Digit=194, 
-		Hex_Digit=195, Comment=196, WS=197, EOL=198, Pragma=199, S_byte_char_value=200, 
-		D_byte_char_value=201, Common_Char_Byte=202, Common_Char_Value=203, Char_Value=204, 
-		Char_doll=205, Char_other=206, Char_S=207, Char_Blank=208, Common_Char_ByteD=209, 
-		ReservedKeyword=210;
+		ASSERT_KW=186, StringLiteralS=187, StringLiteralD=188, ReservedKeyword=189, 
+		Identifier=190, Digit=191, Bit=192, Octal_Digit=193, Hex_Digit=194, Comment=195, 
+		WS=196, EOL=197, Pragma=198, S_byte_char_value=199, D_byte_char_value=200, 
+		Common_Char_Byte=201, Common_Char_Value=202, Char_Value=203, Char_doll=204, 
+		Char_other=205, Char_S=206, Char_Blank=207, Common_Char_ByteD=208;
 	public static final int
 		RULE_startpoint = 0, RULE_identifier = 1, RULE_constant = 2, RULE_numeric_literal = 3, 
 		RULE_int_literal = 4, RULE_signed_int = 5, RULE_binary_int = 6, RULE_octal_int = 7, 
@@ -263,8 +262,8 @@ public class PLCSTPARSERParser extends Parser {
 			null, null, null, "'BOOL'", null, "'OVERRIDE'", null, "'CONSTANT'", null, 
 			"'ARRAY'", "'OF'", "'STRUCT'", "'END_STRUCT'", "'OVERLAP'", "'TYPE'", 
 			"'END_TYPE'", "'REF_TO'", "'REF'", "'THIS'", "'ASSERT'", null, null, 
-			null, null, null, null, null, null, null, null, null, "'\\n'", null, 
-			null, null, null, null, null, "'$$'", null, "'\"'", "' '"
+			null, null, null, null, null, null, null, null, "'\\n'", null, null, 
+			null, null, null, null, "'$$'", null, "'\"'", "' '"
 		};
 	}
 	private static final String[] _LITERAL_NAMES = makeLiteralNames();
@@ -291,11 +290,10 @@ public class PLCSTPARSERParser extends Parser {
 			"FINALORABSTRACT", "OVERRIDE", "RETAINORNONRETAIN", "CONSTANT", "EXITORCONTINUE", 
 			"ARRAY_KW", "OF_KW", "STRUCT_KW", "END_STRUCT_KW", "OVERLAP_KW", "TYPE_KW", 
 			"END_TYPE_KW", "REF_TO_KW", "REF_KW", "THIS_KW", "ASSERT_KW", "StringLiteralS", 
-			"StringLiteralD", "Identifier", "IdentifierStart", "IdentifierPart", 
-			"Digit", "Bit", "Octal_Digit", "Hex_Digit", "Comment", "WS", "EOL", "Pragma", 
-			"S_byte_char_value", "D_byte_char_value", "Common_Char_Byte", "Common_Char_Value", 
-			"Char_Value", "Char_doll", "Char_other", "Char_S", "Char_Blank", "Common_Char_ByteD", 
-			"ReservedKeyword"
+			"StringLiteralD", "ReservedKeyword", "Identifier", "Digit", "Bit", "Octal_Digit", 
+			"Hex_Digit", "Comment", "WS", "EOL", "Pragma", "S_byte_char_value", "D_byte_char_value", 
+			"Common_Char_Byte", "Common_Char_Value", "Char_Value", "Char_doll", "Char_other", 
+			"Char_S", "Char_Blank", "Common_Char_ByteD"
 		};
 	}
 	private static final String[] _SYMBOLIC_NAMES = makeSymbolicNames();
@@ -21871,7 +21869,7 @@ public class PLCSTPARSERParser extends Parser {
 	}
 
 	private static final String _serializedATNSegment0 =
-		"\u0004\u0001\u00d2\u0d3b\u0002\u0000\u0007\u0000\u0002\u0001\u0007\u0001"+
+		"\u0004\u0001\u00d0\u0d3b\u0002\u0000\u0007\u0000\u0002\u0001\u0007\u0001"+
 		"\u0002\u0002\u0007\u0002\u0002\u0003\u0007\u0003\u0002\u0004\u0007\u0004"+
 		"\u0002\u0005\u0007\u0005\u0002\u0006\u0007\u0006\u0002\u0007\u0007\u0007"+
 		"\u0002\b\u0007\b\u0002\t\u0007\t\u0002\n\u0007\n\u0002\u000b\u0007\u000b"+
@@ -22400,7 +22398,7 @@ public class PLCSTPARSERParser extends Parser {
 		"\u0242\u0244\u0246\u0248\u024a\u024c\u024e\u0250\u0252\u0254\u0256\u0258"+
 		"\u025a\u025c\u025e\u0260\u0262\u0264\u0266\u0268\u026a\u026c\u026e\u0270"+
 		"\u0272\u0274\u0276\u0278\u027a\u027c\u0000\u0016\u0002\u0000\u0001\u000e"+
-		"\u00bd\u00bd\u0001\u0000\u0010\u0011\u0002\u0000\u0017\u0018\u00c1\u00c1"+
+		"\u00be\u00be\u0001\u0000\u0010\u0011\u0002\u0000\u0017\u0018\u00c0\u00c0"+
 		"\u0002\u0000  \u009a\u009a\u0003\u0000\u0004\u0004\"\"\u00a7\u00a7\u0002"+
 		"\u0000##\u00a9\u00a9\u0001\u0000\u0095\u0096\u0002\u0000\u009b\u009b\u00aa"+
 		"\u00aa\u0001\u000034\u0002\u0000\u0019\u001955\u0002\u0000:;\u00ae\u00ae"+
@@ -22593,18 +22591,18 @@ public class PLCSTPARSERParser extends Parser {
 		"\u0000\u02a5\u02a6\u0005\u0090\u0000\u0000\u02a6\u000b\u0001\u0000\u0000"+
 		"\u0000\u02a7\u02ac\u0005\u0012\u0000\u0000\u02a8\u02aa\u0005\u0013\u0000"+
 		"\u0000\u02a9\u02a8\u0001\u0000\u0000\u0000\u02a9\u02aa\u0001\u0000\u0000"+
-		"\u0000\u02aa\u02ab\u0001\u0000\u0000\u0000\u02ab\u02ad\u0005\u00c1\u0000"+
+		"\u0000\u02aa\u02ab\u0001\u0000\u0000\u0000\u02ab\u02ad\u0005\u00c0\u0000"+
 		"\u0000\u02ac\u02a9\u0001\u0000\u0000\u0000\u02ad\u02ae\u0001\u0000\u0000"+
 		"\u0000\u02ae\u02ac\u0001\u0000\u0000\u0000\u02ae\u02af\u0001\u0000\u0000"+
 		"\u0000\u02af\r\u0001\u0000\u0000\u0000\u02b0\u02b5\u0005\u0014\u0000\u0000"+
 		"\u02b1\u02b3\u0005\u0013\u0000\u0000\u02b2\u02b1\u0001\u0000\u0000\u0000"+
 		"\u02b2\u02b3\u0001\u0000\u0000\u0000\u02b3\u02b4\u0001\u0000\u0000\u0000"+
-		"\u02b4\u02b6\u0005\u00c2\u0000\u0000\u02b5\u02b2\u0001\u0000\u0000\u0000"+
+		"\u02b4\u02b6\u0005\u00c1\u0000\u0000\u02b5\u02b2\u0001\u0000\u0000\u0000"+
 		"\u02b6\u02b7\u0001\u0000\u0000\u0000\u02b7\u02b5\u0001\u0000\u0000\u0000"+
 		"\u02b7\u02b8\u0001\u0000\u0000\u0000\u02b8\u000f\u0001\u0000\u0000\u0000"+
 		"\u02b9\u02be\u0005\u0015\u0000\u0000\u02ba\u02bc\u0005\u0013\u0000\u0000"+
 		"\u02bb\u02ba\u0001\u0000\u0000\u0000\u02bb\u02bc\u0001\u0000\u0000\u0000"+
-		"\u02bc\u02bd\u0001\u0000\u0000\u0000\u02bd\u02bf\u0005\u00c3\u0000\u0000"+
+		"\u02bc\u02bd\u0001\u0000\u0000\u0000\u02bd\u02bf\u0005\u00c2\u0000\u0000"+
 		"\u02be\u02bb\u0001\u0000\u0000\u0000\u02bf\u02c0\u0001\u0000\u0000\u0000"+
 		"\u02c0\u02be\u0001\u0000\u0000\u0000\u02c0\u02c1\u0001\u0000\u0000\u0000"+
 		"\u02c1\u0011\u0001\u0000\u0000\u0000\u02c2\u02c3\u0005\u0097\u0000\u0000"+
@@ -23752,7 +23750,7 @@ public class PLCSTPARSERParser extends Parser {
 		"\u0000\u0000\u0a9e\u0a9a\u0001\u0000\u0000\u0000\u0a9e\u0a9b\u0001\u0000"+
 		"\u0000\u0000\u0a9e\u0a9c\u0001\u0000\u0000\u0000\u0a9e\u0a9d\u0001\u0000"+
 		"\u0000\u0000\u0a9e\u0a9f\u0001\u0000\u0000\u0000\u0a9f\u0aa1\u0001\u0000"+
-		"\u0000\u0000\u0aa0\u0aa2\u0005\u00c6\u0000\u0000\u0aa1\u0aa0\u0001\u0000"+
+		"\u0000\u0000\u0aa0\u0aa2\u0005\u00c5\u0000\u0000\u0aa1\u0aa0\u0001\u0000"+
 		"\u0000\u0000\u0aa2\u0aa3\u0001\u0000\u0000\u0000\u0aa3\u0aa1\u0001\u0000"+
 		"\u0000\u0000\u0aa3\u0aa4\u0001\u0000\u0000\u0000\u0aa4\u01ff\u0001\u0000"+
 		"\u0000\u0000\u0aa5\u0aa9\u0003\u0204\u0102\u0000\u0aa6\u0aa9\u0003\u0206"+
@@ -23769,7 +23767,7 @@ public class PLCSTPARSERParser extends Parser {
 		"\u0000\u0000\u0ab6\u0ab7\u0005\u009f\u0000\u0000\u0ab7\u0ab9\u0005&\u0000"+
 		"\u0000\u0ab8\u0aba\u0003\u020e\u0107\u0000\u0ab9\u0ab8\u0001\u0000\u0000"+
 		"\u0000\u0ab9\u0aba\u0001\u0000\u0000\u0000\u0aba\u0abc\u0001\u0000\u0000"+
-		"\u0000\u0abb\u0abd\u0005\u00c6\u0000\u0000\u0abc\u0abb\u0001\u0000\u0000"+
+		"\u0000\u0abb\u0abd\u0005\u00c5\u0000\u0000\u0abc\u0abb\u0001\u0000\u0000"+
 		"\u0000\u0abd\u0abe\u0001\u0000\u0000\u0000\u0abe\u0abc\u0001\u0000\u0000"+
 		"\u0000\u0abe\u0abf\u0001\u0000\u0000\u0000\u0abf\u0ac1\u0001\u0000\u0000"+
 		"\u0000\u0ac0\u0ac2\u0003\u0212\u0109\u0000\u0ac1\u0ac0\u0001\u0000\u0000"+
@@ -23790,7 +23788,7 @@ public class PLCSTPARSERParser extends Parser {
 		"\u0adb\u0ac9\u0001\u0000\u0000\u0000\u0adb\u0aca\u0001\u0000\u0000\u0000"+
 		"\u0adb\u0acb\u0001\u0000\u0000\u0000\u0adb\u0acc\u0001\u0000\u0000\u0000"+
 		"\u0adb\u0acd\u0001\u0000\u0000\u0000\u0adc\u0aec\u0001\u0000\u0000\u0000"+
-		"\u0add\u0ae9\u0005&\u0000\u0000\u0ade\u0ae0\u0005\u00c6\u0000\u0000\u0adf"+
+		"\u0add\u0ae9\u0005&\u0000\u0000\u0ade\u0ae0\u0005\u00c5\u0000\u0000\u0adf"+
 		"\u0ade\u0001\u0000\u0000\u0000\u0ae0\u0ae1\u0001\u0000\u0000\u0000\u0ae1"+
 		"\u0adf\u0001\u0000\u0000\u0000\u0ae1\u0ae2\u0001\u0000\u0000\u0000\u0ae2"+
 		"\u0ae4\u0001\u0000\u0000\u0000\u0ae3\u0ae5\u0003\u0216\u010b\u0000\u0ae4"+
@@ -23806,7 +23804,7 @@ public class PLCSTPARSERParser extends Parser {
 		"\u0000\u0000\u0af3\u0af5\u0001\u0000\u0000\u0000\u0af4\u0adb\u0001\u0000"+
 		"\u0000\u0000\u0af4\u0aee\u0001\u0000\u0000\u0000\u0af5\u020b\u0001\u0000"+
 		"\u0000\u0000\u0af6\u0af7\u0003\u0150\u00a8\u0000\u0af7\u0af9\u0005&\u0000"+
-		"\u0000\u0af8\u0afa\u0005\u00c6\u0000\u0000\u0af9\u0af8\u0001\u0000\u0000"+
+		"\u0000\u0af8\u0afa\u0005\u00c5\u0000\u0000\u0af9\u0af8\u0001\u0000\u0000"+
 		"\u0000\u0afa\u0afb\u0001\u0000\u0000\u0000\u0afb\u0af9\u0001\u0000\u0000"+
 		"\u0000\u0afb\u0afc\u0001\u0000\u0000\u0000\u0afc\u0afe\u0001\u0000\u0000"+
 		"\u0000\u0afd\u0aff\u0003\u0216\u010b\u0000\u0afe\u0afd\u0001\u0000\u0000"+
@@ -23826,7 +23824,7 @@ public class PLCSTPARSERParser extends Parser {
 		"\u0003\u0204\u0102\u0000\u0b15\u0b18\u0003\u0206\u0103\u0000\u0b16\u0b18"+
 		"\u0003\u020c\u0106\u0000\u0b17\u0b14\u0001\u0000\u0000\u0000\u0b17\u0b15"+
 		"\u0001\u0000\u0000\u0000\u0b17\u0b16\u0001\u0000\u0000\u0000\u0b18\u0b1a"+
-		"\u0001\u0000\u0000\u0000\u0b19\u0b1b\u0005\u00c6\u0000\u0000\u0b1a\u0b19"+
+		"\u0001\u0000\u0000\u0000\u0b19\u0b1b\u0005\u00c5\u0000\u0000\u0b1a\u0b19"+
 		"\u0001\u0000\u0000\u0000\u0b1b\u0b1c\u0001\u0000\u0000\u0000\u0b1c\u0b1a"+
 		"\u0001\u0000\u0000\u0000\u0b1c\u0b1d\u0001\u0000\u0000\u0000\u0b1d\u0215"+
 		"\u0001\u0000\u0000\u0000\u0b1e\u0b20\u0003\u0218\u010c\u0000\u0b1f\u0b1e"+
@@ -23837,16 +23835,16 @@ public class PLCSTPARSERParser extends Parser {
 		"\u0003\u021c\u010e\u0000\u0b27\u0b29\u0003\u021e\u010f\u0000\u0b28\u0b26"+
 		"\u0001\u0000\u0000\u0000\u0b28\u0b27\u0001\u0000\u0000\u0000\u0b29\u0b2a"+
 		"\u0001\u0000\u0000\u0000\u0b2a\u0b2c\u0005)\u0000\u0000\u0b2b\u0b2d\u0005"+
-		"\u00c6\u0000\u0000\u0b2c\u0b2b\u0001\u0000\u0000\u0000\u0b2d\u0b2e\u0001"+
+		"\u00c5\u0000\u0000\u0b2c\u0b2b\u0001\u0000\u0000\u0000\u0b2d\u0b2e\u0001"+
 		"\u0000\u0000\u0000\u0b2e\u0b2c\u0001\u0000\u0000\u0000\u0b2e\u0b2f\u0001"+
 		"\u0000\u0000\u0000\u0b2f\u0219\u0001\u0000\u0000\u0000\u0b30\u0b33\u0003"+
 		"\u021c\u010e\u0000\u0b31\u0b33\u0003\u021e\u010f\u0000\u0b32\u0b30\u0001"+
 		"\u0000\u0000\u0000\u0b32\u0b31\u0001\u0000\u0000\u0000\u0b33\u0b35\u0001"+
-		"\u0000\u0000\u0000\u0b34\u0b36\u0005\u00c6\u0000\u0000\u0b35\u0b34\u0001"+
+		"\u0000\u0000\u0000\u0b34\u0b36\u0005\u00c5\u0000\u0000\u0b35\u0b34\u0001"+
 		"\u0000\u0000\u0000\u0b36\u0b37\u0001\u0000\u0000\u0000\u0b37\u0b35\u0001"+
 		"\u0000\u0000\u0000\u0b37\u0b38\u0001\u0000\u0000\u0000\u0b38\u021b\u0001"+
 		"\u0000\u0000\u0000\u0b39\u0b44\u0003\u0222\u0111\u0000\u0b3a\u0b45\u0003"+
-		"\u020e\u0107\u0000\u0b3b\u0b3d\u0005&\u0000\u0000\u0b3c\u0b3e\u0005\u00c6"+
+		"\u020e\u0107\u0000\u0b3b\u0b3d\u0005&\u0000\u0000\u0b3c\u0b3e\u0005\u00c5"+
 		"\u0000\u0000\u0b3d\u0b3c\u0001\u0000\u0000\u0000\u0b3e\u0b3f\u0001\u0000"+
 		"\u0000\u0000\u0b3f\u0b3d\u0001\u0000\u0000\u0000\u0b3f\u0b40\u0001\u0000"+
 		"\u0000\u0000\u0b40\u0b41\u0001\u0000\u0000\u0000\u0b41\u0b42\u0003\u0212"+

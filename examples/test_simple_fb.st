@@ -1,0 +1,9 @@
+FUNCTION_BLOCK SIMPLE_FB
+    VAR_INPUT
+        IN : BOOL;
+    END_VAR
+    VAR_OUTPUT
+        OUT : BOOL;
+    END_VAR
+    OUT := IN;
+END_FUNCTION_BLOCK

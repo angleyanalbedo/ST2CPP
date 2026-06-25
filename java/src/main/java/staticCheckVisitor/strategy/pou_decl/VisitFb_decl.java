@@ -120,6 +120,6 @@ public class VisitFb_decl implements Strategy {
 
         //出栈
         PLCScopeStack.pop();
-        return null;
+        return visitor.packSymbols(plcfbDeclSymbol);
     }
 }

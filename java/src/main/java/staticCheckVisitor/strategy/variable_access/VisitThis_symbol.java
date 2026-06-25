@@ -4,6 +4,7 @@ import PLCException.PLCSemanticException;
 import PLCSymbolAndScope.IDGenerator;
 import PLCSymbolAndScope.PLCScopeStack;
 import PLCSymbolAndScope.PLCSymbolTables.PLCSymbolTable;
+import PLCSymbolAndScope.PLCSymbolTables.PLCSymbolTable;
 import PLCSymbolAndScope.PLCSymbolTables.PLCTotalSymbolTable;
 import PLCSymbolAndScope.PLCSymbols.*;
 import antlr4.PLCSTPARSERParser;
@@ -123,7 +124,31 @@ public class VisitThis_symbol implements Strategy {
                 tempFoundSymbol.setSort(fieldVar.getSort());
                 tempFoundSymbol.setRuntimeTypeName(fieldVar.getRuntimeTypeName());
 
-                // 更新名称和 assignVar：处理嵌套 (A.B).C
+                // 更新名称和 assignVar
+                String currentName = tempFoundSymbol.getName();
+                if (currentName.startsWith("*")) {
+                    currentName = currentName.substring(1);
+                }
+                tempFoundSymbol.setName("*(" + currentName + "." + fieldName + ")");
+                if (tempFoundSymbol instanceof PLCVariable) {
+                    PLCVariable tempVar = (PLCVariable) tempFoundSymbol;
+                    tempVar.setAssignVar("(" + currentName + "." + fieldName + ")");
+                    tempVar.setDeclSymbol(fieldVar.getDeclSymbol());
+                }
+            } else if (typeSymbol instanceof PLCBaseClassDeclSymbol classType) {
+                // FB/CLASS 类型：在 import 符号表中查找字段
+                PLCSymbolTable importTable = classType.getImportSymbolTable();
+                PLCSymbol fieldSym = (importTable != null) ? importTable.findSymbol(fieldName) : null;
+                PLCVariable fieldVar = (fieldSym instanceof PLCVariable) ? (PLCVariable) fieldSym : null;
+                if (fieldVar == null) {
+                    throw new PLCSemanticException("type " + typeSymbol.getName()
+                            + " has no member named " + fieldName + " FROM : " + ctx.getText());
+                }
+
+                tempFoundSymbol.setTypeId(fieldVar.getTypeId());
+                tempFoundSymbol.setSort(fieldVar.getSort());
+                tempFoundSymbol.setRuntimeTypeName(fieldVar.getRuntimeTypeName());
+
                 String currentName = tempFoundSymbol.getName();
                 if (currentName.startsWith("*")) {
                     currentName = currentName.substring(1);

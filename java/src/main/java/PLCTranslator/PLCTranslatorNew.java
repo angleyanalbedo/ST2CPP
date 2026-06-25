@@ -7,6 +7,7 @@ import PLCTranslator.TranslateType.Class_decl.TranslateClass_decl;
 import java.util.List;
 import java.util.ArrayList;
 import PLCTranslator.TranslateType.Fb_body.TranslateFb_body;
+import PLCTranslator.TranslateType.Fb_decl.TranslateFb_decl;
 import PLCTranslator.TranslateType.Func_decl.TranslateFunc_decl;
 import PLCTranslator.TranslateType.Interface_decl.TranslateInterface_decl;
 import PLCTranslator.TranslateType.Method_decl.TranslateMethod_decl;
@@ -460,6 +461,14 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     @Override public String visitFunc_decl(PLCSTPARSERParser.Func_declContext ctx) {
         TranslateFunc_decl translateFunc_decl = new TranslateFunc_decl();
         return translateFunc_decl.translateNode(ctx, this);
+    }
+
+    /**
+     * 翻译功能块
+     */
+    @Override public String visitFb_decl(PLCSTPARSERParser.Fb_declContext ctx) {
+        TranslateFb_decl translateFb_decl = new TranslateFb_decl();
+        return translateFb_decl.translateNode(ctx, this);
     }
 
     /**

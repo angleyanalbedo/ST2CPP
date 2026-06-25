@@ -638,7 +638,9 @@ public class PLCVisitor extends PLCSTPARSERBaseVisitor<ArrayList<PLCSymbol>> {
 
     @Override
     public ArrayList<PLCSymbol> visitFb_decl(PLCSTPARSERParser.Fb_declContext ctx) {
-        return factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
+        ArrayList<PLCSymbol> symbols = factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
+        properties.put(ctx, symbols);
+        return symbols;
     }
 
     @Override
