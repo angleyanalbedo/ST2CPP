@@ -79,10 +79,10 @@ public class Main {
             outputFile = "main.cpp";
         }
 
-        // 推导 fileId
+        // 推导 fileId（从输入文件名派生，去掉 .st 后缀）
         if (fileId == null) {
-            String outputName = new File(outputFile).getName();
-            fileId = outputName.endsWith(".cpp") ? outputName.substring(0, outputName.length() - 4) : outputName;
+            String inputName = new File(inputFile).getName();
+            fileId = inputName.endsWith(".st") ? inputName.substring(0, inputName.length() - 3) : inputName;
         }
 
         // 验证输入文件存在

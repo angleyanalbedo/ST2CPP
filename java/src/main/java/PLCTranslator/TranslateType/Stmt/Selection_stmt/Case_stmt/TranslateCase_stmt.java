@@ -27,7 +27,7 @@ public class TranslateCase_stmt {
 
         for(int t =1; t<ctx.case_selection(0).case_list().case_list_elem().size(); t++){
             sb.append("\n||("+translatorNew.codeGen.translateExpr(varExpression.getAssignVar())+"=="
-                    + ctx.case_selection(0).case_list().case_list_elem(t)+")");
+                    + translatorNew.codeGen.translateExpr(ctx.case_selection(0).case_list().case_list_elem(t).getText())+")");
         }
 
 //        System.out.print("){");
@@ -47,7 +47,7 @@ public class TranslateCase_stmt {
                     ")");
 
             for(int t =1; t<ctx.case_selection(i).case_list().case_list_elem().size(); t++){
-                sb.append("\n||("+translatorNew.codeGen.translateExpr(varExpression.getAssignVar())+"=="+ ctx.case_selection(i).case_list().case_list_elem(t)+")");
+                sb.append("\n||("+translatorNew.codeGen.translateExpr(varExpression.getAssignVar())+"=="+ translatorNew.codeGen.translateExpr(ctx.case_selection(i).case_list().case_list_elem(t).getText())+")");
             }
 
 //            System.out.println("){");

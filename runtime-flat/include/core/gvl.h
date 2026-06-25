@@ -2,14 +2,12 @@
 
 #include "constants.h"
 #include "types.h"
+#include "error_manager.h"
 #include <cstdint>
 #include <cstring>
 #include <cstdio>
 
 namespace rt_plc {
-
-// 前向声明
-struct ErrorManager;
 
 // 缓存行对齐的全局变量表
 struct alignas(64) GVL {

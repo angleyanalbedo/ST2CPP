@@ -7,10 +7,14 @@ using namespace rt_plc;
 
 INT PRINTF(STRING FMT);
 
-void PROGRAM_MAIN(GVL& gvl, ProcessImage& io, TIME dt) {
+void PROGRAM_MAIN_init(GVL& gvl, ProcessImage& io) {
 		gvl.write<INT>(0, (42));
 		gvl.write<INT>(2, (10));
 		gvl.write<INT>(4, (0));
+}
+void PROGRAM_MAIN_pre(GVL& gvl, ProcessImage& io) {
+}
+void PROGRAM_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 		gvl.write<INT>(4, (gvl.read<INT>(0)) +(gvl.read<INT>(2)) );
 		printf("C = ");
 		printf("%d", (int)(gvl.read<INT>(4)));
@@ -26,4 +30,15 @@ void PROGRAM_MAIN(GVL& gvl, ProcessImage& io, TIME dt) {
 		printf("%d", (int)(gvl.read<INT>(0)));
 		printf("\n");
 		}
+}
+void PROGRAM_MAIN_post(GVL& gvl, ProcessImage& io) {
+}
+// ─── Auto-generated POU Registration (test_print) ───
+void registerPOU_test_print(POURegistry& reg) {
+    POUCallbacks cbs;
+    cbs.init = PROGRAM_MAIN_init;
+    cbs.cyclic = PROGRAM_MAIN_cyclic;
+    cbs.pre = PROGRAM_MAIN_pre;
+    cbs.post = PROGRAM_MAIN_post;
+    reg.add("MAIN", cbs);
 }

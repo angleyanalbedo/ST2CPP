@@ -243,7 +243,8 @@ public class FlatCodeGenerator implements CodeGenerator {
                     String elemType = typeMatcher.group(2);
                     int count = Integer.parseInt(typeMatcher.group(1));
                     // 生成：gvl.safeArrayAt<ELEM_TYPE>(offset, index, count)
-                    return "gvl.safeArrayAt<" + elemType + ">(" + arrOffset + ", " + indexExpr + ", " + count + ")";
+                    String translatedIndex = translateExpr(indexExpr);
+                    return "gvl.safeArrayAt<" + elemType + ">(" + arrOffset + ", " + translatedIndex + ", " + count + ")";
                 }
             }
         }
@@ -283,7 +284,8 @@ public class FlatCodeGenerator implements CodeGenerator {
                     String elemType = typeMatcher.group(2);
                     int count = Integer.parseInt(typeMatcher.group(1));
                     // 生成：gvl.safeArrayAt<ELEM_TYPE>(offset, index, count) = value
-                    return "gvl.safeArrayAt<" + elemType + ">(" + arrOffset + ", " + indexExpr + ", " + count + ") = " + valueExpr;
+                    String translatedIndex = translateExpr(indexExpr);
+                    return "gvl.safeArrayAt<" + elemType + ">(" + arrOffset + ", " + translatedIndex + ", " + count + ") = " + valueExpr;
                 }
             }
         }
@@ -333,8 +335,9 @@ public class FlatCodeGenerator implements CodeGenerator {
                         if (elemLayout != null) {
                             for (StructField f : elemLayout.fields) {
                                 if (f.name.equals(fieldPart)) {
+                                    String translatedIndex = translateExpr(indexExpr);
                                     return "gvl.safeArrayAt<" + elemType + ">(" + arrOffset + ", "
-                                        + indexExpr + ", " + count + ")." + fieldPart + " = " + valueExpr;
+                                        + translatedIndex + ", " + count + ")." + fieldPart + " = " + valueExpr;
                                 }
                             }
                         }
@@ -874,8 +877,9 @@ public class FlatCodeGenerator implements CodeGenerator {
                         String elemType = typeMatcher.group(2);
                         int count = Integer.parseInt(typeMatcher.group(1));
                         // 使用 gvl.safeArrayAt 进行越界检查
+                        String translatedIndex = translateExpr(indexExpr);
                         arrayAccessMatcher.appendReplacement(sb,
-                            "gvl.safeArrayAt<" + elemType + ">(" + arrOffset + ", " + indexExpr + ", " + count + ")");
+                            "gvl.safeArrayAt<" + elemType + ">(" + arrOffset + ", " + translatedIndex + ", " + count + ")");
                         continue;
                     }
                 }
