@@ -43,7 +43,12 @@ ST2C-master/
 │   ├── test_struct.st           # STRUCT 类型测试
 │   └── test_arr_struct.st       # 数组 + STRUCT 测试
 ├── test.bat                     # 一键测试脚本（编译器 + runtime 集成）
+├── README.md                    # 项目入口、架构概览、快速开始
+├── CONTRIBUTING.md              # 开发指南、环境搭建、编码规范
+├── compiler-to-runtime.md       # 编译器→运行时接口文档
+├── st-support.md                # ST 语言支持矩阵
 ├── ST2C实时化改造方案.md         # 详细设计文档
+├── PLC运行时架构知识库.md        # PLC 架构背景知识
 └── AGENTS.md                    # 本文件
 ```
 
