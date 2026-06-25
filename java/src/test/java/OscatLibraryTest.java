@@ -65,7 +65,7 @@ public class OscatLibraryTest {
             String stem = f.getName();
 
             // 统计 POU 类型
-            if (content.contains("FUNCTION_BLOCK")) { fbCount++; scanSyntax(content, stem); continue; }
+            if (content.contains("FUNCTION_BLOCK")) fbCount++;
             if (content.matches("(?s)^\\s*FUNCTION\\s.*")) funcCount++;
             if (content.matches("(?s)^\\s*PROGRAM\\s.*")) progCount++;
 

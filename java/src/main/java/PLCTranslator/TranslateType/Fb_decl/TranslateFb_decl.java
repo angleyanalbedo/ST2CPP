@@ -1,6 +1,7 @@
 package PLCTranslator.TranslateType.Fb_decl;
 
 import PLCSymbolAndScope.PLCSymbols.*;
+import PLCSymbolAndScope.PLCSymbolTables.PLCSymbolTable;
 import PLCTranslator.FlatCodeGenerator;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
@@ -67,55 +68,17 @@ public class TranslateFb_decl {
 
     private List<FBField> collectFields(PLCSTPARSERParser.Fb_declContext ctx) {
         List<FBField> fields = new ArrayList<>();
+        PLCFBDeclSymbol fbSymbol = (PLCFBDeclSymbol) PLCTranslatorNew.properties.get(ctx).get(0);
+        PLCSymbolTable importTable = fbSymbol.getImportSymbolTable();
+        if (importTable == null) return fields;
 
-        // VAR_INPUT / VAR_OUTPUT / VAR_IN_OUT
-        for (PLCSTPARSERParser.Fb_io_var_declsContext io : ctx.fb_io_var_decls()) {
-            ArrayList<PLCSymbol> symbols = PLCTranslatorNew.properties.get(io);
-            if (symbols != null) {
-                for (PLCSymbol s : symbols) {
-                    if (s instanceof PLCVariable v) {
-                        fields.add(new FBField(v.getName(), v.getRuntimeTypeName(), v.getAssignVar()));
-                    }
-                }
+        for (PLCSymbol s : importTable.getSymbolIDHashMap().values()) {
+            if (s instanceof PLCVariable v) {
+                // 排除 FB 自身（不是变量）
+                if (v.getSymbolId() == fbSymbol.getSymbolId()) continue;
+                fields.add(new FBField(v.getName(), v.getRuntimeTypeName(), v.getAssignVar()));
             }
         }
-
-        // VAR
-        for (PLCSTPARSERParser.Func_var_declsContext fv : ctx.func_var_decls()) {
-            ArrayList<PLCSymbol> symbols = PLCTranslatorNew.properties.get(fv);
-            if (symbols != null) {
-                for (PLCSymbol s : symbols) {
-                    if (s instanceof PLCVariable v) {
-                        fields.add(new FBField(v.getName(), v.getRuntimeTypeName(), v.getAssignVar()));
-                    }
-                }
-            }
-        }
-
-        // VAR_TEMP
-        for (PLCSTPARSERParser.Temp_var_declsContext tv : ctx.temp_var_decls()) {
-            ArrayList<PLCSymbol> symbols = PLCTranslatorNew.properties.get(tv);
-            if (symbols != null) {
-                for (PLCSymbol s : symbols) {
-                    if (s instanceof PLCVariable v) {
-                        fields.add(new FBField(v.getName(), v.getRuntimeTypeName(), v.getAssignVar()));
-                    }
-                }
-            }
-        }
-
-        // VAR_EXTERNAL / other
-        for (PLCSTPARSERParser.Other_var_declsContext ov : ctx.other_var_decls()) {
-            ArrayList<PLCSymbol> symbols = PLCTranslatorNew.properties.get(ov);
-            if (symbols != null) {
-                for (PLCSymbol s : symbols) {
-                    if (s instanceof PLCVariable v) {
-                        fields.add(new FBField(v.getName(), v.getRuntimeTypeName(), v.getAssignVar()));
-                    }
-                }
-            }
-        }
-
         return fields;
     }
 }

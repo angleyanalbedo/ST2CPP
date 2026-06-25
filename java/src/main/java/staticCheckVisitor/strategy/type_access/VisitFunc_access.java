@@ -162,6 +162,22 @@ public class VisitFunc_access implements Strategy {
                 PLCSymbol function = scope.deepFindSymbol(funcName);
                 ArrayList<PLCModifierEnum.Sort> validSorts = new ArrayList<>(Arrays.asList(PLCModifierEnum.Sort.METHOD_DECL, PLCModifierEnum.Sort.FC_DECL));
                 if(function == null || !validSorts.contains(function.getSort())){
+                    // 检查是否是 FB 实例调用: CT() 形式
+                    if (function != null && function.getSort() == PLCModifierEnum.Sort.VAR) {
+                        PLCVariable var = (PLCVariable) function;
+                        PLCTypeDeclSymbol typeSym = PLCTotalSymbolTable.getTypeByTypeID(var.getTypeId());
+                        if (typeSym instanceof PLCBaseClassDeclSymbol) {
+                            // FB 实例调用: 创建合成函数符号
+                            PLCBaseFUNDeclSymbol fakeFunc = new PLCBaseFUNDeclSymbol();
+                            fakeFunc.setName(funcName);
+                            fakeFunc.setRuntimeName("*" + funcName + "::callFunc");
+                            fakeFunc.setRuntimeTypeName("fb_instance_call");
+                            fakeFunc.setSort(PLCModifierEnum.Sort.FC_DECL);
+                            fakeFunc.setSymbolId(var.getSymbolId());
+                            fakeFunc.setTypeId(var.getTypeId());
+                            return visitor.packSymbols(fakeFunc);
+                        }
+                    }
                     throw new PLCSemanticException("can not find method or function : " + funcName + "  from : " + ctx.getText());
                 }
                 basicFunc = (PLCBaseFUNDeclSymbol) function;
