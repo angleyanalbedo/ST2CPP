@@ -122,23 +122,11 @@ char_str
             | D_byte_char;
 
 s_byte_char
-            : '\'' S_byte_char_value*
-              '\''
-            ;
-
-//s_byte_char_str : '\'' S_byte_char_value+ '\'';
-
-//d_byte_char_str : '"' d_byte_char_value + '"';
-
-d_byte_char_value
-            : Common_Char_Value+
-            | '$' Hex_Digit Hex_Digit
-              Hex_Digit Hex_Digit
+            : StringLiteralS
             ;
 
 D_byte_char
-            : '"' D_byte_char_value*
-              '"'
+            : StringLiteralD
             ;
 
 // any printable characters except $, " and '
@@ -1976,6 +1964,8 @@ print_stmt
 print_stmt_element
                 :
                     identifier
+                    | D_byte_char
+                    | s_byte_char
                 ;
 
 

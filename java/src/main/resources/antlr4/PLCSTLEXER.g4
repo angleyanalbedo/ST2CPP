@@ -12,6 +12,10 @@ REF_TO_KW : 'REF_TO';
 REF_KW : 'REF';
 THIS_KW : 'THIS';
 
+// 字符串字面量（必须在 Identifier 之前定义，确保 "hello" 整体匹配而非 h 被 Identifier 吃掉）
+StringLiteralS : '\'' (~['\r\n] | '\'\'' | '$$' | '$' [LlNnPpRrTt] | '$' Hex_Digit Hex_Digit)* '\'';
+StringLiteralD : '"' (~["\r\n] | '""' | '$$' | '$' [LlNnPpRrTt] | '$' Hex_Digit Hex_Digit Hex_Digit Hex_Digit)* '"';
+
 Identifier
   : IdentifierStart IdentifierPart* ;
 

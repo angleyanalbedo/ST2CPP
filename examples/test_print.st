@@ -21,7 +21,8 @@ PROGRAM MAIN
 
     C := A + B;
 
-    PRINT(A);
+    PRINT("C = " + C);
+    PRINT("A = " + A);
     PRINT(B);
     PRINT(C);
 

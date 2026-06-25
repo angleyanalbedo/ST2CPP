@@ -17,8 +17,9 @@ public class TranslatePrint_stmt {
             PLCVariable elem = (PLCVariable) syms.get(0);
             String assignVar = elem.getAssignVar();
             if (assignVar == null || assignVar.isEmpty()) continue;
-            String translated = translatorNew.codeGen.translateExpr(assignVar);
             boolean isString = (elem.getSort() == PLCModifierEnum.Sort.STRING);
+            // 字符串字面量直接使用（已是 C++ 字符串），无需 translateExpr 处理
+            String translated = isString ? assignVar : translatorNew.codeGen.translateExpr(assignVar);
             sb.append(translatorNew.codeGen.emitPrintElement(translated, isString));
         }
         // 新行

@@ -122,13 +122,6 @@ public class PLCSTPARSERBaseVisitor<T> extends AbstractParseTreeVisitor<T> imple
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitD_byte_char_value(PLCSTPARSERParser.D_byte_char_valueContext ctx) { return visitChildren(ctx); }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation returns the result of calling
-	 * {@link #visitChildren} on {@code ctx}.</p>
-	 */
 	@Override public T visitTime_literal(PLCSTPARSERParser.Time_literalContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}

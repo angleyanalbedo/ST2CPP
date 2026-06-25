@@ -101,12 +101,6 @@ public interface PLCSTPARSERVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitS_byte_char(PLCSTPARSERParser.S_byte_charContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link PLCSTPARSERParser#d_byte_char_value}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitD_byte_char_value(PLCSTPARSERParser.D_byte_char_valueContext ctx);
-	/**
 	 * Visit a parse tree produced by {@link PLCSTPARSERParser#time_literal}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
