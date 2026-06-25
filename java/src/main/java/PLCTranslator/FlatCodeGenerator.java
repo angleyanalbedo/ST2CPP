@@ -61,6 +61,16 @@ public class FlatCodeGenerator implements CodeGenerator {
     // PLC_Struct_Value<ID> → struct 类型名映射
     private final Map<String, String> oopStructTypeToName = new HashMap<>();
 
+    // ─── FOR 循环 GVL 局部变量遮盖 ───
+    // 被 FOR 循环局部变量遮盖的 GVL 变量名集合（O(1) 查询用）
+    private final Set<String> shadowedGvlVars = new HashSet<>();
+    // 嵌套顺序栈，内含变量名/类型/偏移
+    private static class ShadowEntry {
+        String varName; String type; int offset;
+        ShadowEntry(String v, String t, int o) { varName = v; type = t; offset = o; }
+    }
+    private final ArrayDeque<ShadowEntry> shadowStack = new ArrayDeque<>();
+
     /**
      * 注册一个 struct 类型
      * @param typeName    C++ struct 名（如 "MyStruct"）
@@ -478,8 +488,13 @@ public class FlatCodeGenerator implements CodeGenerator {
         boolean isGvlVar = offsetMap.containsKey(cleanVar);
 
         if (isGvlVar) {
-            // GVL 变量：需要在 for 循环前声明一个局部副本
+            // GVL 变量：声明同名的局部变量遮盖 GVL，
+            // 从 GVL 读取初值，循环结束后写回终值
             String type = typeMap.getOrDefault(cleanVar, "INT");
+            int offset = offsetMap.get(cleanVar);
+            // 注册为遮盖变量（translateExpr 跳过 GVL 替换）
+            shadowedGvlVars.add(cleanVar);
+            shadowStack.addLast(new ShadowEntry(cleanVar, type, offset));
             sb.append("\n\t\t").append(type).append(" ").append(cleanVar).append(" = ")
               .append(translateExpr(fromAssignVar)).append(";");
             sb.append("\n\t\tfor( ; ").append(cleanVar).append(" <= ")
@@ -502,7 +517,16 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     @Override
     public String emitForEnd() {
-        return "\n\t\t}";
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n\t\t}");
+        // 如果栈顶有遮盖变量，写回 GVL 并取消遮盖
+        if (!shadowStack.isEmpty()) {
+            ShadowEntry entry = shadowStack.removeLast();
+            shadowedGvlVars.remove(entry.varName);
+            sb.append("\n\t\tgvl.write<").append(entry.type).append(">(")
+              .append(entry.offset).append(", ").append(entry.varName).append(");");
+        }
+        return sb.toString();
     }
 
     @Override
@@ -808,6 +832,8 @@ public class FlatCodeGenerator implements CodeGenerator {
             if (type == null || offset == null) continue;
             // 跳过数组类型变量（类型名以 "ARRAY[" 开头）
             if (type.startsWith("ARRAY[")) continue;
+            // 跳过被 FOR 循环局部变量遮盖的 GVL 变量（循环体内引用指向局部变量）
+            if (shadowedGvlVars.contains(varName)) continue;
             // 使用正则匹配独立的变量名（前后不是字母/数字/下划线）
             String regex = "(?<![A-Za-z0-9_])" + Pattern.quote(varName) + "(?![A-Za-z0-9_])";
             result = result.replaceAll(regex, "gvl.read<" + type + ">(" + offset + ")");

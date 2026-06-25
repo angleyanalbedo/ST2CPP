@@ -161,7 +161,8 @@ test-flat.bat myprog.st    # 指定输入
 - [x] **RETAIN 区域标记**：编译器生成 `setRetainRegion()` 调用
 - [x] **ARRAY 类型支持**：Flat 模式支持 `VAR` 内联数组声明和元素访问
 - [ ] **FB（功能块）翻译**：当前仅支持 FUNCTION 和 PROGRAM
-- [ ] **STRUCT 类型支持**：当前生成 `// Flat: TODO`
+- [x] **STRUCT 类型支持**：Flat 模式下 STRUCT 声明生成 C++ struct（对齐偏移），支持 `STRUCT.FIELD` 和 `ARR[I].FIELD`（读/写）
+- [x] **FOR 循环 GVL 局部阴影**：FOR 循环控制变量使用局部副本，循环体引用跳过 GVL 替换，循环结束后写回 GVL
 
 ## 开发指南
 
@@ -217,6 +218,23 @@ test-flat.bat myprog.st    # 指定输入
 - 语义检查阶段报错：`type mismatch : ARR[I]:=I*10`（需修复静态检查器）
 
 **待修复**：静态检查器 `VisitVariableAssignExpression` 需要支持数组元素访问的类型推断。
+
+### 2025-06-25: 实现 STRUCT 完整支持 + FOR 循环 GVL 局部阴影
+
+**完成内容**：
+1. STRUCT 声明 → C++ struct 定义（FlatCodeGenerator + TranslateStruct_type_decl）
+2. `STRUCT.FIELD` 读/写 — 静态检查（`VisitThis_symbol`）→ 代码生成（`writeExpr` LHS + `translateExpr` step 7 RHS）
+3. `ARR[I].FIELD` 混合访问 — 新 `VisitNamespaceSymbolic.java`（处理 `multi_elem_var` 交替的 `subscript_list`/`struct_variable`）
+4. `PLCVisitor.java:949` — `visitNamespaceSymbolic()` 修复分支参数（`factory.getStrategy(ctx.getRuleIndex(), 1)`）
+5. FOR 循环 GVL 变量 bug — `emitForBegin` 创建局部副本 + `shadowedGvlVars`/`shadowStack` 跟踪；`translateExpr` step 7 跳过遮盖变量；`emitForEnd` 写回 GVL 并弹出 shadow
+
+**新文件**：
+- `java/src/main/java/staticCheckVisitor/strategy/variable_access/VisitNamespaceSymbolic.java`
+
+**测试**：
+- `examples/test.st` — 原始 FOR 循环 ✅
+- `examples/test_struct.st` — 简单 STRUCT ✅
+- `examples/test_arr_struct.st` — 数组 + STRUCT + FOR 循环 ✅
 
 ## 注意事项
 

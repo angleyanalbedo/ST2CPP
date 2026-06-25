@@ -13,7 +13,8 @@ void PROGRAM_P(GVL& gvl, ProcessImage& io, TIME dt) {
 		gvl.write<INT>(2, (0));
 		INT A = (1);
 		for( ; A <= (5);A = A + (1)){
-		INT _X0=gvl.read<INT>(0);
+		INT _X0=A;
 		gvl.write<INT>(2, ADD_TEN(_X0));
 		}
+		gvl.write<INT>(0, A);
 }
