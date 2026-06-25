@@ -7,3 +7,4 @@ runtime-flat/build
 runtime-oop/build/
 runtime-flat/*.o
 output/flat/build
+output/test/
