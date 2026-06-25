@@ -116,8 +116,7 @@ public class TranslateProg_decl {
                 }
             }
             if (retainStart < Integer.MAX_VALUE && retainEnd > retainStart) {
-                int retainLength = retainEnd - retainStart;
-                sb.append("\n\t\tgvl.setRetainRegion(").append(retainStart).append(", ").append(retainLength).append(");");
+                sb.append("\n\t\tgvl.setRetainRegion(").append(retainStart).append(", ").append(retainEnd).append(");");
             }
         }
 

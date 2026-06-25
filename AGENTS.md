@@ -214,17 +214,32 @@ test.bat myprog.st    # 指定输入
 
 - [x] **临时变量类型推断**：`auto _X0=A` 改为具体类型 `INT _X0=A`
 - [x] **GVL 变量在表达式中的转换**：`(A)` 改为 `(gvl.read<INT>(0))`
-- [x] **RETAIN 区域标记**：编译器收集 RETAIN 变量并生成 `setRetainRegion()` 调用
+- [x] **RETAIN 区域标记**：编译器收集 RETAIN 变量并生成 `setRetainRegion()` 调用（已修复参数 bug：传 end 偏移而非长度）
 - [x] **ARRAY 类型支持**：Flat 模式支持 `VAR` 内联数组声明和元素访问
 - [x] **STRUCT 类型支持**：STRUCT 声明生成 C++ struct（对齐偏移），支持 `STRUCT.FIELD` 和 `ARR[I].FIELD`（读/写）
 - [x] **FOR 循环 GVL 局部阴影**：FOR 循环控制变量使用局部副本，循环体引用跳过 GVL 替换，循环结束后写回 GVL
 - [x] **WHILE / REPEAT 控制流**：翻译为原生 C++ `while()` / `do{}while()`
-- [x] **CASE 控制流**：翻译为 if/else if 链（⚠️ 部分 case_list_elem 未走 translateExpr）
+- [x] **CASE 控制流**：翻译为 if/else if 链
 - [x] **ASSERT 断言**：翻译为条件检查 + 错误输出
+- [x] **数组下标 GVL 替换**：readExpr/writeExpr/translateExpr 三处均已修复
+- [x] **CASE 翻译修复**：case_list_elem 已走 translateExpr
+- [x] **fileId 后缀修复**：从输入文件名派生，去掉 .st 后缀
+- [x] **ErrorManager 循环依赖**：提取到独立头文件 error_manager.h
 - [ ] **FB（功能块）翻译**：当前仅支持 FUNCTION 和 PROGRAM
 - [ ] **ENUM 类型声明**：TYPE...END_TYPE 中的 ENUM 在 PROGRAM 变量段输出 `// TODO` 注释
-- [ ] **CASE 翻译修复**：`TranslateCase_stmt.java` 中部分 case_list_elem 直接拼接原始文本，未调用 `translateExpr()`
-- [ ] **数组下标变量 GVL 替换**：非 FOR 循环场景下数组下标中的 GVL 变量未被替换为 `gvl.read<T>(offset)`（如 `test_array_simple.st`）
+- [ ] **VAR_INPUT/VAR_OUTPUT/VAR_IN_OUT**：PROGRAM 的 IO 参数声明未正确处理
+- [ ] **标准 FB 调用集成**：运行时有 TON/CTU 等实现，编译器不会生成调用代码
+- [ ] **FB 实例化**：无法 `VAR btn : TON; END_VAR`
+- [ ] **多文件同名 PROGRAM 链接冲突**：多个 .st 定义同名 PROGRAM 导致 multiple definition
+- [ ] **24 处无保护的 PLCVariable 强转**：多个 TranslateXxx 中强转未检查类型
+
+### Runtime 架构扩展
+
+- [ ] **runtime_main 链接失败**：CMake 的 `runtime_main` 目标未链接 `pou_registry.gen.cpp`
+- [ ] **多核调度**：当前单线程串行
+- [ ] **动态任务注册**：当前任务在编译期固定
+- [ ] **OPC UA / MQTT 集成**：工业协议通信接口
+- [ ] **在线下载/热更新**
 
 ## 开发指南
 
@@ -267,6 +282,25 @@ test.bat myprog.st    # 指定输入
 **修复**：删除旧版，确保 `-I runtime-flat/include` 下只有正确版本。
 
 ## 语法修改记录
+
+### 2025-06-25-4: Bug 修复 + 审计 + 文档更新
+
+**修复 Bug**：
+1. **数组下标 GVL 替换缺失**：`readExpr()`、`writeExpr()`、`translateExpr()` step 5 三处数组下标未调用 `translateExpr()`，导致非 FOR 场景下生成裸变量名
+2. **CASE 翻译遗漏**：`TranslateCase_stmt.java` 中多个 case_list_elem 直接拼接原始文本
+3. **fileId 后缀**：`Main.java` 从输出文件名派生 fileId，改为从输入文件名派生并去掉 `.st`
+4. **gvl.h 循环依赖**：`ErrorManager` 提取到独立头文件 `error_manager.h`，解决 forward declaration 警告
+5. **RETAIN 参数 bug**：`TranslateProg_decl.java` 传长度 `retainLength` 给 `setRetainRegion(start, end)`，改为传结束偏移 `retainEnd`
+
+**文档更新**：
+- st-support.md / README.md：WHILE/REPEAT/CASE 标为已实现
+- AGENTS.md / runtime-flat/docs/TODO.md：基于全项目审计重写 TODO 列表
+
+**全项目审计发现**：
+- 24 处无保护的 PLCVariable 强转（ClassCastException 风险）
+- 多文件同名 PROGRAM 链接冲突
+- runtime_main 未链接 pou_registry.gen.cpp
+- FB 翻译、ENUM 类型、VAR_INPUT/OUTPUT 为最大功能缺失
 
 ### 2025-06-25-3: POURegistry + 通用 runtime + 构建脚本（清理遗留文件）
 
