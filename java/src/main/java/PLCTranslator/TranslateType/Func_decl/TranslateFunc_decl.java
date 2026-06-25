@@ -55,19 +55,35 @@ public class TranslateFunc_decl {
                 params.append(", ").append(this.funcParaSentences.get(t));
             }
         }
-        sb.append(translatorNew.codeGen.emitFuncDeclBegin(funcName, returnValueType, params.toString()));
-        // 局部变量声明（func_var, temp_var）
-        for (String initSentence : this.funcCallInitSentences) {
-            sb.append(initSentence);
+
+        // 检查 func_body 是否包含实际语句（ANTLR 可能匹配空 stmt_list）
+        boolean hasBody = false;
+        if (ctx.func_body() != null) {
+            PLCSTPARSERParser.Func_bodyContext body = ctx.func_body();
+            hasBody = (body.stmt_list() != null && body.stmt_list().stmt().size() > 0)
+                    || body.ladder_diagram() != null || body.fb_diagram() != null
+                    || body.instruction_list() != null || body.Other_Languages() != null;
         }
-        // 函数体
-        String result = translatorNew.visit(ctx.func_body());
-        sb.append(result);
-        // 输出返回
-        for (String funcCallOutputSentence : this.funcCallOutputSentences) {
-            sb.append(funcCallOutputSentence);
+
+        if (hasBody) {
+            sb.append(translatorNew.codeGen.emitFuncDeclBegin(funcName, returnValueType, params.toString()));
+            // 局部变量声明（func_var, temp_var）
+            for (String initSentence : this.funcCallInitSentences) {
+                sb.append(initSentence);
+            }
+            // 函数体
+            String result = translatorNew.visit(ctx.func_body());
+            sb.append(result);
+            // 输出返回
+            for (String funcCallOutputSentence : this.funcCallOutputSentences) {
+                sb.append(funcCallOutputSentence);
+            }
+            sb.append(translatorNew.codeGen.emitFuncDeclEnd());
+        } else {
+            // 外部函数声明（无 body）→ 仅生成原型
+            String nativeReturn = mapToNativeType(returnValueType);
+            sb.append("\n" + nativeReturn + " " + funcName + "(" + params.toString() + ");\n");
         }
-        sb.append(translatorNew.codeGen.emitFuncDeclEnd());
 
         return sb.toString();
     }

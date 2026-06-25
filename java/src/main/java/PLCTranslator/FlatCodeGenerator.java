@@ -570,9 +570,12 @@ public class FlatCodeGenerator implements CodeGenerator {
     }
 
     @Override
-    public String emitPrintStmt(String exprAssignVar) {
-        String translated = translateExpr(exprAssignVar);
-        return "\n\t\tprintf(\"%d\\n\", (int)(" + translated + "));";
+    public String emitPrintElement(String translatedExpr, boolean isString) {
+        if (isString) {
+            return "\n\t\tprintf(" + translatedExpr + ");";
+        } else {
+            return "\n\t\tprintf(\"%d\", (int)(" + translatedExpr + "));";
+        }
     }
 
 

@@ -95,11 +95,24 @@ public class VisitFunc_decl implements Strategy {
         }
 
         if(ctx.func_body() != null){
-            visitor.visit(ctx.func_body());
+            PLCSTPARSERParser.Func_bodyContext body = ctx.func_body();
+            // func_body 可能匹配空 stmt_list，此时视为无 body
+            boolean hasStatements = body.stmt_list() != null && body.stmt_list().stmt().size() > 0;
+            if (hasStatements || body.ladder_diagram() != null || body.fb_diagram() != null
+                    || body.instruction_list() != null || body.Other_Languages() != null) {
+                visitor.visit(body);
+            }
         }
 
+        // 外部函数（无实际 body）不要求有 RETURN 语句
         if(fcSymbol.getReturnTypeId() != -1 && !fcSymbol.isIfReturned()){
-            throw new PLCSemanticException("function " + fcSymbol.getName() + " needs return");
+            PLCSTPARSERParser.Func_bodyContext body = ctx.func_body();
+            boolean hasStatements = body != null && body.stmt_list() != null && body.stmt_list().stmt().size() > 0;
+            boolean hasOther = body != null && (body.ladder_diagram() != null || body.fb_diagram() != null
+                    || body.instruction_list() != null || body.Other_Languages() != null);
+            if (hasStatements || hasOther) {
+                throw new PLCSemanticException("function " + fcSymbol.getName() + " needs return");
+            }
         }
 
         //--------------------------------------------------------------

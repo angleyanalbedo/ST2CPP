@@ -1975,9 +1975,7 @@ print_stmt
 
 print_stmt_element
                 :
-                    s_byte_char
-                  | D_byte_char
-                  | identifier
+                    identifier
                 ;
 
 

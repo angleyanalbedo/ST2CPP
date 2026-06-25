@@ -5,16 +5,19 @@
 using namespace rt_plc;
 
 
-INT ADD_TEN(INT X) {
-		return (X) +((10)) ;
-}
-void PROGRAM_P(GVL& gvl, ProcessImage& io, TIME dt) {
-		gvl.write<INT>(0, (0));
-		gvl.write<INT>(2, (0));
-		INT A = (1);
-		for( ; A <= (5);A = A + (1)){
-		INT _X0=A;
-		gvl.write<INT>(2, ADD_TEN(_X0));
+struct MY_POINT {
+    INT X;
+    INT Y;
+};
+
+void PROGRAM_MAIN(GVL& gvl, ProcessImage& io, TIME dt) {
+		gvl.write<INT>(20, (0));
+		gvl.write<INT>(22, (0));
+		INT I = (0);
+		for( ; I <= (4);I = I + (1)){
+		gvl.safeArrayAt<MY_POINT>(0, I, 5).X = (I) *((10)) ;
+		gvl.safeArrayAt<MY_POINT>(0, I, 5).Y = (I) *((20)) ;
 		}
-		gvl.write<INT>(0, A);
+		gvl.write<INT>(20, I);
+		gvl.write<INT>(22, ((gvl.safeArrayAt<MY_POINT>(0, 0, 5).X)) +((gvl.safeArrayAt<MY_POINT>(0, 1, 5).X)) );
 }

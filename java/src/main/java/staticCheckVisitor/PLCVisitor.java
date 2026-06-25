@@ -503,6 +503,20 @@ public class PLCVisitor extends PLCSTPARSERBaseVisitor<ArrayList<PLCSymbol>> {
     }
 
     @Override
+    public ArrayList<PLCSymbol> visitPrint_stmt(PLCSTPARSERParser.Print_stmtContext ctx) {
+        return factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
+    }
+
+    @Override
+    public ArrayList<PLCSymbol> visitPrint_stmt_element(PLCSTPARSERParser.Print_stmt_elementContext ctx) {
+        ArrayList<PLCSymbol> symbols = factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
+        if (symbols != null && !symbols.isEmpty()) {
+            this.properties.put(ctx, symbols);
+        }
+        return symbols;
+    }
+
+    @Override
     public ArrayList<PLCSymbol> visitWhile_stmt(PLCSTPARSERParser.While_stmtContext ctx) {
         return factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
     }

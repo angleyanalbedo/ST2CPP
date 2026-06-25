@@ -72,7 +72,7 @@ public interface CodeGenerator {
     String emitCaseDefault();
     String emitCaseEnd();
 
-    String emitPrintStmt(String exprAssignVar);
+    String emitPrintElement(String translatedExpr, boolean isString);
 
 
     // ═══ 函数 / PROGRAM ═══

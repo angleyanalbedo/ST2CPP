@@ -1,4 +1,4 @@
-// Generated from D:/source/Project/ST2C-master/java/src/main/resources/antlr4/PLCSTPARSER.g4 by ANTLR 4.13.1
+// Generated from D:\source\Project\ST2C-master\java\src\main\resources\antlr4\PLCSTPARSER.g4 by ANTLR 4.10.1
 package antlr4;
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 
@@ -10,7 +10,6 @@ import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
  * @param <T> The return type of the visit operation. Use {@link Void} for
  * operations with no return type.
  */
-@SuppressWarnings("CheckReturnValue")
 public class PLCSTPARSERBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements PLCSTPARSERVisitor<T> {
 	/**
 	 * {@inheritDoc}
