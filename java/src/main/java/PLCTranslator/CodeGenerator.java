@@ -114,6 +114,23 @@ public interface CodeGenerator {
     /** 生成 PROGRAM 体结束 */
     String emitProgBodyEnd();
 
+    // ═══ PROGRAM 生命周期回调 ═══
+
+    /** 生成 Init 回调开始（变量初始化） */
+    String emitProgInitBegin(String progName);
+
+    /** 生成 Cyclic 回调开始（循环体） */
+    String emitProgCyclicBegin(String progName);
+
+    /** 生成 Pre 回调开始（首次扫描前） */
+    String emitProgPreBegin(String progName);
+
+    /** 生成 Post 回调开始（停止时） */
+    String emitProgPostBegin(String progName);
+
+    /** 生成回调函数结束 */
+    String emitProgFuncEnd();
+
 
     // ═══ 函数块 ═══
 

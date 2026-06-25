@@ -536,7 +536,5 @@ flowchart LR
 ---
 
 ## 10. 待完善项
-
-- [ ] 完整 PROGRAM 生命周期（Init/Pre/Cyclic/Post 回调，当前仅用 POUFunc 路径）
 - [ ] FB（功能块）翻译
 - [ ] RETAIN 区域标记（编译器生成 `setRetainRegion()` 调用）

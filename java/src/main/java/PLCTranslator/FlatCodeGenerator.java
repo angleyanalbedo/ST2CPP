@@ -600,7 +600,12 @@ public class FlatCodeGenerator implements CodeGenerator {
         sb.append("\n// ─── Auto-generated POU Registration (").append(fileId).append(") ───\n");
         sb.append("void registerPOU_").append(fileId).append("(POURegistry& reg) {\n");
         for (String name : progNames) {
-            sb.append("    reg.add(\"").append(name).append("\", PROGRAM_").append(name).append(");\n");
+            sb.append("    POUCallbacks cbs;\n");
+            sb.append("    cbs.init = PROGRAM_").append(name).append("_init;\n");
+            sb.append("    cbs.cyclic = PROGRAM_").append(name).append("_cyclic;\n");
+            sb.append("    cbs.pre = PROGRAM_").append(name).append("_pre;\n");
+            sb.append("    cbs.post = PROGRAM_").append(name).append("_post;\n");
+            sb.append("    reg.add(\"").append(name).append("\", cbs);\n");
         }
         sb.append("}\n");
         return sb.toString();
@@ -680,6 +685,33 @@ public class FlatCodeGenerator implements CodeGenerator {
     @Override
     public String emitProgBodyEnd() {
         return "";
+    }
+
+    // ═══ PROGRAM 生命周期回调 ═══
+
+    @Override
+    public String emitProgInitBegin(String progName) {
+        return "\nvoid PROGRAM_" + progName + "_init(GVL& gvl, ProcessImage& io) {";
+    }
+
+    @Override
+    public String emitProgCyclicBegin(String progName) {
+        return "\nvoid PROGRAM_" + progName + "_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {";
+    }
+
+    @Override
+    public String emitProgPreBegin(String progName) {
+        return "\nvoid PROGRAM_" + progName + "_pre(GVL& gvl, ProcessImage& io) {";
+    }
+
+    @Override
+    public String emitProgPostBegin(String progName) {
+        return "\nvoid PROGRAM_" + progName + "_post(GVL& gvl, ProcessImage& io) {";
+    }
+
+    @Override
+    public String emitProgFuncEnd() {
+        return "\n}";
     }
 
 

@@ -199,7 +199,9 @@ int main(int argc, char* argv[]) {
     registerAllPOUs(reg);
     std::printf("Registered %d POU(s):\n", reg.count());
     for (int i = 0; i < reg.count(); i++)
-        std::printf("  [%d] %s\n", i, reg.entries()[i].name);
+        std::printf("  [%d] %s (init=%s cyclic=%s)\n", i, reg.entries()[i].name,
+                    reg.entries()[i].cbs.init ? "Y" : "N",
+                    reg.entries()[i].cbs.cyclic ? "Y" : "N");
     std::printf("\n");
 
     // ── Step 2: Load configuration ──
@@ -221,10 +223,13 @@ int main(int argc, char* argv[]) {
         int taskIdx = sched.addCyclicTask(tc.name.c_str(), tc.priority, T_us(tc.intervalUs));
         int pousAdded = 0;
         for (const auto& pouName : tc.pous) {
-            POUFunc f = reg.lookup(pouName.c_str());
-            if (f) {
-                sched.addPOU(taskIdx, f);
-                pousAdded++;
+            const auto* cbs = reg.lookup(pouName.c_str());
+            if (cbs && cbs->cyclic) {
+                int progIdx = sched.addProgram(pouName.c_str(), cbs->init, cbs->cyclic, cbs->pre, cbs->post);
+                if (progIdx >= 0) {
+                    sched.addProgramToTask(taskIdx, progIdx);
+                    pousAdded++;
+                }
             } else {
                 std::printf("  [WARN] POU \"%s\" not found in registry\n", pouName.c_str());
             }
@@ -241,11 +246,15 @@ int main(int argc, char* argv[]) {
     if (!anyPouScheduled && reg.count() > 0) {
         std::printf("  (no tasks configured — auto-registering each POU)\n");
         for (int i = 0; i < reg.count(); i++) {
-            int taskIdx = sched.addCyclicTask(reg.entries()[i].name, 5, T_ms(10));
-            sched.addPOU(taskIdx, reg.entries()[i].func);
+            const auto& e = reg.entries()[i];
+            int taskIdx = sched.addCyclicTask(e.name, 5, T_ms(10));
+            int progIdx = sched.addProgram(e.name, e.cbs.init, e.cbs.cyclic, e.cbs.pre, e.cbs.post);
+            if (progIdx >= 0) {
+                sched.addProgramToTask(taskIdx, progIdx);
+            }
             sched.setTaskWatchdog(taskIdx, T_ms(5));
             std::printf("  Task: %s  priority=5  interval=10ms  watchdog=5ms\n",
-                        reg.entries()[i].name);
+                        e.name);
         }
     }
 

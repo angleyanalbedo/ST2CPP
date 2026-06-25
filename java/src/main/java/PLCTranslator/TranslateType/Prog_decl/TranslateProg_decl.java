@@ -12,24 +12,49 @@ public class TranslateProg_decl {
     public String translateNode(PLCSTPARSERParser.Prog_declContext ctx, PLCTranslatorNew translatorNew) {
         StringBuilder sb = new StringBuilder();
 
-        // 生成 void PROGRAM_Name(GVL& gvl, ProcessImage& io, TIME dt) { ... }
         String progName = ctx.prog_type_name().identifier().getText();
-        // 收集 PROGRAM 名称到注册表
         if (translatorNew.codeGen instanceof FlatCodeGenerator) {
             ((FlatCodeGenerator)translatorNew.codeGen).addProgramName(progName);
         }
-        sb.append(translatorNew.codeGen.emitProgDeclBegin(progName));
 
-        //翻译变量段
+        // ─── Init 回调：变量初始化 + RETAIN 区域 ───
+        sb.append(translatorNew.codeGen.emitProgInitBegin(progName));
+
+        // 翻译变量段（写入初始值）
+        sb.append(emitVarInit(ctx, translatorNew));
+
+        // 收集 RETAIN 变量并生成区域标记
+        sb.append(emitRetainRegion(ctx, translatorNew));
+
+        sb.append(translatorNew.codeGen.emitProgFuncEnd());
+
+        // ─── Pre 回调（空） ───
+        sb.append(translatorNew.codeGen.emitProgPreBegin(progName));
+        sb.append(translatorNew.codeGen.emitProgFuncEnd());
+
+        // ─── Cyclic 回调：循环体 ───
+        sb.append(translatorNew.codeGen.emitProgCyclicBegin(progName));
+        String result = translatorNew.visit(ctx.fb_body());
+        sb.append(result);
+        sb.append(translatorNew.codeGen.emitProgFuncEnd());
+
+        // ─── Post 回调（空） ───
+        sb.append(translatorNew.codeGen.emitProgPostBegin(progName));
+        sb.append(translatorNew.codeGen.emitProgFuncEnd());
+
+        return sb.toString();
+    }
+
+    /**
+     * 生成变量初始化语句（GVL 写入）
+     */
+    private String emitVarInit(PLCSTPARSERParser.Prog_declContext ctx, PLCTranslatorNew translatorNew) {
+        StringBuilder sb = new StringBuilder();
+
         for (PLCSTPARSERParser.Func_var_declsContext func_var_decl : ctx.func_var_decls()) {
             ArrayList<PLCSymbol> funcVarDecl = PLCTranslatorNew.properties.get(func_var_decl);
             for (PLCSymbol symbol : funcVarDecl) {
-                if(symbol instanceof PLCEnumDeclSymbol enumDeclSymbol){
-                    sb.append("\n\t// TODO: enum declaration");
-                } else if (symbol instanceof PLCArrayDeclSymbol varSymbol) {
-                    sb.append("\n\t// TODO: array declaration");
-                }else{
-                    PLCVariable varSymbol = (PLCVariable) symbol;
+                if (symbol instanceof PLCVariable varSymbol) {
                     sb.append(translatorNew.codeGen.emitVarDecl(varSymbol.getName(), varSymbol.getRuntimeTypeName(), varSymbol.getAssignVar()));
                 }
             }
@@ -38,31 +63,35 @@ public class TranslateProg_decl {
         for (PLCSTPARSERParser.Temp_var_declsContext temp_var_decl : ctx.temp_var_decls()) {
             ArrayList<PLCSymbol> tempVarDecl = PLCTranslatorNew.properties.get(temp_var_decl);
             for (PLCSymbol symbol : tempVarDecl) {
-                if(symbol instanceof PLCEnumDeclSymbol enumDeclSymbol){
-                    sb.append("\n\t// TODO: enum declaration");
-                } else if (symbol instanceof PLCArrayDeclSymbol varSymbol) {
-                    sb.append("\n\t// TODO: array declaration");
-                }else{
-                    PLCVariable varSymbol = (PLCVariable) symbol;
+                if (symbol instanceof PLCVariable varSymbol) {
                     sb.append(translatorNew.codeGen.emitVarDecl(varSymbol.getName(), varSymbol.getRuntimeTypeName(), varSymbol.getAssignVar()));
                 }
             }
         }
 
-        // 收集 RETAIN 变量
+        for (PLCSTPARSERParser.Other_var_declsContext other_var_decl : ctx.other_var_decls()) {
+            ArrayList<PLCSymbol> otherVarDecl = PLCTranslatorNew.properties.get(other_var_decl);
+            for (PLCSymbol symbol : otherVarDecl) {
+                if (symbol instanceof PLCVariable varSymbol) {
+                    sb.append(translatorNew.codeGen.emitVarDecl(varSymbol.getName(), varSymbol.getRuntimeTypeName(), varSymbol.getAssignVar()));
+                }
+            }
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * 生成 RETAIN 区域标记
+     */
+    private String emitRetainRegion(PLCSTPARSERParser.Prog_declContext ctx, PLCTranslatorNew translatorNew) {
+        StringBuilder sb = new StringBuilder();
         java.util.ArrayList<PLCVariable> retainVars = new java.util.ArrayList<>();
 
         for (PLCSTPARSERParser.Other_var_declsContext other_var_decl : ctx.other_var_decls()) {
             ArrayList<PLCSymbol> otherVarDecl = PLCTranslatorNew.properties.get(other_var_decl);
             for (PLCSymbol symbol : otherVarDecl) {
-                if(symbol instanceof PLCEnumDeclSymbol enumDeclSymbol){
-                    sb.append("\n\t// TODO: enum declaration");
-                } else if (symbol instanceof PLCArrayDeclSymbol varSymbol) {
-                    sb.append("\n\t// TODO: array declaration");
-                }else{
-                    PLCVariable varSymbol = (PLCVariable) symbol;
-                    sb.append(translatorNew.codeGen.emitVarDecl(varSymbol.getName(), varSymbol.getRuntimeTypeName(), varSymbol.getAssignVar()));
-                    // 收集 RETAIN 变量
+                if (symbol instanceof PLCVariable varSymbol) {
                     if (varSymbol.getRetainQualifiers() == PLCModifierEnum.RetainModifier.RETAIN) {
                         retainVars.add(varSymbol);
                     }
@@ -70,7 +99,6 @@ public class TranslateProg_decl {
             }
         }
 
-        // 生成 RETAIN 区域标记
         if (!retainVars.isEmpty()) {
             FlatCodeGenerator flatGen = (FlatCodeGenerator) translatorNew.codeGen;
             java.util.Map<String, Integer> offsets = flatGen.getOffsetMap();
@@ -93,9 +121,6 @@ public class TranslateProg_decl {
             }
         }
 
-        String result = translatorNew.visit(ctx.fb_body());
-        sb.append(result);
-        sb.append(translatorNew.codeGen.emitProgDeclEnd());
         return sb.toString();
     }
 
