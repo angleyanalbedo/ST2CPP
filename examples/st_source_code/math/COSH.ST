@@ -10,21 +10,3 @@ FUNCTION COSH:REAL
 	T := EXP(X);
 	COSH := (1.0 / T + T) * 0.5;
 END_FUNCTION
-
-PROGRAM program0
-  VAR
-    LocalVar0 : REAL;
-    CEIL5_OUT : REAL;
-  END_VAR
-
-  CEIL5_OUT := COSH(LocalVar0);
-END_PROGRAM
-
-
-CONFIGURATION Config0
-
-  RESOURCE Res0 ON PLC
-    TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    PROGRAM instance0 WITH task0 : program0;
-  END_RESOURCE
-END_CONFIGURATION

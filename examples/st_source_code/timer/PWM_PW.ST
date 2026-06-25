@@ -155,33 +155,3 @@ FUNCTION_BLOCK PWM_PW_Block
 	END_IF;
 
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-	
-	VAR
-		F :	REAL;
-		PW :	TIME;
-
-		Q :	BOOL;
-		func_block : PWM_PW_Block;
-  	END_VAR
-	func_block.F := F;
-	func_block.PW := PW;
-	func_block();
-	Q := func_block.Q;
-
-END_PROGRAM
-
-CONFIGURATION Config0
-
-	VAR_GLOBAL
-		PLC_TICKS_PER_SEC :	INT;
-		PLC_SYS_TICK_CNT :	DINT;
-	END_VAR
-
-  	RESOURCE Res0 ON PLC
-    	TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    	PROGRAM instance0 WITH task0 : program0;
-  	END_RESOURCE
-
-END_CONFIGURATION

@@ -32,27 +32,3 @@ FUNCTION_BLOCK MOON_PHASE_Block
 	END_IF;
 
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-	VAR
-		XDT :	UDINT;
-		SCALE :	BYTE := BYTE#12;
-		UPDATE :	TIME := T#1h;
-		PHASE :	BYTE;
-
-		func_block : MOON_PHASE_Block;
-	END_VAR
-	func_block.XDT := XDT;
-	func_block.SCALE := SCALE;
-	func_block.UPDATE := UPDATE;
-
-	func_block();
-  	PHASE  := func_block.PHASE;
-END_PROGRAM
-
-CONFIGURATION Config0
-	RESOURCE Res0 ON PLC
-		TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-		PROGRAM instance0 WITH task0 : program0;
-	END_RESOURCE
-END_CONFIGURATION

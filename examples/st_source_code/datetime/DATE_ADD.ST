@@ -162,22 +162,3 @@ FUNCTION DATE_ADD:UDINT
 	END_WHILE;
 	DATE_ADD := SET_DATE(yr, mo, dm);
 END_FUNCTION
-
-PROGRAM program0
-  VAR
-    LocalVar0 : UDINT;
-	LocalVar1 : INT;
-	LocalVar2 : INT;
-	LocalVar3 : INT;
-	LocalVar4 : INT;
-	LocalOUT  : UDINT;
-  END_VAR
-  	LocalOUT := DATE_ADD(LocalVar0, LocalVar1, LocalVar2, LocalVar3, LocalVar4);
-END_PROGRAM
-
-CONFIGURATION Config0
-  RESOURCE Res0 ON PLC
-    TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    PROGRAM instance0 WITH task0 : program0;
-  END_RESOURCE
-END_CONFIGURATION

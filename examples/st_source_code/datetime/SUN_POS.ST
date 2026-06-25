@@ -135,27 +135,3 @@ FUNCTION_BLOCK SUN_POS
 	(* consider refraction *)
 	HR := h + REFRACTION(h);
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-  VAR
-	LATITUDE :	REAL;
-	LONGITUDE :	REAL;
-	UTC :	UDINT;
-	B :	REAL;
-	HR :	REAL;
-	func_block : SUN_POS;
-  END_VAR
-	func_block.LATITUDE  :=LATITUDE ;
-	func_block.LONGITUDE  :=LONGITUDE ;
-	func_block.UTC  :=UTC ;
-	func_block();
-	B := func_block.B;
-	HR := func_block.HR;
-END_PROGRAM
-
-CONFIGURATION Config0
-	RESOURCE Res0 ON PLC
-		TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-		PROGRAM instance0 WITH task0 : program0;
-	END_RESOURCE
-END_CONFIGURATION

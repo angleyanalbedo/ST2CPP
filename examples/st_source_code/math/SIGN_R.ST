@@ -5,22 +5,3 @@ FUNCTION SIGN_R : BOOL
 
   SIGN_R := in < 0.0;
 END_FUNCTION
-
-PROGRAM program0
-  VAR
-    LocalVar0 : REAL;
-    CEIL5_OUT : BOOL;
-  END_VAR
-
-  CEIL5_OUT := SIGN_R(LocalVar0);
-END_PROGRAM
-
-
-CONFIGURATION Config0
-
-  RESOURCE Res0 ON PLC
-    TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    PROGRAM instance0 WITH task0 : program0;
-  END_RESOURCE
-END_CONFIGURATION
-

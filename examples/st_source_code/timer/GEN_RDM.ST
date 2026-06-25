@@ -215,31 +215,3 @@ FUNCTION_BLOCK GEN_RDM_Block
 	END_IF;
 
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-  VAR
-	PT :	TIME;
-	AM :	REAL := REAL#1.0;
-	OS :	REAL;
-	Q :	BOOL;
-	Out :	REAL;
-	func_block : GEN_RDM_Block;
-  END_VAR
-	func_block.PT  :=PT;
-	func_block.AM  :=AM;
-	func_block.OS  :=OS;
-	func_block();
-	Q := func_block.Q;
-	Out := func_block.Out;
-END_PROGRAM
-
-CONFIGURATION Config0
-	VAR_GLOBAL
-		PLC_TICKS_PER_SEC :	INT;
-		PLC_SYS_TICK_CNT :	DINT;
-	END_VAR
-	RESOURCE Res0 ON PLC
-		TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-		PROGRAM instance0 WITH task0 : program0;
-	END_RESOURCE
-END_CONFIGURATION

@@ -119,31 +119,3 @@ FUNCTION_BLOCK ACTUATOR_COIL_Block
 	END_IF;
 
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-	VAR
-		IN :	BOOL;
-		SELF_ACT_CYCLE :	TIME := T#10d;
-		SELF_ACT_TIME :	TIME := T#1s;
-		OUT :	BOOL;
-		STATUS :	BYTE;
-		func_block : ACTUATOR_COIL_Block;
-	END_VAR
-	func_block.IN := IN;
-	func_block.SELF_ACT_CYCLE := SELF_ACT_CYCLE;
-	func_block.SELF_ACT_TIME := SELF_ACT_TIME ;
-	func_block();
-	OUT  := func_block.OUT;
-	STATUS  := func_block.STATUS;
-END_PROGRAM
-
-CONFIGURATION Config0
-	VAR_GLOBAL
-		PLC_TICKS_PER_SEC :	INT;
-		PLC_SYS_TICK_CNT :	DINT;
-	END_VAR
-  	RESOURCE Res0 ON PLC
-    	TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    	PROGRAM instance0 WITH task0 : program0;
-  	END_RESOURCE
-END_CONFIGURATION

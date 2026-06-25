@@ -33,37 +33,3 @@ FUNCTION_BLOCK BYTE_TO_BITS
 	B6 := BIT_OF_DWORD(BYTE_TO_DWORD(IN),6); (* IN.X6 *)
 	B7 := BIT_OF_DWORD(BYTE_TO_DWORD(IN),7); (* IN.X7 *)
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-  VAR
-	LocalVar0  : BYTE;
-	B0 :	BOOL;
-	B1 :	BOOL;
-	B2 :	BOOL;
-	B3 :	BOOL;
-	B4 :	BOOL;
-	B5 :	BOOL;
-	B6 :	BOOL;
-	B7 :	BOOL;
-	func_block: BYTE_TO_BITS;
-  END_VAR
-	
-	func_block.IN  := LocalVar0;
-	func_block();
-	B0 := func_block.B0;
-	B1 := func_block.B1;
-	B2 := func_block.B2;
-	B3 := func_block.B3;
-	B4 := func_block.B4;
-	B5 := func_block.B5;
-	B6 := func_block.B6;
-	B7 := func_block.B7;
-
-END_PROGRAM
-
-CONFIGURATION Config0
-  RESOURCE Res0 ON PLC
-    TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    PROGRAM instance0 WITH task0 : program0;
-  END_RESOURCE
-END_CONFIGURATION

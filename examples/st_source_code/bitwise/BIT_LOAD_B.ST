@@ -11,21 +11,3 @@ FUNCTION BIT_LOAD_B:BYTE
 		BIT_LOAD_B := in AND (NOT SHL(BYTE#1,pos));
 	END_IF;
 END_FUNCTION
-
-PROGRAM program0
-  VAR
-    LocalVar0 : BYTE;
-	LocalVar1 : BOOL;
-	LocalVar2 : INT;
-    LocalOUT  : BYTE;
-  END_VAR
-
-  LocalOUT := BIT_LOAD_B(LocalVar0, LocalVar1, LocalVar2);
-END_PROGRAM
-
-CONFIGURATION Config0
-  RESOURCE Res0 ON PLC
-    TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    PROGRAM instance0 WITH task0 : program0;
-  END_RESOURCE
-END_CONFIGURATION

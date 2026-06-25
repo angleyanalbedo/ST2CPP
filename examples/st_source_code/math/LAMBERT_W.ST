@@ -61,26 +61,3 @@ FUNCTION_BLOCK LAMBERT_W_Block
 	LAMBERT_W := w;
 
 END_FUNCTION_BLOCK
-
-
-PROGRAM program0
-
-	VAR
-		X :	REAL;
-		LAMBERT_W :	REAL;
-		func_block : LAMBERT_W_Block;
-	END_VAR
-	func_block.X := X;
-	func_block();
-	LAMBERT_W := func_block.LAMBERT_W;
-
-END_PROGRAM
-
-CONFIGURATION Config0
-
-	RESOURCE Res0 ON PLC
-		TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-		PROGRAM instance0 WITH task0 : program0;
-	END_RESOURCE
-
-END_CONFIGURATION

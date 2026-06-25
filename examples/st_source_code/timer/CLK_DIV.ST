@@ -54,37 +54,3 @@ FUNCTION_BLOCK CLK_DIV
 	END_IF;
 
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-  VAR
-    LocalVar0 : BOOL;
-    LocalVar1 : BOOL;
-	Q0 :	BOOL;
-	Q1 :	BOOL;
-	Q2 :	BOOL;
-	Q3 :	BOOL;
-	Q4 :	BOOL;
-	Q5 :	BOOL;
-	Q6 :	BOOL;
-	Q7 :	BOOL;
-	func_block : CLK_DIV;
-  END_VAR
-	func_block.CLK  := LocalVar0;
-	func_block.RST := LocalVar1;
-	func_block();
-	Q0 := func_block.Q0;
-	Q1 := func_block.Q1;
-	Q2 := func_block.Q2;
-	Q3 := func_block.Q3;
-	Q4 := func_block.Q4;
-	Q5 := func_block.Q5;
-	Q6 := func_block.Q6;
-	Q7 := func_block.Q7;
-END_PROGRAM
-
-CONFIGURATION Config0
-  RESOURCE Res0 ON PLC
-    TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    PROGRAM instance0 WITH task0 : program0;
-  END_RESOURCE
-END_CONFIGURATION

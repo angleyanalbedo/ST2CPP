@@ -128,30 +128,3 @@ FUNCTION_BLOCK _RMP_B
 	END_IF;
 	last_dir := dir;
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-	VAR
-	    LocalVar1 : BOOL;
-		LocalVar2 : BOOL;
-		LocalVar3 : TIME;
-		LocalVar4 : BYTE;
-		func_block : _RMP_B;
-  	END_VAR
-	func_block.DIR := LocalVar1;
-	func_block.E := LocalVar2;
-	func_block.TR := LocalVar3;
-	func_block.RMP := LocalVar4;
-	func_block();
-	LocalVar4 := func_block.RMP;
-END_PROGRAM
-
-CONFIGURATION Config0
-	VAR_GLOBAL
-		PLC_TICKS_PER_SEC :	INT;
-		PLC_SYS_TICK_CNT :	DINT;
-	END_VAR
-  	RESOURCE Res0 ON PLC
-    	TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    	PROGRAM instance0 WITH task0 : program0;
-  	END_RESOURCE
-END_CONFIGURATION

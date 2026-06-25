@@ -15,23 +15,3 @@ FUNCTION BYTE_TO_RANGE:REAL
 
 	Byte_to_Range := (high - low) * _BYTE_TO_REAL(X) / 255.0 + low;
 END_FUNCTION
-
-PROGRAM program0
-  VAR
-    LocalVar0 : BYTE;
-    LocalVar1 : REAL;
-	LocalVar2 : REAL;
-    CEIL5_OUT : REAL;
-  END_VAR
-
-  CEIL5_OUT := BYTE_TO_RANGE(LocalVar0, LocalVar1, LocalVar2);
-END_PROGRAM
-
-
-CONFIGURATION Config0
-
-  RESOURCE Res0 ON PLC
-    TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    PROGRAM instance0 WITH task0 : program0;
-  END_RESOURCE
-END_CONFIGURATION

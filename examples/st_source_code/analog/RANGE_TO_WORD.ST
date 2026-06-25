@@ -19,25 +19,3 @@ FUNCTION RANGE_TO_WORD:WORD
 	Range_to_Word := REAL_TO_WORD(TRUNC_REAL((LIMIT(low,X,high)-low) * 65535.0 / (high - low)));
 
 END_FUNCTION
-
-PROGRAM program0
-
-	VAR
-		X :	REAL;
-		LOW :	REAL;
-		HIGH :	REAL;
-		
-        OUT :	WORD;
-	END_VAR
-	OUT := RANGE_TO_WORD(X, LOW, HIGH);
-
-END_PROGRAM
-
-CONFIGURATION Config0
-	
-	RESOURCE Res0 ON PLC
-		TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-		PROGRAM instance0 WITH task0 : program0;
-	END_RESOURCE
-
-END_CONFIGURATION

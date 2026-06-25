@@ -12,19 +12,3 @@ FUNCTION BAND_B:BYTE
 		BAND_B := X;
 	END_IF;
 END_FUNCTION
-PROGRAM program0
-  VAR
-    LocalVar0 : BYTE;
-	LocalVar1 : BYTE;
-    LocalOUT  : BYTE;
-  END_VAR
-
-  LocalOUT := BAND_B(LocalVar0, LocalVar1);
-END_PROGRAM
-
-CONFIGURATION Config0
-  RESOURCE Res0 ON PLC
-    TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    PROGRAM instance0 WITH task0 : program0;
-  END_RESOURCE
-END_CONFIGURATION

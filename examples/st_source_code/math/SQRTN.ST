@@ -12,23 +12,3 @@ FUNCTION SQRTN:REAL
 	END_IF;
 
 END_FUNCTION
-
-PROGRAM program0
-	VAR
-		LocalVar0 : REAL;
-		LocalVar1 : INT;
-		LocalOUT  : REAL;
-	END_VAR
-
- 	LocalOUT := SQRTN(LocalVar0, LocalVar1);
-
-END_PROGRAM
-
-CONFIGURATION Config0
-
-	RESOURCE Res0 ON PLC
-		TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-		PROGRAM instance0 WITH task0 : program0;
-	END_RESOURCE
-	
-END_CONFIGURATION

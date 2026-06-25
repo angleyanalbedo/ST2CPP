@@ -133,21 +133,3 @@ FUNCTION_BLOCK DT_TO_STRING_Block
 	st_tmp2 := CONCAT(st_tmp2,st_tmp1);
 	DT_STRING := st_tmp2;
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-	VAR
-		IDT : UDINT;
-		OUT  : STRING;
-		func_block : DT_TO_STRING_Block;
-	END_VAR
-	func_block.IDT := IDT;
-	func_block();
-	OUT := func_block.DT_STRING;
-END_PROGRAM
-
-CONFIGURATION Config0
-	RESOURCE Res0 ON PLC
-		TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-		PROGRAM instance0 WITH task0 : program0;
-	END_RESOURCE
-END_CONFIGURATION

@@ -181,35 +181,3 @@ FUNCTION_BLOCK FT_PDT1_Block
 	Y := KP * (_tp.out + IN);
 
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-	VAR
-		IN :	REAL;
-		KP :	REAL := 1.0;
-		TV :	REAL := 1.0;
-		T1 :	REAL := 1.0;
-
-		Y :	REAL;
-		func_block : FT_PDT1_Block;
-	END_VAR
-	func_block.IN :=IN;
-	func_block.KP :=KP;
-	func_block.TV :=TV;
-	func_block.T1 :=T1;
-	func_block();
-	Y := func_block.Y;
-END_PROGRAM
-
-CONFIGURATION Config0
-	
-	VAR_GLOBAL
-		PLC_TICKS_PER_SEC :	INT;
-		PLC_SYS_TICK_CNT :	DINT;
-	END_VAR
-
-	RESOURCE Res0 ON PLC
-		TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-		PROGRAM instance0 WITH task0 : program0;
-	END_RESOURCE
-
-END_CONFIGURATION

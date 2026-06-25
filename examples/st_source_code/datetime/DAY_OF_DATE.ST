@@ -5,19 +5,3 @@ FUNCTION DAY_OF_DATE:DINT
 
 	day_of_date := UDINT_TO_DINT(idate / UDINT#86400);
 END_FUNCTION
-
-PROGRAM program0
-  VAR
-    LocalVar0 : UDINT;
-	LocalOUT  : DINT;
-  END_VAR
-  	LocalOUT := DAY_OF_DATE(LocalVar0);
-END_PROGRAM
-
-CONFIGURATION Config0
-  RESOURCE Res0 ON PLC
-    TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    PROGRAM instance0 WITH task0 : program0;
-  END_RESOURCE
-END_CONFIGURATION
-

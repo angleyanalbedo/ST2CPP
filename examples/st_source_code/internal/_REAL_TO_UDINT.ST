@@ -13,19 +13,3 @@ FUNCTION _REAL_TO_UDINT:UDINT
     _REAL_TO_UDINT := UDINT#0;
   END_IF;
 END_FUNCTION
-
-PROGRAM program0
-    VAR
-      LocalVar0 : REAL;
-      LocalOUT  : UDINT;
-    END_VAR
-
-    LocalOUT := _REAL_TO_UDINT(LocalVar0);
-END_PROGRAM
-
-CONFIGURATION Config0
-    RESOURCE Res0 ON PLC
-      TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-      PROGRAM instance0 WITH task0 : program0;
-    END_RESOURCE
-END_CONFIGURATION

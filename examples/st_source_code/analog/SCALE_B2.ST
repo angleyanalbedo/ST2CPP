@@ -21,29 +21,3 @@ FUNCTION SCALE_B2:REAL
 	SCALE_B2 := 	(((in1_max - in1_min)* _BYTE_TO_REAL(in1) + (in2_max - in2_min)* _BYTE_TO_REAL(in2)) * 0.003921569 + in1_min + in2_min) * K + O;
 
 END_FUNCTION
-
-PROGRAM program0
-  VAR
-	IN1 :	BYTE;
-	IN2 :	BYTE;
-	K :	REAL;
-	O :	REAL;
-	IN1_MIN :	REAL;
-	IN1_MAX :	REAL;
-	IN2_MIN :	REAL;
-	IN2_MAX :	REAL;
-	CEIL5_OUT : REAL;
-  END_VAR
-
-  CEIL5_OUT := SCALE_B2(IN1, IN2, K, O, IN1_MIN, IN1_MAX, IN2_MIN, IN2_MAX);
-  
-	
-END_PROGRAM
-
-CONFIGURATION Config0
-
-  RESOURCE Res0 ON PLC
-    TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    PROGRAM instance0 WITH task0 : program0;
-  END_RESOURCE
-END_CONFIGURATION

@@ -18,10 +18,3 @@ PROGRAM program0
   END_VAR
 	LocalOUT := CAUCHYCD(LocalVar0, LocalVar1, LocalVar2);
 END_PROGRAM
-
-CONFIGURATION Config0
-  RESOURCE Res0 ON PLC
-    TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    PROGRAM instance0 WITH task0 : program0;
-  END_RESOURCE
-END_CONFIGURATION

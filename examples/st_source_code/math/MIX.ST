@@ -9,26 +9,3 @@ FUNCTION MIX:REAL
 	MIX := (1.0 - M) * A + M * B;
 
 END_FUNCTION
-
-PROGRAM program0
-	VAR
-		A :	REAL;
-		B :	REAL;
-		M :	REAL;
-
-		OUT : REAL;
-	END_VAR
-
-	OUT := MIX(A, B, M);
-	
-END_PROGRAM
-
-
-CONFIGURATION Config0
-
-	RESOURCE Res0 ON PLC
-		TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-		PROGRAM instance0 WITH task0 : program0;
-	END_RESOURCE
-
-END_CONFIGURATION

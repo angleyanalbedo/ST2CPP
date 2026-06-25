@@ -65,23 +65,3 @@ FUNCTION AOUT:DWORD
 	IF sx THEN Aout := SHL(DWORD#2#1,_BYTE_TO_INT(sign)) OR Aout; END_IF;
 
 END_FUNCTION
-
-PROGRAM program0
-  VAR
-    LocalVar0 : REAL;
-	LocalVar1 : BYTE;
-	LocalVar2 : BYTE;
-	LocalVar3 : REAL;
-	LocalVar4 : REAL;
-	LocalOUT  : DWORD;
-  END_VAR
-  	LocalOUT := AOUT(LocalVar0, LocalVar1, LocalVar2, LocalVar3,LocalVar4);
-END_PROGRAM
-
-CONFIGURATION Config0
-  RESOURCE Res0 ON PLC
-    TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    PROGRAM instance0 WITH task0 : program0;
-  END_RESOURCE
-END_CONFIGURATION
-

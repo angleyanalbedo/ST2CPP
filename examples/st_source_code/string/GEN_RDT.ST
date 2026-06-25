@@ -240,31 +240,3 @@ FUNCTION_BLOCK GEN_RDT_Block
 	END_IF;
 
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-  VAR
-	ENABLE :	BOOL := TRUE;
-	MIN_TIME_MS :	TIME := t#1s;
-	MAX_TIME_MS :	TIME := t#1.2s;
-	TP_Q :	TIME := t#100ms;
-	XQ :	BOOL;
-	func_block : GEN_RDT_Block;
-  END_VAR
-	func_block.ENABLE  :=ENABLE;
-	func_block.MIN_TIME_MS  :=MIN_TIME_MS;
-	func_block.MAX_TIME_MS  :=MAX_TIME_MS;
-	func_block.TP_Q  :=TP_Q;
-	func_block();
-	XQ := func_block.XQ;
-END_PROGRAM
-
-CONFIGURATION Config0
-	VAR_GLOBAL
-		PLC_TICKS_PER_SEC :	INT;
-		PLC_SYS_TICK_CNT :	DINT;
-	END_VAR
-	RESOURCE Res0 ON PLC
-		TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-		PROGRAM instance0 WITH task0 : program0;
-	END_RESOURCE
-END_CONFIGURATION

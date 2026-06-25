@@ -150,39 +150,3 @@ FUNCTION_BLOCK FLOW_CONTROL
 	timer.IN := FALSE;
 	Q := (IN AND ENQ) OR timer.Q;
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-  VAR
-	IN      :	BOOL;
-	REQ     :	BOOL;
-	ENQ     :	BOOL;
-	RST     :	BOOL ;
-	T_AUTO  :	TIME ;
-	T_DELAY :	TIME ;
-
-	Q      :	BOOL;
-	STATUS :	BYTE;
-
-	func_block : FLOW_CONTROL;
-  END_VAR
-	func_block.IN     :=IN     ;
-	func_block.REQ    :=REQ    ;
-	func_block.ENQ    :=ENQ    ;
-	func_block.RST    :=RST    ;
-	func_block.T_AUTO :=T_AUTO ;
-	func_block.T_DELAY:=T_DELAY;
-	func_block();
-	Q     := func_block.Q     ;
-	STATUS:= func_block.STATUS;
-END_PROGRAM
-
-CONFIGURATION Config0
-	VAR_GLOBAL
-		PLC_TICKS_PER_SEC :	INT;
-		PLC_SYS_TICK_CNT :	DINT;
-	END_VAR
-	RESOURCE Res0 ON PLC
-		TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-		PROGRAM instance0 WITH task0 : program0;
-	END_RESOURCE
-END_CONFIGURATION

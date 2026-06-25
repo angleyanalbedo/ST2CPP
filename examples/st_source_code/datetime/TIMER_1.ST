@@ -92,33 +92,3 @@ FUNCTION_BLOCK TIMER_1_Block
 	END_IF;
 
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-	VAR
-		E :	BOOL := TRUE;
-		DTI :	UDINT;
-		START :	UDINT;
-		DURATION :	TIME;
-		DAY :	BYTE := BYTE#2#0111_1111;
-		Q :	BOOL;
-		STOP :	TIME;
-
-		func_block : TIMER_1_Block;
-	END_VAR
-	func_block.E := E;
-	func_block.DTI := DTI;
-	func_block.START := START ;
-	func_block.DURATION    := DURATION    ;
-	func_block.DAY := DAY;
-
-	func_block();
-	Q  := func_block.Q;
-	STOP  := func_block.STOP;
-END_PROGRAM
-
-CONFIGURATION Config0
-	RESOURCE Res0 ON PLC
-		TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-		PROGRAM instance0 WITH task0 : program0;
-	END_RESOURCE
-END_CONFIGURATION

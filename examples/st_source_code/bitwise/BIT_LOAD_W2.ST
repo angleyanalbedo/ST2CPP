@@ -12,22 +12,3 @@ FUNCTION BIT_LOAD_W2:WORD
 		BIT_LOAD_W2 := ROL(SHL(WORD#16#FFFF, N) AND ROR(I, P), P);
 	END_IF;
 END_FUNCTION
-
-PROGRAM program0
-  VAR
-    LocalVar0 : WORD;
-	LocalVar1 : BOOL;
-	LocalVar2 : INT;
-	LocalVar3 : INT;
-    LocalOUT  : WORD;
-  END_VAR
-
-  LocalOUT := BIT_LOAD_W2(LocalVar0, LocalVar1, LocalVar2, LocalVar3);
-END_PROGRAM
-
-CONFIGURATION Config0
-  RESOURCE Res0 ON PLC
-    TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    PROGRAM instance0 WITH task0 : program0;
-  END_RESOURCE
-END_CONFIGURATION

@@ -39,12 +39,3 @@ PROGRAM program0
 	R2_DIV := func_block.R2_DIV;
 
 END_PROGRAM
-
-CONFIGURATION Config0
-	
-	RESOURCE Res0 ON PLC
-		TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-		PROGRAM instance0 WITH task0 : program0;
-	END_RESOURCE
-
-END_CONFIGURATION

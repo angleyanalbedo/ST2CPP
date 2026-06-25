@@ -69,32 +69,3 @@ FUNCTION_BLOCK SHR_8PLE_Block
 	END_IF;
 
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-  	VAR
-		DIN :	BOOL;
-		DLOAD :	BYTE;
-		CLK :	BOOL;
-		UP :	BOOL := TRUE;
-		LOAD :	BOOL;
-		RST :	BOOL;
-		DOUT :	BOOL;
-		func_block : SHR_8PLE_Block;
-	END_VAR
-	func_block.DIN  :=DIN;
-	func_block.DLOAD  :=DLOAD;
-	func_block.CLK  :=CLK;
-	func_block.UP  :=UP;
-	func_block.LOAD  :=LOAD;
-	func_block.RST  :=RST;
-	func_block();
-	DOUT := func_block.DOUT;
-
-END_PROGRAM
-
-CONFIGURATION Config0
-	RESOURCE Res0 ON PLC
-		TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-		PROGRAM instance0 WITH task0 : program0;
-	END_RESOURCE
-END_CONFIGURATION

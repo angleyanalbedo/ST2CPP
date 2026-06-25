@@ -28,18 +28,3 @@ FUNCTION ERF:REAL
 	ERF := SQRT(1.0 - EXP(-X2 * ((0.27323954473516 + aX2)/(ax2)))) * INT_TO_REAL(SGN(x));
 
 END_FUNCTION
-
-PROGRAM program0
-  VAR
-    LocalVar0 : REAL;
-	  LocalOUT  : REAL;
-  END_VAR
-  	LocalOUT := ERF(LocalVar0);
-END_PROGRAM
-
-CONFIGURATION Config0
-  RESOURCE Res0 ON PLC
-    TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    PROGRAM instance0 WITH task0 : program0;
-  END_RESOURCE
-END_CONFIGURATION

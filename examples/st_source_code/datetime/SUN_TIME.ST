@@ -147,37 +147,3 @@ FUNCTION_BLOCK SUN_TIME_Block
 	sun_rise := MIDDAY - delta;
 	sun_set := MIDDAY + delta;
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-  VAR
-	LATITUDE :	REAL;
-	LONGITUDE :	REAL;
-	UTC :	DATE;
-	H :	REAL := -0.83333333333;
-	MIDDAY :	UDINT;
-	SUN_RISE :	UDINT;
-	SUN_SET :	UDINT;
-	SUN_DECLINATION :	REAL;
-	func_block : SUN_TIME_Block;
-  END_VAR
-	func_block.LATITUDE := LATITUDE;
-	func_block.LONGITUDE := LONGITUDE;
-	func_block.UTC := UTC;
-	func_block.H := H;
-	func_block();
-	MIDDAY := func_block.MIDDAY;	
-	SUN_RISE := func_block.SUN_RISE;
-	SUN_SET := func_block.SUN_SET;
-	SUN_DECLINATION := func_block.SUN_DECLINATION;
-
-
-END_PROGRAM
-
-CONFIGURATION Config0
-
-	RESOURCE Res0 ON PLC
-		TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-		PROGRAM instance0 WITH task0 : program0;
-	END_RESOURCE
-	
-END_CONFIGURATION

@@ -41,21 +41,3 @@ FUNCTION_BLOCK TOD_TO_STRING_Block
 	st_tmp1 := CONCAT(INT_TO_STRING(cur_hours),INT_TO_STRING(minute(ITOD)));
 	TOD_STRING := CONCAT(st_tmp1,UDINT_TO_STRING(ITOD MOD UDINT#60000 / UDINT#1000));
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-  VAR
-    LocalVar0 : UDINT;
-	LocalOUT  : STRING;
-	func_block : TOD_TO_STRING_Block;
-  END_VAR
-	func_block.ITOD  := LocalVar0;
-	func_block();
-	LocalOUT := func_block.TOD_STRING;
-END_PROGRAM
-
-CONFIGURATION Config0
-  RESOURCE Res0 ON PLC
-    TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    PROGRAM instance0 WITH task0 : program0;
-  END_RESOURCE
-END_CONFIGURATION

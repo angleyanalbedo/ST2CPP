@@ -56,30 +56,3 @@ FUNCTION_BLOCK REAL_TO_STRF_Block
 
 
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-
-	VAR
-		IN :	REAL;
-		N :	INT;
-		D :	STRING;
-		
-        REAL_TO_STRF :	STRING;
-		func_block : REAL_TO_STRF_Block;
-	END_VAR
-		func_block.IN := IN;
-		func_block.N := N;
-		func_block.D := D;
-		func_block();
-		REAL_TO_STRF := func_block.REAL_TO_STRF;
-
-END_PROGRAM
-
-CONFIGURATION Config0
-	
-	RESOURCE Res0 ON PLC
-		TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-		PROGRAM instance0 WITH task0 : program0;
-	END_RESOURCE
-
-END_CONFIGURATION

@@ -46,10 +46,3 @@ PROGRAM program0
 	Q0 := func_block.Q0;
 	Q1 := func_block.Q1;
 END_PROGRAM
-
-CONFIGURATION Config0
-  RESOURCE Res0 ON PLC
-    TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    PROGRAM instance0 WITH task0 : program0;
-  END_RESOURCE
-END_CONFIGURATION

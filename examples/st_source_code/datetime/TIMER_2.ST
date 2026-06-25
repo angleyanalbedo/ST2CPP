@@ -306,35 +306,3 @@ FUNCTION_BLOCK TIMER_2_Block
 	last_check := Tx;
 
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-	VAR
-		DT_IN :	UDINT;
-		START :	UDINT;
-		DURATION :	TIME;
-		MODE :	BYTE;
-		HOLIDAY :	BOOL;
-		Q :	BOOL;
-
-		func_block : TIMER_2_Block;
-	END_VAR
-	func_block.DT_IN := DT_IN;
-	func_block.START := START;
-	func_block.DURATION := DURATION ;
-	func_block.MODE    := MODE    ;
-	func_block.HOLIDAY := HOLIDAY;
-
-	func_block();
-	Q  := func_block.Q;
-END_PROGRAM
-
-CONFIGURATION Config0
-	VAR_GLOBAL
-		PLC_TICKS_PER_SEC :	INT;
-		PLC_SYS_TICK_CNT :	DINT;
-	END_VAR
-  	RESOURCE Res0 ON PLC
-    	TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    	PROGRAM instance0 WITH task0 : program0;
-  	END_RESOURCE
-END_CONFIGURATION

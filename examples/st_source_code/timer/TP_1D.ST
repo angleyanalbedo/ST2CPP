@@ -108,34 +108,3 @@ FUNCTION_BLOCK TP_1D
 	ix := IN;
 
 END_FUNCTION_BLOCK
-
-
-PROGRAM program0
-  VAR
-	IN :	BOOL;
-	PT1 :	TIME;
-	PTD :	TIME;
-	RST :	BOOL;
-	Q :	BOOL;
-	W :	BOOL;
-	func_block : TP_1D;
-  END_VAR
-	func_block.IN  :=IN;
-	func_block.PT1  :=PT1;
-	func_block.PTD  :=PTD;
-	func_block.RST  :=RST;
-	func_block();
-	Q := func_block.Q;
-	W := func_block.W;
-END_PROGRAM
-
-CONFIGURATION Config0
-	VAR_GLOBAL
-		PLC_TICKS_PER_SEC :	INT;
-		PLC_SYS_TICK_CNT :	DINT;
-	END_VAR
-	RESOURCE Res0 ON PLC
-		TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-		PROGRAM instance0 WITH task0 : program0;
-	END_RESOURCE
-END_CONFIGURATION

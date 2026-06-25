@@ -105,30 +105,3 @@ FUNCTION_BLOCK DT_SIMU
 		last := last + _REAL_TO_UDINT(UDINT_TO_REAL(td) / speed);
 	END_IF;
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-  VAR
-    LocalVar0 : UDINT;
-	LocalVar1 : REAL;
-	LocalOUT  : UDINT;
-	func_block : DT_SIMU;
-  END_VAR
-	func_block.START  := LocalVar0;
-	func_block.SPEED  := LocalVar1;
-	func_block();
-	LocalOUT := func_block.DTS;
-END_PROGRAM
-
-CONFIGURATION Config0
-
-	VAR_GLOBAL
-		PLC_TICKS_PER_SEC :	INT;
-		PLC_SYS_TICK_CNT :	DINT;
-	END_VAR
-
-  	RESOURCE Res0 ON PLC
-    	TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    	PROGRAM instance0 WITH task0 : program0;
-  	END_RESOURCE
-
-END_CONFIGURATION

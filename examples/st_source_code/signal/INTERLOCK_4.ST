@@ -93,37 +93,3 @@ FUNCTION_BLOCK INTERLOCK_4_Block
 	END_IF;
 
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-
-	VAR
-		I0 :	BOOL;
-		I1 :	BOOL;
-		I2 :	BOOL;
-		I3 :	BOOL;
-		E :	BOOL;
-		MODE :	INT;
-		OUT :	BYTE;
-		_TP :	BOOL;
-		func_block : INTERLOCK_4_Block;
-	END_VAR
-	func_block.I0 := I0;
-	func_block.I1 := I1;
-	func_block.I2 := I2;
-	func_block.I3 := I3;
-	func_block.E := E;
-	func_block.MODE := MODE;
-	func_block();
-	OUT := func_block.OUT;
-	_TP := func_block._TP;
-
-END_PROGRAM
-
-CONFIGURATION Config0
-
-	RESOURCE Res0 ON PLC
-		TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-		PROGRAM instance0 WITH task0 : program0;
-	END_RESOURCE
-
-END_CONFIGURATION

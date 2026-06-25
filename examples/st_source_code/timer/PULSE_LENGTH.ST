@@ -113,35 +113,3 @@ FUNCTION_BLOCK PULSE_LENGTH_Block
 	END_IF;
 
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-	VAR
-		IN :	BOOL;
-		T_SHORT :	TIME := T#100ms;
-		T_LONG :	TIME := T#1s;
-		SHORT :	BOOL;
-		MIDDLE :	BOOL;
-		LONG :	BOOL;
-
-		func_block : PULSE_LENGTH_Block;
-	END_VAR
-	func_block.IN := IN;
-	func_block.T_SHORT := T_SHORT;
-	func_block.T_LONG := T_LONG ;
-
-	func_block();
-	SHORT  := func_block.SHORT;
-	MIDDLE  := func_block.MIDDLE;
-	LONG  := func_block.LONG;
-END_PROGRAM
-
-CONFIGURATION Config0
-	VAR_GLOBAL
-		PLC_TICKS_PER_SEC :	INT;
-		PLC_SYS_TICK_CNT :	DINT;
-	END_VAR
-  	RESOURCE Res0 ON PLC
-    	TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    	PROGRAM instance0 WITH task0 : program0;
-  	END_RESOURCE
-END_CONFIGURATION

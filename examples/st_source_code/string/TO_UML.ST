@@ -37,22 +37,3 @@ FUNCTION_BLOCK TO_UML_Block
 	END_CASE;
 
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-  VAR
-	IN :	BYTE;
-	TO_UML :	STRING;
-	func_block : TO_UML_Block;
-  END_VAR
-	func_block.IN  := IN;
-	func_block();
-	TO_UML := func_block.TO_UML;
-
-END_PROGRAM
-
-CONFIGURATION Config0
-	RESOURCE Res0 ON PLC
-		TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-		PROGRAM instance0 WITH task0 : program0;
-	END_RESOURCE
-END_CONFIGURATION

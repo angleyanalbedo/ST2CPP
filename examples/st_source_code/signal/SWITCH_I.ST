@@ -113,37 +113,3 @@ FUNCTION_BLOCK SWITCH_I_Block
 	edge := in;
 
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-	VAR
-		SET :	BOOL;
-		IN :	BOOL;
-		RST :	BOOL;
-		T_DEBOUNCE :	TIME := T#10ms;
-		T_RECONFIG :	TIME := T#1s;
-		T_ON_MAX :	TIME := T#0h;
-		Q :	BOOL := FALSE;
-
-		func_block : SWITCH_I_Block;
-	END_VAR
-	func_block.SET := SET;
-	func_block.IN := IN;
-	func_block.RST := RST ;
-	func_block.T_DEBOUNCE := T_DEBOUNCE ;
-	func_block.T_RECONFIG := T_RECONFIG ;
-	func_block.T_ON_MAX := T_ON_MAX ;
-
-	func_block();
-	Q  := func_block.Q;
-END_PROGRAM
-
-CONFIGURATION Config0
-	VAR_GLOBAL
-		PLC_TICKS_PER_SEC :	INT;
-		PLC_SYS_TICK_CNT :	DINT;
-	END_VAR
-  	RESOURCE Res0 ON PLC
-    	TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    	PROGRAM instance0 WITH task0 : program0;
-  	END_RESOURCE
-END_CONFIGURATION

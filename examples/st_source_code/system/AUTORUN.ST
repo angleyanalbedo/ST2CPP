@@ -175,35 +175,3 @@ FUNCTION_BLOCK AUTORUN_Block
 	out := IN OR ARO;
 
 END_FUNCTION_BLOCK
-
-PROGRAM program0
-	VAR
-		IN :	BOOL;
-		TEST :	BOOL;
-		ARE :	BOOL := TRUE;
-		TRUN :	TIME;
-		TOFF :	TIME;
-		OUT :	BOOL;
-		ARO :	BOOL;
-		func_block : AUTORUN_Block;
-	END_VAR
-	func_block.IN := IN;
-	func_block.TEST := TEST;
-	func_block.ARE := ARE ;
-	func_block.TRUN := TRUN;
-	func_block.TOFF := TOFF;
-	func_block();
-	OUT  := func_block.OUT;
-	ARO  := func_block.ARO;
-END_PROGRAM
-
-CONFIGURATION Config0
-	VAR_GLOBAL
-		PLC_TICKS_PER_SEC :	INT;
-		PLC_SYS_TICK_CNT :	DINT;
-	END_VAR
-  	RESOURCE Res0 ON PLC
-    	TASK task0(INTERVAL := T#20ms,PRIORITY := 0);
-    	PROGRAM instance0 WITH task0 : program0;
-  	END_RESOURCE
-END_CONFIGURATION
