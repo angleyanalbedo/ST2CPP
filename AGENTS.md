@@ -49,39 +49,65 @@ ST2C-master/
 
 ## 构建
 
-### Flat Runtime（runtime-flat/）
+### C++ Runtime（runtime-flat/）
+
+使用 CMake 构建，标准 C++17，无外部依赖。
 
 ```bash
-cd runtime-flat
-mkdir build && cd build
-cmake .. -G "MinGW Makefiles"   # Windows / MinGW
-mingw32-make                     # 或 make
+cd runtime-flat/build
+cmake .. -G "MinGW Makefiles"   # Windows / MinGW 首次
+cmake --build .                  # 重新编译
 ```
+
+CMake 变量：
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `-DGEN_CPP_DIR=<path>` | `../output/flat/build` | Java 编译器产出的 `.cpp` 目录（相对于 `runtime-flat/`） |
+
+`GEN_CPP_DIR` 必须指向 Java 编译器输出的目录。如果为空，CMake 不会创建 `runtime` 目标（仅编译独立测试套件）。
 
 生成可执行文件：
 - `fibonacci.exe` — 基础类型验证
 - `multitask_demo.exe` — 多任务调度演示
-- `framework_test.exe` — 框架完整性测试（82 项，应全部 PASS）
+- `framework_test.exe` — 框架完整性测试（112 项，应全部 PASS）
+- `runtime.exe` — 集成生成的 POU 代码，含调度器主循环（仅当 `GEN_CPP_DIR` 非空）
 
-C++17 标准，无外部依赖。
+### Java 编译器（独立步骤）
 
-### Java 编译器
+CMake 不管理 ST 编译。需先独立运行 Java 编译器：
 
 ```bash
 cd java
 mvn compile
-
-mvn exec:java -Dexec.mainClass="Main" -Dexec.args="--input ../examples/test.st --output ../output/flat/main.cpp"
+java -cp "target/classes;lib/antlr4-runtime-4.10.1.jar;lib/slf4j-api-1.7.32.jar;lib/slf4j-simple-1.7.32.jar" \
+  Main --input ../examples/test.st --output ../output/flat/build/test.cpp
 ```
 
-### 集成测试（编译器 + rt_runtime）
+生成多个 `.st` 文件时，每个文件独立调用一次 `Main`。
+
+### 集成运行
 
 ```bash
-test.bat              # 默认 examples\test.st
+# 1. ST → C++（Java 编译器）
+cd java && mvn compile && java -cp ... Main --input ../examples/test.st --output ../output/flat/build/test.cpp
+
+# 2. CMake 构建 C++
+cd runtime-flat/build && cmake .. -G "MinGW Makefiles" -DGEN_CPP_DIR=../../output/flat/build && cmake --build .
+
+# 3. 运行
+./build/runtime.exe                    # 读取 tasks.json（默认）
+./build/runtime.exe my_config.json     # 自定义配置
+```
+
+### 独立测试
+
+```bash
+test.bat              # 一键测试（编译器 + runtime 集成）
 test.bat myprog.st    # 指定输入
 ```
 
-流程：编译 Java → Flat 翻译 → 编译 runtime_main + generated_pou → Scheduler 调度运行
+`test.bat` 自动执行 Java 编译 → CMake 构建 → 运行的全流程。
 
 ## 代码约定
 

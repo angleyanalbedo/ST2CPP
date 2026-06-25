@@ -141,7 +141,6 @@ struct TaskConfig {
 
 struct Config {
     int baseCycleUs = 1000;
-    std::vector<std::string> sources;
     std::vector<TaskConfig> tasks;
 
     static Config loadOrDefault(const char* path) {
@@ -161,10 +160,6 @@ struct Config {
         if (root.type == JsonValue::OBJECT_VAL) {
             if (root.get("base_cycle_us").type != JsonValue::NULL_VAL)
                 cfg.baseCycleUs = (int)root.get("base_cycle_us");
-
-            const auto& srcs = root.get("sources");
-            for (size_t i = 0; i < srcs.size(); i++)
-                cfg.sources.push_back(srcs[i].c_str());
 
             const auto& tasks = root.get("tasks");
             for (size_t i = 0; i < tasks.size(); i++) {
@@ -196,7 +191,7 @@ extern void registerAllPOUs(POURegistry& reg);
 //  Main
 // ═══════════════════════════════════════════════════════
 
-int main() {
+int main(int argc, char* argv[]) {
     std::printf("=== ST2C++ Flat Runtime ===\n\n");
 
     // ── Step 1: Register all compiled POUs ──
@@ -208,7 +203,8 @@ int main() {
     std::printf("\n");
 
     // ── Step 2: Load configuration ──
-    json_cfg::Config cfg = json_cfg::Config::loadOrDefault("tasks.json");
+    const char* cfgPath = (argc > 1) ? argv[1] : "tasks.json";
+    json_cfg::Config cfg = json_cfg::Config::loadOrDefault(cfgPath);
     std::printf("Config: base_cycle=%dus  tasks=%zu\n\n",
                 cfg.baseCycleUs, cfg.tasks.size());
 
