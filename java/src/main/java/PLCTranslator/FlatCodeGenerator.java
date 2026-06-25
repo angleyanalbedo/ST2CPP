@@ -257,6 +257,7 @@ public class FlatCodeGenerator implements CodeGenerator {
         }
 
         // 检测 struct 字段写入：MY_STRUCT.FIELD = value → gvl.write<FIELD_TYPE>(offset + fieldOffset, value)
+        // 同时处理 ARR[I].FIELD → gvl.safeArrayAt<STRUCT>(arrOff, I, cnt).FIELD = value
         String trimmed = cleanName.trim();
         // 去掉外层括号，如 (MY_STRUCT.FIELD) → MY_STRUCT.FIELD
         String stripped = trimmed;
@@ -267,15 +268,43 @@ public class FlatCodeGenerator implements CodeGenerator {
         if (dotIdx > 0) {
             String baseVar = stripped.substring(0, dotIdx);
             String fieldPart = stripped.substring(dotIdx + 1);
+
+            // 情况1：baseVar 是简单 GVL 变量（如 MY_STRUCT）
             Integer baseOffset = offsetMap.get(baseVar);
             String baseTypeName = typeMap.get(baseVar);
             if (baseOffset != null && baseTypeName != null) {
                 StructLayout layout = structLayoutMap.get(baseTypeName);
                 if (layout != null) {
-                    // 处理单层字段访问：STRUCT.FIELD
                     for (StructField f : layout.fields) {
                         if (f.name.equals(fieldPart)) {
                             return "gvl.write<" + f.type + ">(" + (baseOffset + f.offset) + ", " + valueExpr + ")";
+                        }
+                    }
+                }
+            }
+
+            // 情况2：baseVar 是数组元素访问（如 ARR[I]）
+            java.util.regex.Matcher arrBaseMatcher =
+                java.util.regex.Pattern.compile("^([A-Z][A-Z0-9$_]*)\\[(.+)\\]$").matcher(baseVar);
+            if (arrBaseMatcher.matches()) {
+                String arrName = arrBaseMatcher.group(1);
+                String indexExpr = arrBaseMatcher.group(2);
+                Integer arrOffset = offsetMap.get(arrName);
+                String arrType = typeMap.get(arrName);
+                if (arrType != null && arrType.startsWith("ARRAY[") && arrOffset != null) {
+                    java.util.regex.Matcher typeMatcher =
+                        java.util.regex.Pattern.compile("ARRAY\\[(\\d+)\\] OF (\\w+)").matcher(arrType);
+                    if (typeMatcher.find()) {
+                        String elemType = typeMatcher.group(2);
+                        int count = Integer.parseInt(typeMatcher.group(1));
+                        StructLayout elemLayout = structLayoutMap.get(elemType);
+                        if (elemLayout != null) {
+                            for (StructField f : elemLayout.fields) {
+                                if (f.name.equals(fieldPart)) {
+                                    return "gvl.safeArrayAt<" + elemType + ">(" + arrOffset + ", "
+                                        + indexExpr + ", " + count + ")." + fieldPart + " = " + valueExpr;
+                                }
+                            }
                         }
                     }
                 }

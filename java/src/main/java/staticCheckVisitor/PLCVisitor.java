@@ -945,7 +945,7 @@ public class PLCVisitor extends PLCSTPARSERBaseVisitor<ArrayList<PLCSymbol>> {
 
     @Override
     public ArrayList<PLCSymbol> visitNamespaceSymbolic(PLCSTPARSERParser.NamespaceSymbolicContext ctx) {
-        return factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
+        return factory.getStrategy(ctx.getRuleIndex(), 1).invoke(ctx, this);
     }
 
 }
