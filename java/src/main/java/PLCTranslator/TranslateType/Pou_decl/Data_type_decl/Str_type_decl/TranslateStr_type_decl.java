@@ -11,7 +11,7 @@ public class TranslateStr_type_decl {
         String typeName = ctx.string_type_name_identifier().getText();
 
         //获取typedef类型名
-        PLCVariable typedefSymbol =(PLCVariable) PLCTranslatorNew.properties.get(ctx.str_spec()).get(0);
+        PLCVariable typedefSymbol = PLCTranslatorNew.getVariable(ctx.str_spec(), "string type spec");
 
         return "";
     }

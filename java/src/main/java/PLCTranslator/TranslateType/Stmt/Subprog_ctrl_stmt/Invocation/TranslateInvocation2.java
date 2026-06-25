@@ -10,16 +10,11 @@ import antlr4.PLCSTPARSERParser;
 public class TranslateInvocation2 {
     public String translateNode(PLCSTPARSERParser.Invocation2Context ctx, PLCTranslatorNew translatorNew){
         StringBuilder sb = new StringBuilder();
-        PLCVariable instanceSymbol = (PLCVariable) PLCTranslatorNew.properties.get(ctx.invocation2branch()).get(0);
-
-//        System.out.println(instanceSymbol.getRuntimeName()+"::callFunc("+instanceSymbol.getName());
+        PLCVariable instanceSymbol = PLCTranslatorNew.getVariable(ctx.invocation2branch(), "invocation2 instance");
 
         for (PLCSTPARSERParser.Param_assignContext param_assignContext : ctx.param_assign()) {
-            PLCVariable paraSymbol = (PLCVariable) PLCTranslatorNew.properties.get(param_assignContext).get(0);
-
-//            System.out.print(","+paraSymbol.getRuntimeName()); //类内函数调用细化修改
+            PLCVariable paraSymbol = PLCTranslatorNew.getVariable(param_assignContext, "invocation2 parameter");
         }
-//        System.out.print(");");
         return sb.toString();
     }
 }

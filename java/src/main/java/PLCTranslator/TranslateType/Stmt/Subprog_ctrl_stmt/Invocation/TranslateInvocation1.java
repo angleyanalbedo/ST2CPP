@@ -11,18 +11,13 @@ public class TranslateInvocation1 {
     public String translateNode(PLCSTPARSERParser.Invocation1Context ctx, PLCTranslatorNew translatorNew){
         StringBuilder sb = new StringBuilder();
 
-        PLCVariable instanceSymbol = (PLCVariable) PLCTranslatorNew.properties.get(ctx.invocation1branch()).get(0);
+        PLCVariable instanceSymbol = PLCTranslatorNew.getVariable(ctx.invocation1branch(), "invocation1 instance");
 
         String methodName = ctx.method_name().getText();
 
-//        System.out.print(instanceSymbol.getRuntimeName()+
-//                "::"+methodName+"::callFunc(meth" +methodName);
         for (PLCSTPARSERParser.Param_assignContext param_assignContext : ctx.param_assign()) {
-            PLCVariable paraSymbol = (PLCVariable) PLCTranslatorNew.properties.get(param_assignContext).get(0);
-
-//            System.out.print(","+paraSymbol.getRuntimeName()); //类内函数调用细化修改
+            PLCVariable paraSymbol = PLCTranslatorNew.getVariable(param_assignContext, "invocation1 parameter");
         }
-//        System.out.print(");");
         return sb.toString();
     }
 }

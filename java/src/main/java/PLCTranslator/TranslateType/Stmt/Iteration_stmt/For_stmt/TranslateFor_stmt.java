@@ -13,17 +13,15 @@ public class TranslateFor_stmt {
     public String translateNode(PLCSTPARSERParser.For_stmtContext ctx, PLCTranslatorNew translatorNew){
         StringBuilder sb = new StringBuilder();
         //*********************************************翻译for循环条件****************************************************
-        PLCVariable controlVariable = (PLCVariable) PLCTranslatorNew.properties.get(ctx.control_variable()).get(0);
+        PLCVariable controlVariable = PLCTranslatorNew.getVariable(ctx.control_variable(), "for control variable");
         String conVar = controlVariable.getName();
-        PLCVariable varExpression1 = (PLCVariable) PLCTranslatorNew.properties.get(ctx.expression(0)).get(0);
+        PLCVariable varExpression1 = PLCTranslatorNew.getVariable(ctx.expression(0), "for start expression");
 
-        //***********************************************翻译循环条件*****************************************************
-        PLCVariable varExpression2 = (PLCVariable) PLCTranslatorNew.properties.get(ctx.expression(1)).get(0);
+        PLCVariable varExpression2 = PLCTranslatorNew.getVariable(ctx.expression(1), "for end expression");
 
-        //**********************************************
         String stepVar = null;
         if(ctx.by_list()!=null){
-            PLCVariable varStepSize = (PLCVariable) PLCTranslatorNew.properties.get(ctx.by_list()).get(0);
+            PLCVariable varStepSize = PLCTranslatorNew.getVariable(ctx.by_list(), "for step expression");
             stepVar = varStepSize.getAssignVar();
         }
 

@@ -17,7 +17,7 @@ public class TranslateRepeat_stmt {
            sb.append(bodyResult);
        }
 
-       PLCVariable varExpression = (PLCVariable) PLCTranslatorNew.properties.get(ctx.expression()).get(0);
+       PLCVariable varExpression = PLCTranslatorNew.getVariable(ctx.expression(), "repeat expression");
        //while条件语句
        sb.append(PLCTranslatorNew.codeGen.emitRepeatEnd(varExpression.getAssignVar()));
        return sb.toString();

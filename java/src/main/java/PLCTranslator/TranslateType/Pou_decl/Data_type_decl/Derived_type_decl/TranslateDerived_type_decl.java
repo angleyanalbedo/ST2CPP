@@ -12,7 +12,7 @@ public class TranslateDerived_type_decl {
         String typeName = ctx.derived_type_name().getText();
 
         //获取typedef类型名
-        PLCVariable typedefSymbol =(PLCVariable) PLCTranslatorNew.properties.get(ctx.derived_spec_init()).get(0);
+        PLCVariable typedefSymbol = PLCTranslatorNew.getVariable(ctx.derived_spec_init(), "derived type spec");
 
         return "";
     }

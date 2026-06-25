@@ -10,7 +10,7 @@ public class TranslateSimple_type_decl {
         String typeName = ctx.simple_type_name().getText();
 
         //获取typedef类型名
-        PLCVariable typedefSymbol =(PLCVariable) PLCTranslatorNew.properties.get(ctx.simple_spec_init()).get(0);
+        PLCVariable typedefSymbol = PLCTranslatorNew.getVariable(ctx.simple_spec_init(), "simple type spec");
 
         return "";
     }

@@ -19,10 +19,10 @@ public class TranslateFunc_call {
         StringBuilder sb = new StringBuilder();
         //
 
-        PLCVariable funcSymbol = (PLCVariable) PLCTranslatorNew.properties.get(ctx).get(0);
+        PLCVariable funcSymbol = PLCTranslatorNew.getVariable(ctx, "function call");
 
         for (PLCSTPARSERParser.Param_assignContext param_assignContext : ctx.param_assign()) {
-            PLCVariable plcVariable =(PLCVariable) PLCTranslatorNew.properties.get(param_assignContext).get(0);
+            PLCVariable plcVariable = PLCTranslatorNew.getVariable(param_assignContext, "function parameter");
                 String typeName = plcVariable.getRuntimeTypeName();
                 if (typeName == null || typeName.isEmpty()) {
                     typeName = "INT";

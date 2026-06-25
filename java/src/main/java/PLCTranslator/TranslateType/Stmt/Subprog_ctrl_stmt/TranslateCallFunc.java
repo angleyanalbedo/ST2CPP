@@ -9,10 +9,10 @@ public class TranslateCallFunc {
     public String translateNode(PLCSTPARSERParser.CallFuncContext ctx, PLCTranslatorNew translatorNew){
         StringBuilder sb = new StringBuilder();
         if(ctx.getChild(0) instanceof PLCSTPARSERParser.Func_callContext childCtx){
-            PLCVariable funcSymbol = (PLCVariable) PLCTranslatorNew.properties.get(childCtx).get(0);
+            PLCVariable funcSymbol = PLCTranslatorNew.getVariable(childCtx, "call function");
 
             for (PLCSTPARSERParser.Param_assignContext param_assignContext : childCtx.param_assign()) {
-                PLCVariable plcVariable =(PLCVariable) PLCTranslatorNew.properties.get(param_assignContext).get(0);
+                PLCVariable plcVariable = PLCTranslatorNew.getVariable(param_assignContext, "call parameter");
                 String typeName = plcVariable.getRuntimeTypeName();
                 if (typeName == null || typeName.isEmpty()) {
                     typeName = "INT";

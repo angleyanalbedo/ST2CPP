@@ -14,7 +14,7 @@ import java.util.ArrayList;
 public class TranslateCase_stmt {
     public String translateNode(PLCSTPARSERParser.Case_stmtContext ctx, PLCTranslatorNew translatorNew){
         StringBuilder sb = new StringBuilder();
-        PLCVariable varExpression = (PLCVariable) PLCTranslatorNew.properties.get(ctx.expression()).get(0);
+        PLCVariable varExpression = PLCTranslatorNew.getVariable(ctx.expression(), "case expression");
         //***********************************************翻译第一个if****************************************************
 
         ArrayList<PLCSymbol> caseList = PLCTranslatorNew.properties.get(ctx.case_selection(0).case_list());

@@ -15,9 +15,9 @@ public class TranslateVariableAssignExpression {
         if (visitResult != null) {
             sb.append(visitResult);
         }
-        PLCVariable varSymbol = (PLCVariable) PLCTranslatorNew.properties.get(ctx).get(0);
+        PLCVariable varSymbol = PLCTranslatorNew.getVariable(ctx, "assign target");
 
-        PLCVariable varExpression = (PLCVariable) PLCTranslatorNew.properties.get(ctx.expression()).get(0);
+        PLCVariable varExpression = PLCTranslatorNew.getVariable(ctx.expression(), "assign expression");
 
         if(varSymbol.getSort() != PLCModifierEnum.Sort.FC) {
             // 使用 CodeGenerator 生成赋值

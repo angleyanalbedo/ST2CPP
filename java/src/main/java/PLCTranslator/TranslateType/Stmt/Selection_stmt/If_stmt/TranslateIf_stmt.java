@@ -11,7 +11,7 @@ public class TranslateIf_stmt {
     public String translateNode(PLCSTPARSERParser.If_stmtContext ctx, PLCTranslatorNew translatorNew){
         StringBuilder sb = new StringBuilder();
 
-        PLCVariable varExpression = (PLCVariable) PLCTranslatorNew.properties.get(ctx.expression()).get(0);
+        PLCVariable varExpression = PLCTranslatorNew.getVariable(ctx.expression(), "if expression");
 
         // 使用 CodeGenerator 生成 if
         sb.append(PLCTranslatorNew.codeGen.emitIfBegin(varExpression.getAssignVar()));

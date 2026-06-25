@@ -12,7 +12,7 @@ public class TranslateWhile_stmt {
     public String translateNode(PLCSTPARSERParser.While_stmtContext ctx, PLCTranslatorNew translatorNew){
         StringBuilder sb = new StringBuilder();
         //翻译while循环语句
-        PLCVariable varExpression = (PLCVariable) PLCTranslatorNew.properties.get(ctx.expression()).get(0);
+        PLCVariable varExpression = PLCTranslatorNew.getVariable(ctx.expression(), "while expression");
 
         // 使用 CodeGenerator 生成 while
         sb.append(PLCTranslatorNew.codeGen.emitWhileBegin(varExpression.getAssignVar()));
