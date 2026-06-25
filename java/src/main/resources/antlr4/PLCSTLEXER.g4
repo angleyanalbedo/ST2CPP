@@ -13,88 +13,87 @@ REF_KW : 'REF';
 THIS_KW : 'THIS';
 ASSERT_KW : 'ASSERT';
 
-// 字符串字面量（必须在 Identifier 之前定义，确保 "hello" 整体匹配而非 h 被 Identifier 吃掉）
+// 字符串字面量
 StringLiteralS : '\'' (~['\r\n] | '\'\'' | '$$' | '$' [LlNnPpRrTt] | '$' Hex_Digit Hex_Digit)* '\'';
 StringLiteralD : '"' (~["\r\n] | '""' | '$$' | '$' [LlNnPpRrTt] | '$' Hex_Digit Hex_Digit Hex_Digit Hex_Digit)* '"';
 
-// 关键字 — 必须在 Identifier 之前定义
-ReservedKeyword
-  :
-  'VAR_INPUT'
-  |'RETAIN'
-  |'NON_RETAIN'
-  |'END_VAR'
-  |'R_EDGE'
-  |'F_EDGE'
-  |'VAR_IN_OUT'
-  |'CONSTANT'
-  |'VAR'
-  |'VAR_TEMP'
-  |'VAR_EXTERNAL'
-  |'VAR_GLOBAL'
-  |'AT'
-  |'FUNCTION'
-  |'END_FUNCTION'
-  |'FUNCTION_BLOCK'
-  |'FINAL'
-  |'ABSTRACT'
-  |'EXTENDS'
-  |'IMPLEMENTS'
-  |'END_FUNCTION_BLOCK'
-  |'VAR_OUTPUT'
-  |'OVERRIDE'
-  |'METHOD'
-  |'END_METHOD'
-  |'CLASS'
-  |'END_CLASS'
-  |'END_INTERFACE'
-  |'PROGRAM'
-  |'END_PROGRAM'
-  |'VAR_ACCESS'
-  |'INITIAL_STEP'
-  |'END_STEP'
-  |'STEP'
-  |'TRANSITION'
-  |'PRIORITY'
-  |'FROM'
-  |'TO'
-  |'END_TRANSITION'
-  |'ACTION'
-  |'END_ACTION'
-  |'CONFIGURATION'
-  |'END_CONFIGURATION'
-  |'RESOURCE'
-  |'ON'
-  |'END_RESOURCE'
-  |'TASK'
-  |'SINGLE'
-  |'INTERVAL'
-  |'WITH'
-  |'VAR_CONFIG'
-  |'NAMESPACE'
-  |'END_NAMESPACE'
-  |'USING'
-  |'SUPER'
-  |'IL_Operator'
-  |'RETURN'
-  |'IF'
-  |'THEN'
-  |'ELSIF'
-  |'ELSE'
-  |'END_IF'
-  |'CASE'
-  |'END_CASE'
-  |'EXIT'
-  |'CONTINUE'
-  |'FOR'
-  |'END_FOR'
-  |'DO'
-  |'WHILE'
-  |'BY'
-  |'END_WHILE'
-  |'REPEAT'
-  |'UNTIL'
-  |'END_REPEAT';
+// 关键字 — 每条独立规则，必须在 Identifier 之前
+// 长关键字优先（ANTLR 匹配最长，但同长时先定义优先）
+FUNCTION_BLOCK      : 'FUNCTION_BLOCK';
+END_FUNCTION_BLOCK  : 'END_FUNCTION_BLOCK';
+VAR_INPUT           : 'VAR_INPUT';
+VAR_OUTPUT          : 'VAR_OUTPUT';
+VAR_IN_OUT          : 'VAR_IN_OUT';
+VAR_EXTERNAL        : 'VAR_EXTERNAL';
+VAR_GLOBAL          : 'VAR_GLOBAL';
+VAR_ACCESS          : 'VAR_ACCESS';
+VAR_CONFIG          : 'VAR_CONFIG';
+VAR_TEMP            : 'VAR_TEMP';
+END_VAR             : 'END_VAR';
+RETAIN              : 'RETAIN';
+NON_RETAIN          : 'NON_RETAIN';
+CONSTANT            : 'CONSTANT';
+FUNCTION            : 'FUNCTION';
+END_FUNCTION        : 'END_FUNCTION';
+PROGRAM             : 'PROGRAM';
+END_PROGRAM         : 'END_PROGRAM';
+CONFIGURATION       : 'CONFIGURATION';
+END_CONFIGURATION   : 'END_CONFIGURATION';
+RESOURCE            : 'RESOURCE';
+END_RESOURCE        : 'END_RESOURCE';
+NAMESPACE           : 'NAMESPACE';
+END_NAMESPACE       : 'END_NAMESPACE';
+CLASS               : 'CLASS';
+END_CLASS           : 'END_CLASS';
+END_INTERFACE       : 'END_INTERFACE';
+METHOD              : 'METHOD';
+END_METHOD          : 'END_METHOD';
+INITIAL_STEP        : 'INITIAL_STEP';
+END_STEP            : 'END_STEP';
+STEP                : 'STEP';
+TRANSITION          : 'TRANSITION';
+END_TRANSITION      : 'END_TRANSITION';
+ACTION              : 'ACTION';
+END_ACTION          : 'END_ACTION';
+VAR                 : 'VAR';
+AT                  : 'AT';
+R_EDGE              : 'R_EDGE';
+F_EDGE              : 'F_EDGE';
+FINAL               : 'FINAL';
+ABSTRACT            : 'ABSTRACT';
+EXTENDS             : 'EXTENDS';
+IMPLEMENTS          : 'IMPLEMENTS';
+OVERRIDE            : 'OVERRIDE';
+PRIORITY            : 'PRIORITY';
+INTERVAL            : 'INTERVAL';
+TASK                : 'TASK';
+SINGLE              : 'SINGLE';
+WITH                : 'WITH';
+FROM                : 'FROM';
+TO                  : 'TO';
+ON                  : 'ON';
+USING               : 'USING';
+SUPER               : 'SUPER';
+IL_Operator         : 'IL_Operator';
+RETURN              : 'RETURN';
+IF                  : 'IF';
+THEN                : 'THEN';
+ELSIF               : 'ELSIF';
+ELSE                : 'ELSE';
+END_IF              : 'END_IF';
+CASE                : 'CASE';
+END_CASE            : 'END_CASE';
+EXIT                : 'EXIT';
+CONTINUE            : 'CONTINUE';
+FOR                 : 'FOR';
+END_FOR             : 'END_FOR';
+DO                  : 'DO';
+WHILE               : 'WHILE';
+BY                  : 'BY';
+END_WHILE           : 'END_WHILE';
+REPEAT              : 'REPEAT';
+UNTIL               : 'UNTIL';
+END_REPEAT          : 'END_REPEAT';
 
 // 标识符 — 必须在关键字之后定义
 Identifier
