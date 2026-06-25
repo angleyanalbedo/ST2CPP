@@ -89,6 +89,59 @@ public class OscatLibraryTest {
         printReport(funcCount, fbCount, progCount);
     }
 
+    private void scanSyntax(String content, String stem) {
+        check(content, "VAR_IN_OUT", "VAR_IN_OUT");
+        check(content, "VAR_OUTPUT", "VAR_OUTPUT");
+        check(content, "VAR_EXTERNAL", "VAR_EXTERNAL");
+        check(content, "VAR_TEMP", "VAR_TEMP");
+        check(content, "VAR_ACCESS", "VAR_ACCESS");
+        check(content, "RETAIN", "RETAIN");
+        check(content, "CONSTANT", "CONSTANT");
+        check(content, "AT\\s+%", "AT % address binding");
+        check(content, "T#", "TIME literal");
+        check(content, "D#", "DATE literal");
+        check(content, "TOD#", "TIME_OF_DAY literal");
+        check(content, "DT#", "DATE_AND_TIME literal");
+        check(content, "DINT#", "DINT typed literal");
+        check(content, "INT#", "INT typed literal");
+        check(content, "REAL#", "REAL typed literal");
+        check(content, "REF_TO", "REF_TO");
+        check(content, "\\bEN\\b.*\\bENO\\b", "EN/ENO pattern");
+        check(content, "\\bSEL\\b", "SEL function");
+        check(content, "\\bMUX\\b", "MUX function");
+        check(content, "\\bLIMIT\\b", "LIMIT function");
+        check(content, "\\bTO_INT\\b|\\bTO_REAL\\b|\\bTO_DINT\\b|\\bTO_BOOL\\b|\\bTO_STRING\\b", "type conversion");
+        check(content, "\\bSR\\b|\\bRS\\b", "SR/RS flip-flop");
+        check(content, "\\bEXIT\\b", "EXIT statement");
+        check(content, "\\bELSE\\b", "ELSE");
+        check(content, "\\bELSIF\\b", "ELSIF");
+        check(content, "\\bFOR\\b", "FOR loop");
+        check(content, "\\bWHILE\\b", "WHILE loop");
+        check(content, "\\bREPEAT\\b", "REPEAT loop");
+        check(content, "\\bCASE\\b", "CASE statement");
+        check(content, "\\bRETURN\\b", "RETURN");
+        check(content, "\\bARRAY\\b", "ARRAY type");
+        check(content, "\\bSTRUCT\\b", "STRUCT type");
+        check(content, "\\bTON\\b|\\bTOF\\b|\\bTP\\b", "timer FB (TON/TOF/TP)");
+        check(content, "\\bCTU\\b|\\bCTD\\b|\\bCTUD\\b", "counter FB (CTU/CTD/CTUD)");
+        check(content, "\\bR_TRIG\\b|\\bF_TRIG\\b", "edge detection FB");
+        check(content, "\\bWORD\\b|\\bDWORD\\b|\\bBYTE\\b", "bit-string types");
+        check(content, "\\bDATE\\b|\\bTOD\\b", "DATE/TOD types");
+        check(content, "\\bDINT\\b", "DINT type");
+        check(content, "\\bLINT\\b|\\bLREAL\\b", "64-bit types (LINT/LREAL)");
+        check(content, "\\bSINT\\b|\\bUSINT\\b|\\bUINT\\b|\\bUDINT\\b|\\bULINT\\b", "small/unsigned types");
+        check(content, "\\bSTRING\\b", "STRING type");
+        check(content, "\\bBOOL\\b", "BOOL type");
+        check(content, "\\bINT\\b", "INT type");
+        check(content, "\\bREAL\\b", "REAL type");
+    }
+
+    private void check(String content, String regex, String feature) {
+        if (content.matches("(?s).*" + regex + ".*")) {
+            syntaxUsage.put(feature, syntaxUsage.getOrDefault(feature, 0) + 1);
+        }
+    }
+
     private void compileFile(File f) throws Exception {
         CharStream charStream = CharStreams.fromFileName(f.getAbsolutePath());
 
@@ -161,6 +214,11 @@ public class OscatLibraryTest {
         System.out.println();
         System.out.println("--- Missing Features (from failures) ---");
         printMissingFeatures();
+
+        System.out.println();
+        System.out.println("--- Syntax Feature Usage in 729 Files ---");
+        System.out.println("(features used by OSCAT, ST2C support status)");
+        printSyntaxUsage();
     }
 
     private Map<String, Integer> categorize(List<String> errors) {
@@ -213,6 +271,30 @@ public class OscatLibraryTest {
         System.out.println("  lowercase IDs       — causes most parse errors");
         System.out.println("  VAR_IN_OUT / ENUM   — semantic/codegen gaps");
         System.out.println("  CONFIGURATION       — removed, not needed");
+    }
+
+    private void printSyntaxUsage() {
+        Set<String> supported = new HashSet<>(Arrays.asList(
+            "INT type", "REAL type", "BOOL type", "DINT type", "STRING type",
+            "TIME literal", "FOR loop", "WHILE loop", "REPEAT loop", "CASE statement",
+            "RETURN", "ARRAY type", "STRUCT type", "type conversion",
+            "SEL function", "MUX function", "LIMIT function", "ELSE", "ELSIF"
+        ));
+        Set<String> partial = new HashSet<>(Arrays.asList(
+            "RETAIN", "VAR_OUTPUT", "VAR_IN_OUT", "64-bit types (LINT/LREAL)",
+            "small/unsigned types", "bit-string types", "DATE/TOD types",
+            "DATE literal", "TIME_OF_DAY literal", "DATE_AND_TIME literal",
+            "DINT typed literal", "INT typed literal", "REAL typed literal"
+        ));
+        syntaxUsage.entrySet().stream()
+            .sorted((a, b) -> b.getValue() - a.getValue())
+            .forEach(e -> {
+                String status;
+                if (supported.contains(e.getKey())) status = "  YES";
+                else if (partial.contains(e.getKey())) status = " PART";
+                else status = "   NO";
+                System.out.printf("  %3dx  [%s] %s%n", e.getValue(), status, e.getKey());
+            });
     }
 
     private static List<File> collectStFiles(File dir) {
