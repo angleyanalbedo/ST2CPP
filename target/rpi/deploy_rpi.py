@@ -22,7 +22,7 @@ import tarfile
 import tempfile
 
 # ═══ 配置 ═══
-RPI_IP     = "192.168.5.128"
+RPI_IP     = "192.168.5.130"
 RPI_PORT   = 22
 RPI_USER   = "pi"
 RPI_PASS   = "123456"

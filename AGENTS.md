@@ -53,28 +53,45 @@ ST2C-master/
 │       ├── PLCTargetFileOutPut/
 │       ├── PLCException/
 │       └── JSON/
-├── runtime-flat/                # 当前运行时（待迁移至裸机）
-│   ├── include/
-│   ├── runtime_main.cpp
-│   ├── tests/
-│   └── build/
-├── target/                      # 目标平台 BSP + 固件（新增）
-│   ├── stm32h7/                 # STM32H7 裸机工程
-│   │   ├── startup.s
-│   │   ├── linker.ld
-│   │   ├── hal/                 # 定时器/GPIO/ETH 驱动
-│   │   └── Makefile
-│   ├── riscv/                   # RISC-V 向量扩展平台（新增）
-│   │   ├── startup.s
-│   │   ├── linker.ld
-│   │   ├── hal/
-│   │   └── Makefile
-│   └── soem/                    # SOEM EtherCAT Master 移植（新增）
-│       ├── ethercat_main.cpp
-│       ├── pdo_map.h
-│       └── soem_config/
-├── examples/
-├── test.bat
+├── runtime-flat/                # 核心运行时静态库（平台无关）
+│   ├── include/                 # 头文件
+│   │   ├── rt_plc.h             # ProcessImage / TCI / 安全运算宏
+│   │   ├── rt_runtime.h         # Scheduler / GVL / PROGRAM 生命周期
+│   │   └── core/                # 子模块
+│   │       ├── platform.h       # 平台抽象层（桌面/Linux/裸机三模式）
+│   │       ├── types.h          # IEC 61131-3 类型系统
+│   │       ├── gvl.h            # 全局变量表（64KB flat memory）
+│   │       ├── error_manager.h  # 错误管理（ring buffer + safe 运算）
+│   │       ├── scheduler.h      # 任务调度器
+│   │       ├── registry.h       # POU 回调注册表
+│   │       ├── task.h / program.h / event.h / watchdog.h / diag.h
+│   │       └── constants.h      # 编译期常量（可覆盖）
+│   ├── src/                     # 核心源文件
+│   │   ├── gvl.cpp / program.cpp / task.cpp / event.cpp
+│   │   ├── watchdog.cpp / diag.cpp / scheduler.cpp
+│   ├── tests/                   # 桌面端测试（-DRT_BUILD_TESTS=ON 启用）
+│   │   ├── framework_test.cpp   # 124 项框架完整性测试
+│   │   ├── runtime_integration_test.cpp  # 60 项运行时集成测试
+│   │   └── ...
+│   └── CMakeLists.txt           # 仅产静态库（rt_core + rt_scheduler）
+├── target/                      # 平台特定运行时入口
+│   ├── desktop/                 # Windows/macOS 桌面（chrono 计时）
+│   │   └── runtime_main.cpp     # 读 tasks.json 配置
+│   ├── linux/                   # Linux 通用（timerfd + SCHED_FIFO）
+│   │   └── runtime_linux.cpp    # 抖动统计 + 实时优先级
+│   ├── windows/                 # Windows（QPC + WaitableTimer）
+│   │   └── runtime_windows.cpp  # timeBeginPeriod(1) 优化
+│   ├── rpi/                     # Raspberry Pi（clock_gettime + GPIO）
+│   │   ├── platform_rpi.cpp     # POSIX timer + /dev/gpiomem + RT priority
+│   │   ├── runtime_rpi.cpp      # PLC 入口 + 抖动测量
+│   │   ├── Makefile             # 本地/交叉编译 + make deploy
+│   │   ├── deploy_rpi.py        # paramiko SSH 自动部署
+│   │   └── config/tasks.json
+│   └── stm32h7/                 # STM32H7 裸机
+│       ├── platform_stm32.cpp   # DWT CYCCNT + TIM2 中断 + UART 重定向
+│       └── runtime_stm32.cpp    # PLC 入口（__WFI 省电主循环）
+├── output/flat/build/           # Java 编译器生成的 POU .cpp 文件
+├── examples/                    # ST 源文件示例
 └── README.md
 ```
 
@@ -87,17 +104,38 @@ cd java && mvn package -DskipTests
 java -jar target/st2c-jar-with-dependencies.jar --input examples/test.st --output-dir output/flat/build
 ```
 
-### 目标平台固件（新工作重心）
+### 核心静态库（runtime-flat）
 
 ```bash
+# 仅编译静态库（默认）
+cd runtime-flat && mkdir build && cd build
+cmake .. -G "MinGW Makefiles"
+cmake --build .
+
+# 启用测试
+cmake .. -G "MinGW Makefiles" -DRT_BUILD_TESTS=ON
+cmake --build .
+./framework_test.exe          # 124 项测试
+./runtime_integration_test.exe  # 60 项集成测试
+```
+
+### 目标平台固件
+
+```bash
+# Raspberry Pi（在 Pi 上直接编译）
+cd target/rpi && make
+make deploy    # SCP 到 Pi
+make run       # 部署 + 运行
+
+# Raspberry Pi（交叉编译）
+cd target/rpi && make CROSS=aarch64-linux-gnu-
+
 # STM32H7 裸机
 cd target/stm32h7 && make
 
-# RISC-V 向量平台
-cd target/riscv && make
-
-# EtherCAT 集成测试
-cd target/soem && cmake -B build && cmake --build build
+# Linux 通用（timerfd）
+cd target/linux && g++ -O2 -DRT_PLATFORM_LINUX -I../../runtime-flat/include \
+    ../../runtime-flat/src/*.cpp runtime_linux.cpp -lpthread -o plc_runtime_linux
 ```
 
 ## 周目标
