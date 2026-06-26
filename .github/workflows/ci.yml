@@ -34,7 +34,7 @@ jobs:
           jar ufe java/target/st2c-lsp-server-jar-with-dependencies.jar com.st2c.lsp.ST2CLanguageServer
 
       - name: Upload JARs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: st2c-jar
           path: |
@@ -98,6 +98,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: st2c-jar
+          path: java/target/
 
       - name: Compile ST examples with JAR
         shell: powershell
@@ -151,6 +152,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: st2c-jar
+          path: java/target/
 
       - name: Download runtime binaries
         uses: actions/download-artifact@v4
