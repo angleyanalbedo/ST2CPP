@@ -52,6 +52,7 @@ def main():
         out.write("// Auto-generated: registerAllPOUs bridge\n")
         out.write("// Source: compiler-generated POU .cpp files\n")
         out.write('#include "rt_plc.h"\n')
+        out.write('#include "rt_runtime.h"\n')
         out.write("using namespace rt_plc;\n\n")
 
         for fn in reg_funcs:
