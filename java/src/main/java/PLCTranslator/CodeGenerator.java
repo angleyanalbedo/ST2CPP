@@ -1,6 +1,7 @@
 package PLCTranslator;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 代码生成器接口 — Flat 后端
@@ -174,6 +175,65 @@ public interface CodeGenerator {
      */
     String translateExpr(String expr);
 
+
+    // ═══ 类型与元数据 ═══
+
+    /** 将 ST 类型名映射为原生 C++ 类型名 */
+    String toNativeType(String typeName);
+
+    /** 获取类型的字节大小 */
+    int getTypeSize(String nativeType);
+
+    /** 注册一个 PROGRAM 名称（用于 POU 注册） */
+    void addProgramName(String name);
+
+    /** 获取变量的原生类型名（如 GVL 中的变量类型） */
+    String getVarType(String varName);
+
+    /** 获取当前文件的标识符 */
+    String getFileId();
+
+    /** 获取当前文件中所有 PROGRAM 名称 */
+    List<String> getProgramNames();
+
+    // ═══ Struct 类型支持 ═══
+
+    /** Struct 字段信息 */
+    class StructField {
+        public String name;
+        public String type;
+        public int offset;
+        public StructField(String name, String type, int offset) {
+            this.name = name; this.type = type; this.offset = offset;
+        }
+    }
+
+    /** Struct 布局信息 */
+    class StructLayout {
+        public String structName;
+        public List<StructField> fields;
+        public int totalSize;
+        public StructLayout(String structName, List<StructField> fields, int totalSize) {
+            this.structName = structName;
+            this.fields = fields;
+            this.totalSize = totalSize;
+        }
+    }
+
+    /** 注册 struct 类型 */
+    void registerStructType(String typeName, String runtimeType, StructLayout layout);
+
+    /** 获取变量的 GVL 偏移量 */
+    Integer getVarOffset(String varName);
+
+    /** 获取所有变量的偏移量映射（只读） */
+    Map<String, Integer> getOffsetMap();
+
+    /** 获取所有变量的类型映射（只读） */
+    Map<String, String> getTypeMap();
+
+    /** 注册变量名和 symbolId 的映射关系 */
+    void registerVariable(String varName, String symbolId);
 
     // ═══ POU 注册表（编译器生成元数据，运行时决定调度） ═══
 

@@ -178,7 +178,7 @@ public class Main {
         // 统一一次性写入文件
         if (codeGen instanceof FlatCodeGenerator) {
             fullCodeBuilder.append("\n");
-            fullCodeBuilder.append(((FlatCodeGenerator) codeGen).emitPOURegistration(codeGen.getFileId(), codeGen.getProgramNames()));
+            fullCodeBuilder.append(codeGen.emitPOURegistration(codeGen.getFileId(), codeGen.getProgramNames()));
         }
 
         String fullCode = fullCodeBuilder.toString();

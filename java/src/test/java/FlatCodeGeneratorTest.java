@@ -1,3 +1,4 @@
+import PLCTranslator.CodeGenerator;
 import PLCTranslator.FlatCodeGenerator;
 import org.junit.Test;
 import java.util.Arrays;
@@ -46,9 +47,9 @@ public class FlatCodeGeneratorTest {
     @Test
     public void testToNativeTypeStruct() {
         FlatCodeGenerator g = gen();
-        FlatCodeGenerator.StructLayout layout = new FlatCodeGenerator.StructLayout(
+        CodeGenerator.StructLayout layout = new CodeGenerator.StructLayout(
             "MyStruct",
-            Arrays.asList(new FlatCodeGenerator.StructField("X", "INT", 0)),
+            Arrays.asList(new CodeGenerator.StructField("X", "INT", 0)),
             2
         );
         g.registerStructType("MyStruct", "PLC_Struct_Value<123>", layout);
@@ -75,10 +76,10 @@ public class FlatCodeGeneratorTest {
     @Test
     public void testGetTypeSizeStruct() {
         FlatCodeGenerator g = gen();
-        FlatCodeGenerator.StructLayout layout = new FlatCodeGenerator.StructLayout(
+        CodeGenerator.StructLayout layout = new CodeGenerator.StructLayout(
             "Point", Arrays.asList(
-                new FlatCodeGenerator.StructField("X", "INT", 0),
-                new FlatCodeGenerator.StructField("Y", "INT", 2)
+                new CodeGenerator.StructField("X", "INT", 0),
+                new CodeGenerator.StructField("Y", "INT", 2)
             ), 4
         );
         g.registerStructType("Point", "PLC_Struct_Value<99>", layout);
@@ -494,10 +495,10 @@ public class FlatCodeGeneratorTest {
     @Test
     public void testGetStructFieldOffset() {
         FlatCodeGenerator g = gen();
-        FlatCodeGenerator.StructLayout layout = new FlatCodeGenerator.StructLayout(
+        CodeGenerator.StructLayout layout = new CodeGenerator.StructLayout(
             "Point", Arrays.asList(
-                new FlatCodeGenerator.StructField("X", "INT", 0),
-                new FlatCodeGenerator.StructField("Y", "INT", 2)
+                new CodeGenerator.StructField("X", "INT", 0),
+                new CodeGenerator.StructField("Y", "INT", 2)
             ), 4
         );
         g.registerStructType("Point", "PLC_Struct_Value<99>", layout);

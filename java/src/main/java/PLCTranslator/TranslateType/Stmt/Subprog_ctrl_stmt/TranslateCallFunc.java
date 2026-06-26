@@ -5,7 +5,6 @@ import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCVariable;
 
 
-import PLCTranslator.FlatCodeGenerator;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
 
@@ -18,9 +17,8 @@ public class TranslateCallFunc {
         if(ctx.getChild(0) instanceof PLCSTPARSERParser.Func_callContext childCtx){
             PLCSymbol firstSym = PLCTranslatorNew.getSymbol(childCtx, "call function");
             if(firstSym instanceof PLCFBCallSymbol fbCallSym){
-                FlatCodeGenerator flatGen = (FlatCodeGenerator) translatorNew.codeGen;
                 String fbInstanceName = fbCallSym.getFbInstanceName();
-                String fbTypeName = flatGen.getVarType(fbInstanceName);
+                String fbTypeName = translatorNew.codeGen.getVarType(fbInstanceName);
                 if(fbTypeName == null) fbTypeName = fbInstanceName;
                 List<String> paramNames = new ArrayList<>();
                 List<String> paramValues = new ArrayList<>();
@@ -29,7 +27,7 @@ public class TranslateCallFunc {
                     paramNames.add(plcVariable.getName());
                     paramValues.add(translatorNew.codeGen.translateExpr(plcVariable.getAssignVar()));
                 }
-                sb.append(flatGen.emitFBCall(fbInstanceName, fbTypeName, paramNames, paramValues));
+                sb.append(translatorNew.codeGen.emitFBCall(fbInstanceName, fbTypeName, paramNames, paramValues));
             }else{
                 PLCVariable funcSymbol = (PLCVariable) firstSym;
                 for (PLCSTPARSERParser.Param_assignContext param_assignContext : childCtx.param_assign()) {
@@ -38,7 +36,7 @@ public class TranslateCallFunc {
                     if (typeName == null || typeName.isEmpty()) {
                         typeName = "INT";
                     }
-                    typeName = ((FlatCodeGenerator) translatorNew.codeGen).toNativeType(typeName);
+                    typeName = translatorNew.codeGen.toNativeType(typeName);
                     sb.append("\n\t\t" + typeName + " " + plcVariable.getRuntimeName() + "=" + translatorNew.codeGen.translateExpr(plcVariable.getAssignVar()) + ";");
                 }
                 String var = translatorNew.codeGen.translateExpr(funcSymbol.getAssignVar()).substring(1);

@@ -1,7 +1,6 @@
 package PLCTranslator.TranslateType.Pou_decl.Data_type_decl.Array_type_decl;
 
 import PLCSymbolAndScope.PLCSymbols.PLCSubtypeDeclSymbol;
-import PLCTranslator.FlatCodeGenerator;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
 
@@ -21,7 +20,7 @@ public class TranslateArray_type_decl {
             var arraySpec = ctx.array_spec_init().array_spec();
             if (arraySpec.data_type_access() != null) {
                 elemType = arraySpec.data_type_access().getText();
-                elemType = ((FlatCodeGenerator) translatorNew.codeGen).toNativeType(elemType);
+                elemType = translatorNew.codeGen.toNativeType(elemType);
             }
             if (!arraySpec.subrange().isEmpty()) {
                 var subrange = arraySpec.subrange(0);

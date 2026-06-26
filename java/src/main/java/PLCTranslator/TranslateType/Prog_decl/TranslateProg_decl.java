@@ -1,7 +1,6 @@
 package PLCTranslator.TranslateType.Prog_decl;
 
 import PLCSymbolAndScope.PLCSymbols.*;
-import PLCTranslator.FlatCodeGenerator;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
 
@@ -13,9 +12,7 @@ public class TranslateProg_decl {
         StringBuilder sb = new StringBuilder();
 
         String progName = ctx.prog_type_name().identifier().getText();
-        if (translatorNew.codeGen instanceof FlatCodeGenerator) {
-            ((FlatCodeGenerator)translatorNew.codeGen).addProgramName(progName);
-        }
+        translatorNew.codeGen.addProgramName(progName);
 
         // ─── Init 回调：变量初始化 + RETAIN 区域 ───
         sb.append(translatorNew.codeGen.emitProgInitBegin(progName));
@@ -100,9 +97,8 @@ public class TranslateProg_decl {
         }
 
         if (!retainVars.isEmpty()) {
-            FlatCodeGenerator flatGen = (FlatCodeGenerator) translatorNew.codeGen;
-            java.util.Map<String, Integer> offsets = flatGen.getOffsetMap();
-            java.util.Map<String, String> types = flatGen.getTypeMap();
+            java.util.Map<String, Integer> offsets = translatorNew.codeGen.getOffsetMap();
+            java.util.Map<String, String> types = translatorNew.codeGen.getTypeMap();
 
             int retainStart = Integer.MAX_VALUE;
             int retainEnd = 0;
@@ -111,7 +107,7 @@ public class TranslateProg_decl {
                 if (off != null) {
                     retainStart = Math.min(retainStart, off);
                     String type = types.getOrDefault(rv.getName(), "INT");
-                    int size = getTypeSize(type);
+                    int size = translatorNew.codeGen.getTypeSize(type);
                     retainEnd = Math.max(retainEnd, off + size);
                 }
             }
@@ -121,19 +117,5 @@ public class TranslateProg_decl {
         }
 
         return sb.toString();
-    }
-
-    /**
-     * 获取类型的字节大小（用于 RETAIN 区域计算）
-     */
-    private int getTypeSize(String type) {
-        switch (type) {
-            case "SINT": case "USINT": case "BOOL": return 1;
-            case "INT": case "UINT": return 2;
-            case "DINT": case "UDINT": case "REAL": return 4;
-            case "LINT": case "ULINT": case "LREAL": case "TIME": return 8;
-            case "STRING": return 256;
-            default: return 4;
-        }
     }
 }

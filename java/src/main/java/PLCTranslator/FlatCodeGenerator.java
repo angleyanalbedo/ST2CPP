@@ -29,32 +29,6 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     // ─── Struct 类型支持 ───
 
-    /**
-     * Struct 字段信息
-     */
-    public static class StructField {
-        String name;
-        String type;
-        int offset;
-        public StructField(String name, String type, int offset) {
-            this.name = name; this.type = type; this.offset = offset;
-        }
-    }
-
-    /**
-     * Struct 布局信息
-     */
-    public static class StructLayout {
-        String structName;
-        List<StructField> fields;
-        int totalSize;
-        public StructLayout(String structName, List<StructField> fields, int totalSize) {
-            this.structName = structName;
-            this.fields = fields;
-            this.totalSize = totalSize;
-        }
-    }
-
     // struct 类型名 → 布局（如 "MyStruct" → layout）
     private final Map<String, StructLayout> structLayoutMap = new HashMap<>();
 
@@ -68,7 +42,7 @@ public class FlatCodeGenerator implements CodeGenerator {
     // 当前文件的标识符（用于生成注册函数名，如 "main" → registerPOU_main）
     private String fileId = "";
 
-    public void addProgramName(String name) {
+    @Override public void addProgramName(String name) {
         if (programNameSet.contains(name)) {
             throw new RuntimeException("Duplicate PROGRAM definition: " + name);
         }
@@ -80,7 +54,7 @@ public class FlatCodeGenerator implements CodeGenerator {
         this.fileId = id;
     }
 
-    public String getFileId() {
+    @Override public String getFileId() {
         return fileId.isEmpty() ? "unnamed" : fileId;
     }
 
@@ -104,7 +78,7 @@ public class FlatCodeGenerator implements CodeGenerator {
      * @param runtimeType 运行时类型名（PLC_Struct_Value<ID>）
      * @param layout      struct 布局信息
      */
-    public void registerStructType(String typeName, String runtimeType, StructLayout layout) {
+    @Override public void registerStructType(String typeName, String runtimeType, StructLayout layout) {
         structLayoutMap.put(typeName, layout);
         // 注册运行时类型名 → C++ struct 名的映射
         structTypeToName.put(runtimeType, typeName);
@@ -139,14 +113,14 @@ public class FlatCodeGenerator implements CodeGenerator {
     /**
      * 获取变量的 GVL 偏移量
      */
-    public Integer getVarOffset(String varName) {
+    @Override public Integer getVarOffset(String varName) {
         return offsetMap.get(varName);
     }
 
     /**
      * 获取变量的类型名
      */
-    public String getVarType(String varName) {
+    @Override public String getVarType(String varName) {
         return typeMap.get(varName);
     }
 
@@ -201,7 +175,7 @@ public class FlatCodeGenerator implements CodeGenerator {
         SIZE_MAP.put("DATE_AND_TIME", 8);
     }
 
-    public String toNativeType(String typeName) {
+    @Override public String toNativeType(String typeName) {
         if (typeName == null) return typeName;
         // 优先查运行时类型名 → C++ struct 映射
         String mapped = structTypeToName.get(typeName);
@@ -211,7 +185,7 @@ public class FlatCodeGenerator implements CodeGenerator {
         return mapped != null ? mapped : typeName;
     }
 
-    public int getTypeSize(String nativeType) {
+    @Override public int getTypeSize(String nativeType) {
         if (nativeType == null) return 4;
         Integer size = SIZE_MAP.get(nativeType);
         if (size != null) return size;
@@ -237,7 +211,7 @@ public class FlatCodeGenerator implements CodeGenerator {
      * 注册变量名和 symbolId 的映射关系
      * 用于表达式转换时将 RFM symbolId 查找替换为 GVL 偏移量读写
      */
-    public void registerVariable(String varName, String symbolId) {
+    @Override public void registerVariable(String varName, String symbolId) {
         if (varName != null && symbolId != null) {
             symbolIdToNameMap.put(symbolId, varName);
             nameToSymbolIdMap.put(varName, symbolId);
@@ -1007,11 +981,11 @@ public class FlatCodeGenerator implements CodeGenerator {
         return sb.toString();
     }
 
-    public Map<String, Integer> getOffsetMap() {
+    @Override public Map<String, Integer> getOffsetMap() {
         return Collections.unmodifiableMap(offsetMap);
     }
 
-    public Map<String, String> getTypeMap() {
+    @Override public Map<String, String> getTypeMap() {
         return Collections.unmodifiableMap(typeMap);
     }
 }

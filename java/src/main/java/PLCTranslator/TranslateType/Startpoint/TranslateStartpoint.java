@@ -3,7 +3,6 @@ package PLCTranslator.TranslateType.Startpoint;
 import PLCSymbolAndScope.PLCSymbols.PLCInterfaceDeclSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCTypeDeclSymbol;
-import PLCTranslator.FlatCodeGenerator;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
 
@@ -26,10 +25,10 @@ public class TranslateStartpoint {
                 sb.append(result);
             }
         }
-        // 尾部追加 POU 注册表（编译器只需描述「有哪些 PROGRAM」）
-        if (translatorNew.shouldEmitPOURegistration() && PLCTranslatorNew.codeGen instanceof FlatCodeGenerator) {
-            FlatCodeGenerator flatGen = (FlatCodeGenerator) PLCTranslatorNew.codeGen;
-            sb.append(flatGen.emitPOURegistration(flatGen.getFileId(), flatGen.getProgramNames()));
+        // 尾部追加 POU 注册表
+        if (translatorNew.shouldEmitPOURegistration()) {
+            sb.append(PLCTranslatorNew.codeGen.emitPOURegistration(
+                PLCTranslatorNew.codeGen.getFileId(), PLCTranslatorNew.codeGen.getProgramNames()));
         }
         return sb.toString();
     }

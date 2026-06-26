@@ -2,7 +2,7 @@ package PLCTranslator.TranslateType.Fb_decl;
 
 import PLCSymbolAndScope.PLCSymbols.*;
 import PLCSymbolAndScope.PLCSymbolTables.PLCSymbolTable;
-import PLCTranslator.FlatCodeGenerator;
+import PLCTranslator.CodeGenerator;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
 
@@ -14,7 +14,6 @@ public class TranslateFb_decl {
     public String translateNode(PLCSTPARSERParser.Fb_declContext ctx, PLCTranslatorNew translatorNew) {
         PLCFBDeclSymbol fbSymbol = (PLCFBDeclSymbol) PLCTranslatorNew.properties.get(ctx).get(0);
         String fbName = fbSymbol.getName();
-        FlatCodeGenerator flatGen = (FlatCodeGenerator) translatorNew.codeGen;
 
         StringBuilder sb = new StringBuilder();
 
@@ -24,7 +23,7 @@ public class TranslateFb_decl {
         // 生成 C++ struct 定义
         sb.append("\nstruct ").append(fbName).append(" {\n");
         for (FBField f : fields) {
-            String nativeType = flatGen.toNativeType(f.typeName);
+            String nativeType = translatorNew.codeGen.toNativeType(f.typeName);
             sb.append("    ").append(nativeType).append(" ").append(f.name).append(";");
             if (f.initValue != null && !f.initValue.isEmpty()) {
                 sb.append(" // = ").append(f.initValue);
@@ -43,18 +42,18 @@ public class TranslateFb_decl {
         sb.append("};\n");
 
         // 注册 struct 布局（用于字段偏移计算）
-        List<FlatCodeGenerator.StructField> structFields = new ArrayList<>();
+        List<CodeGenerator.StructField> structFields = new ArrayList<>();
         int currentOffset = 0;
         for (FBField f : fields) {
-            String nativeType = flatGen.toNativeType(f.typeName);
-            int fieldSize = flatGen.getTypeSize(nativeType);
+            String nativeType = translatorNew.codeGen.toNativeType(f.typeName);
+            int fieldSize = translatorNew.codeGen.getTypeSize(nativeType);
             int aligned = (currentOffset + fieldSize - 1) / fieldSize * fieldSize;
-            structFields.add(new FlatCodeGenerator.StructField(f.name, nativeType, aligned));
+            structFields.add(new CodeGenerator.StructField(f.name, nativeType, aligned));
             currentOffset = aligned + fieldSize;
         }
-        FlatCodeGenerator.StructLayout layout = new FlatCodeGenerator.StructLayout(
+        CodeGenerator.StructLayout layout = new CodeGenerator.StructLayout(
             fbName, structFields, currentOffset);
-        flatGen.registerStructType(fbName, fbName, layout);
+        translatorNew.codeGen.registerStructType(fbName, fbName, layout);
 
         return sb.toString();
     }
@@ -74,7 +73,6 @@ public class TranslateFb_decl {
 
         for (PLCSymbol s : importTable.getSymbolIDHashMap().values()) {
             if (s instanceof PLCVariable v) {
-                // 排除 FB 自身（不是变量）
                 if (v.getSymbolId() == fbSymbol.getSymbolId()) continue;
                 fields.add(new FBField(v.getName(), v.getRuntimeTypeName(), v.getAssignVar()));
             }
