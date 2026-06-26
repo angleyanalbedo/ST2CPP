@@ -41,7 +41,7 @@ remote_dir = home + "/st2c-runtime"
 import tarfile, tempfile, os
 
 tar_path = os.path.join(tempfile.gettempdir(), "st2c.tar.gz")
-root = "D:/source/Project/ST2C-master"  # 项目根
+root = "ST2C-master"  # 项目根
 
 with tarfile.open(tar_path, "w:gz") as tar:
     tar.add(os.path.join(root, "runtime-flat/include"), arcname="runtime-flat/include")

@@ -52,7 +52,7 @@ public class VisitUser_defination_type_access implements Strategy {
             throw new PLCSemanticException("can not find type : " + typeName);
         }
         //检查无误，进行组装
-        PLCTypeDeclSymbol targetVar = new PLCTypeDeclSymbol();
+        PLCTypeDeclSymbol targetVar = new PLCTypeDeclSymbol(basicType);
 
         StringBuilder runtimeTypeName = new StringBuilder();
         for (String name : nameList) {
