@@ -415,6 +415,171 @@ inline STRING TO_STRING(BOOL v) {
     return s;
 }
 
+// ─── BYTE / WORD / DWORD / TIME 转换 ───
+
+// → BYTE
+inline BYTE  TO_BYTE(INT v)     { return (BYTE)v; }
+inline BYTE  TO_BYTE(DINT v)    { return (BYTE)v; }
+inline BYTE  TO_BYTE(LINT v)    { return (BYTE)v; }
+inline BYTE  TO_BYTE(UDINT v)   { return (BYTE)v; }
+inline BYTE  TO_BYTE(USINT v)   { return (BYTE)v; }
+inline BYTE  TO_BYTE(UINT v)    { return (BYTE)v; }
+inline BYTE  TO_BYTE(WORD v)    { return (BYTE)v; }
+inline BYTE  TO_BYTE(DWORD v)   { return (BYTE)v; }
+inline BYTE  TO_BYTE(REAL v)    { return (BYTE)v; }
+inline BYTE  TO_BYTE(LREAL v)   { return (BYTE)v; }
+inline BYTE  TO_BYTE(BOOL v)    { return (BYTE)v; }
+
+// → WORD
+inline WORD  TO_WORD(INT v)     { return (WORD)v; }
+inline WORD  TO_WORD(DINT v)    { return (WORD)v; }
+inline WORD  TO_WORD(UDINT v)   { return (WORD)v; }
+inline WORD  TO_WORD(UINT v)    { return (WORD)v; }
+inline WORD  TO_WORD(BYTE v)    { return (WORD)v; }
+inline WORD  TO_WORD(DWORD v)   { return (WORD)v; }
+inline WORD  TO_WORD(REAL v)    { return (WORD)v; }
+inline WORD  TO_WORD(LREAL v)   { return (WORD)v; }
+
+// → DWORD
+inline DWORD TO_DWORD(INT v)    { return (DWORD)v; }
+inline DWORD TO_DWORD(DINT v)   { return (DWORD)v; }
+inline DWORD TO_DWORD(UDINT v)  { return (DWORD)v; }
+inline DWORD TO_DWORD(UINT v)   { return (DWORD)v; }
+inline DWORD TO_DWORD(BYTE v)   { return (DWORD)v; }
+inline DWORD TO_DWORD(WORD v)   { return (DWORD)v; }
+inline DWORD TO_DWORD(REAL v)   { return (DWORD)v; }
+inline DWORD TO_DWORD(LREAL v)  { return (DWORD)v; }
+
+// → TIME
+inline TIME  TO_TIME(INT v)     { return (TIME)v; }
+inline TIME  TO_TIME(DINT v)    { return (TIME)v; }
+inline TIME  TO_TIME(UDINT v)   { return (TIME)v; }
+inline TIME  TO_TIME(REAL v)    { return (TIME)v; }
+inline TIME  TO_TIME(DWORD v)   { return (TIME)v; }
+
+// → UINT / UDINT（补充）
+inline UINT  TO_UINT(UDINT v)   { return (UINT)v; }
+inline UINT  TO_UINT(WORD v)    { return (UINT)v; }
+inline UINT  TO_UINT(BYTE v)    { return (UINT)v; }
+inline UINT  TO_UINT(USINT v)   { return (UINT)v; }
+inline UDINT TO_UDINT(UINT v)   { return (UDINT)v; }
+inline UDINT TO_UDINT(WORD v)   { return (UDINT)v; }
+inline UDINT TO_UDINT(BYTE v)   { return (UDINT)v; }
+inline UDINT TO_UDINT(INT v)    { return (UDINT)v; }
+inline UDINT TO_UDINT(REAL v)   { return (UDINT)v; }
+inline USINT TO_USINT(BYTE v)   { return (USINT)v; }
+
+// ─── IEC 61131-3 X_TO_Y 类型转换 ───
+
+// UDINT → *
+inline DINT  UDINT_TO_DINT(UDINT v)  { return (DINT)v; }
+inline INT   UDINT_TO_INT(UDINT v)   { return (INT)v; }
+inline DWORD UDINT_TO_DWORD(UDINT v) { return (DWORD)v; }
+inline WORD  UDINT_TO_WORD(UDINT v)  { return (WORD)v; }
+inline BYTE  UDINT_TO_BYTE(UDINT v)  { return (BYTE)v; }
+inline STRING UDINT_TO_STRING(UDINT v) { return TO_STRING((DINT)v); }
+inline UINT  UDINT_TO_UINT(UDINT v)  { return (UINT)v; }
+inline REAL  UDINT_TO_REAL(UDINT v)  { return (REAL)v; }
+inline TIME  UDINT_TO_TIME(UDINT v)  { return (TIME)v; }
+
+// DINT → *
+inline TIME   DINT_TO_TIME(DINT v)   { return (TIME)v; }
+inline UDINT  DINT_TO_UDINT(DINT v)  { return (UDINT)v; }
+inline INT    DINT_TO_INT(DINT v)    { return (INT)v; }
+inline REAL   DINT_TO_REAL(DINT v)   { return (REAL)v; }
+inline DWORD  DINT_TO_DWORD(DINT v)  { return (DWORD)v; }
+inline WORD   DINT_TO_WORD(DINT v)   { return (WORD)v; }
+inline STRING DINT_TO_STRING(DINT v) { return TO_STRING(v); }
+
+// INT → *
+inline UDINT  INT_TO_UDINT(INT v)    { return (UDINT)v; }
+inline DINT   INT_TO_DINT(INT v)     { return (DINT)v; }
+inline REAL   INT_TO_REAL(INT v)     { return (REAL)v; }
+inline DWORD  INT_TO_DWORD(INT v)    { return (DWORD)v; }
+inline BYTE   INT_TO_BYTE(INT v)     { return (BYTE)v; }
+inline WORD   INT_TO_WORD(INT v)     { return (WORD)v; }
+inline STRING INT_TO_STRING(INT v)   { return TO_STRING(v); }
+inline TIME   INT_TO_TIME(INT v)     { return (TIME)v; }
+inline UINT   INT_TO_UINT(INT v)     { return (UINT)v; }
+
+// REAL → *
+inline DINT   REAL_TO_DINT(REAL v)   { return (DINT)v; }
+inline UDINT  REAL_TO_UDINT(REAL v)  { return (UDINT)v; }
+inline DWORD  REAL_TO_DWORD(REAL v)  { DWORD r; memcpy(&r, &v, sizeof(r)); return r; }
+inline INT    REAL_TO_INT(REAL v)    { return (INT)v; }
+inline WORD   REAL_TO_WORD(REAL v)   { return (WORD)v; }
+inline BYTE   REAL_TO_BYTE(REAL v)   { return (BYTE)v; }
+inline TIME   REAL_TO_TIME(REAL v)   { return (TIME)v; }
+inline STRING REAL_TO_STRING(REAL v) { return TO_STRING(v); }
+
+// DWORD → *
+inline DINT   DWORD_TO_DINT(DWORD v)   { return (DINT)v; }
+inline INT    DWORD_TO_INT(DWORD v)    { return (INT)v; }
+inline WORD   DWORD_TO_WORD(DWORD v)   { return (WORD)v; }
+inline BYTE   DWORD_TO_BYTE(DWORD v)   { return (BYTE)v; }
+inline TIME   DWORD_TO_TIME(DWORD v)   { return (TIME)v; }
+inline UDINT  DWORD_TO_UDINT(DWORD v)  { return (UDINT)v; }
+inline STRING DWORD_TO_STRING(DWORD v) { return TO_STRING((DINT)v); }
+
+// WORD → *
+inline DINT   WORD_TO_DINT(WORD v)    { return (DINT)v; }
+inline INT    WORD_TO_INT(WORD v)     { return (INT)v; }
+inline DWORD  WORD_TO_DWORD(WORD v)   { return (DWORD)v; }
+inline BYTE   WORD_TO_BYTE(WORD v)    { return (BYTE)v; }
+inline UDINT  WORD_TO_UDINT(WORD v)   { return (UDINT)v; }
+inline UINT   WORD_TO_UINT(WORD v)    { return (UINT)v; }
+inline STRING WORD_TO_STRING(WORD v)  { char buf[32]; snprintf(buf, sizeof(buf), "%u", (unsigned)v); return STRING(buf); }
+
+// BYTE → *
+inline DINT   BYTE_TO_DINT(BYTE v)    { return (DINT)v; }
+inline INT    BYTE_TO_INT(BYTE v)     { return (INT)v; }
+inline DWORD  BYTE_TO_DWORD(BYTE v)   { return (DWORD)v; }
+inline WORD   BYTE_TO_WORD(BYTE v)    { return (WORD)v; }
+inline UDINT  BYTE_TO_UDINT(BYTE v)   { return (UDINT)v; }
+inline UINT   BYTE_TO_UINT(BYTE v)    { return (UINT)v; }
+inline USINT  BYTE_TO_USINT(BYTE v)   { return (USINT)v; }
+inline STRING BYTE_TO_STRING(BYTE v)  { char buf[32]; snprintf(buf, sizeof(buf), "%u", (unsigned)v); return STRING(buf); }
+
+// UINT → *
+inline DINT   UINT_TO_DINT(UINT v)    { return (DINT)v; }
+inline INT    UINT_TO_INT(UINT v)     { return (INT)v; }
+inline DWORD  UINT_TO_DWORD(UINT v)   { return (DWORD)v; }
+inline BYTE   UINT_TO_BYTE(UINT v)    { return (BYTE)v; }
+inline WORD   UINT_TO_WORD(UINT v)    { return (WORD)v; }
+inline UDINT  UINT_TO_UDINT(UINT v)   { return (UDINT)v; }
+inline REAL   UINT_TO_REAL(UINT v)    { return (REAL)v; }
+
+// USINT → *
+inline INT    USINT_TO_INT(USINT v)   { return (INT)v; }
+inline BYTE   USINT_TO_BYTE(USINT v)  { return (BYTE)v; }
+inline REAL   USINT_TO_REAL(USINT v)  { return (REAL)v; }
+inline DINT   USINT_TO_DINT(USINT v)  { return (DINT)v; }
+
+// SINT → *
+inline INT    SINT_TO_INT(SINT v)     { return (INT)v; }
+inline DINT   SINT_TO_DINT(SINT v)    { return (DINT)v; }
+
+// STRING → *
+inline INT    STRING_TO_INT(STRING s)    { return (INT)atoi(s.data); }
+inline REAL   STRING_TO_REAL(STRING s)   { return (REAL)atof(s.data); }
+inline DWORD  STRING_TO_DWORD(STRING s)  { return (DWORD)strtoul(s.data, nullptr, 10); }
+inline WORD   STRING_TO_WORD(STRING s)   { return (WORD)strtoul(s.data, nullptr, 10); }
+inline UDINT  STRING_TO_UDINT(STRING s)  { return (UDINT)strtoul(s.data, nullptr, 10); }
+inline TIME   STRING_TO_TIME(STRING s)   { return (TIME)strtoll(s.data, nullptr, 10); }
+
+// BOOL → *
+inline BYTE   BOOL_TO_BYTE(BOOL v)    { return (BYTE)v; }
+inline INT    BOOL_TO_INT(BOOL v)     { return (INT)v; }
+inline DWORD  BOOL_TO_DWORD(BOOL v)   { return (DWORD)v; }
+inline UDINT  BOOL_TO_UDINT(BOOL v)   { return (UDINT)v; }
+inline STRING BOOL_TO_STRING(BOOL v)  { return TO_STRING(v); }
+
+// TIME → *
+inline DINT   TIME_TO_DINT(TIME v)    { return (DINT)v; }
+inline INT    TIME_TO_INT(TIME v)     { return (INT)v; }
+inline DWORD  TIME_TO_DWORD(TIME v)   { return (DWORD)v; }
+inline REAL   TIME_TO_REAL(TIME v)    { return (REAL)v; }
+
 // ─── 数学函数 ───
 
 inline SINT  ABS(SINT x)   { return x < 0 ? -x : x; }
