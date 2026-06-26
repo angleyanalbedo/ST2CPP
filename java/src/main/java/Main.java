@@ -31,6 +31,7 @@ public class Main {
         String outputFile = null;
         String outputDir = null;
         String fileId = null;
+        String stdlibFile = null;
         boolean verbose = false;
 
         // 解析命令行参数
@@ -65,6 +66,9 @@ public class Main {
                 case "--file-id":
                     if (i + 1 < args.length) fileId = args[++i];
                     break;
+                case "--stdlib":
+                    if (i + 1 < args.length) stdlibFile = args[++i];
+                    break;
                 case "--verbose":
                     verbose = true;
                     break;
@@ -80,9 +84,8 @@ public class Main {
             inputFiles.add("pou.st");
         }
 
-        // 解析输出文件路径
+        // 解析输出文件路径（基于用户输入，不含 stdlib）
         if (outputDir != null) {
-            // --output-dir: 如果是单个输入，保持同名；否则默认 main.cpp
             String baseName = new File(inputFiles.get(0)).getName();
             String stem = inputFiles.size() == 1
                     ? (baseName.endsWith(".st") ? baseName.substring(0, baseName.length() - 3) : baseName)
@@ -92,7 +95,7 @@ public class Main {
             outputFile = "main.cpp";
         }
 
-        // 推导 fileId（从输入文件名派生，去掉 .st 后缀）
+        // 推导 fileId（从用户输入文件名派生，去掉 .st 后缀）
         if (fileId == null) {
             if (inputFiles.size() == 1) {
                 String inputName = new File(inputFiles.get(0)).getName();
@@ -102,7 +105,17 @@ public class Main {
             }
         }
 
-        // 验证输入文件存在
+        // 如果指定了 stdlib，插入到输入文件列表最前面
+        if (stdlibFile != null) {
+            File stdlib = new File(stdlibFile);
+            if (!stdlib.exists()) {
+                System.err.println("Error: stdlib file not found: " + stdlibFile);
+                System.exit(1);
+            }
+            inputFiles.add(0, stdlibFile);
+        }
+
+        // 验证其余输入文件存在
         for (String inputPath : inputFiles) {
             File input = new File(inputPath);
             if (!input.exists()) {
@@ -129,8 +142,13 @@ public class Main {
             System.out.println("[Output] " + outputFile);
         }
 
-        // 注册访问策略
+        // 注册访问策略（只需一次）
         new Registrant().autoRegister();
+
+        // 共享符号表和属性（跨所有输入文件）
+        ParseTreeProperty<ArrayList<PLCSymbol>> property = new ParseTreeProperty<>();
+        PLCVisitor plcVisitor = new PLCVisitor(property);
+        PLCTranslatorNew translatorNew = new PLCTranslatorNew(property, codeGen);
 
         StringBuilder fullCodeBuilder = new StringBuilder();
 
@@ -146,11 +164,9 @@ public class Main {
             PLCSTPARSERParser helloParser = new PLCSTPARSERParser(commonTokenStream);
 
             ParseTree parseTree = helloParser.startpoint();
-            ParseTreeProperty<ArrayList<PLCSymbol>> property = new ParseTreeProperty<>();
-            PLCVisitor plcVisitor = new PLCVisitor(property);
+
             plcVisitor.visit(parseTree);
 
-            PLCTranslatorNew translatorNew = new PLCTranslatorNew(property, codeGen);
             translatorNew.setEmitHeader(fileIndex == 0);
             translatorNew.setEmitPOURegistration(false);
             String fileCode = translatorNew.visit(parseTree);
@@ -198,6 +214,7 @@ public class Main {
         System.out.println("  --output <file>      Output C++ file (.cpp)");
         System.out.println("  --output-dir <dir>   Auto-name output as <dir>/<stem>.cpp");
         System.out.println("  --file-id <id>       POU registration ID (default: output stem)");
+        System.out.println("  --stdlib <file>      Standard library ST file (preloaded before user input)");
         System.out.println("  --verbose            Print detailed translation statistics");
         System.out.println();
         System.out.println("Examples:");

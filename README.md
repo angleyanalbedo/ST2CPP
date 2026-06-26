@@ -226,4 +226,4 @@ ST2C-master/
 
 ## 许可证
 
-见 [LICENSE](LICENSE)。
+见 [LICENSE](LICENSE)  [COPYING](COPYING)。
