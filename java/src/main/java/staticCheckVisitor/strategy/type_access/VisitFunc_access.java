@@ -177,9 +177,9 @@ public class VisitFunc_access implements Strategy {
                             fakeFunc.setTypeId(var.getTypeId());
                             return visitor.packSymbols(fakeFunc);
                         }
-                    }
+}
                     throw new PLCSemanticException("can not find method or function : " + funcName + "  from : " + ctx.getText());
-                }
+				}
                 basicFunc = (PLCBaseFUNDeclSymbol) function;
             }
 

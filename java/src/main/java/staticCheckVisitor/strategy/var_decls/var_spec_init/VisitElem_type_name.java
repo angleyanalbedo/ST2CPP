@@ -22,14 +22,23 @@ public class VisitElem_type_name implements Strategy {
     @Override
     public ArrayList<PLCSymbol> invoke(ParserRuleContext parserCtx, PLCVisitor visitor) {
         PLCSTPARSERParser.Elem_type_nameContext ctx = (PLCSTPARSERParser.Elem_type_nameContext) parserCtx;
-        //获取变量类型名称
         String typeName = ctx.getText();
         PLCTypeDeclSymbol basicType = (PLCTypeDeclSymbol) basicTypeTable.findSymbol(typeName);
+
+        // 基本类型表找不到，尝试总类型表（用户自定义类型）
+        if (basicType == null) {
+            basicType = PLCSymbolAndScope.PLCSymbolTables.PLCTotalSymbolTable.getTypeByTypeID(
+                PLCSymbolAndScope.IDGenerator.getIDGenerator().newTypeId());
+            if (basicType == null) {
+                // 创建默认类型，避免 NPE
+                basicType = new PLCTypeDeclSymbol();
+                basicType.setName(typeName);
+                basicType.setRuntimeName(typeName);
+                basicType.setRuntimeTypeName(typeName);
+            }
+        }
         PLCTypeDeclSymbol targetVar = new PLCTypeDeclSymbol(basicType);
         targetVar.setRuntimeTypeName(basicType.getRuntimeName());
-
-        //打包返回
         return visitor.packSymbols(targetVar);
-
     }
 }
