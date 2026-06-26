@@ -10,24 +10,24 @@ struct MY_POINT {
     INT Y;
 };
 
-void PROGRAM_MAIN_init(GVL& gvl, ProcessImage& io) {
+void PROGRAM_MAIN_STRUCT_init(GVL& gvl, ProcessImage& io) {
 		gvl.write<INT>(4, (0));
 }
-void PROGRAM_MAIN_pre(GVL& gvl, ProcessImage& io) {
+void PROGRAM_MAIN_STRUCT_pre(GVL& gvl, ProcessImage& io) {
 }
-void PROGRAM_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
+void PROGRAM_MAIN_STRUCT_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 		gvl.write<INT>(0, (10));
 		gvl.write<INT>(2, (20));
 		gvl.write<INT>(4, ((gvl.read<MY_POINT>(0).X)) +((gvl.read<MY_POINT>(0).Y)) );
 }
-void PROGRAM_MAIN_post(GVL& gvl, ProcessImage& io) {
+void PROGRAM_MAIN_STRUCT_post(GVL& gvl, ProcessImage& io) {
 }
 // ─── Auto-generated POU Registration (test_struct) ───
 void registerPOU_test_struct(POURegistry& reg) {
     POUCallbacks cbs;
-    cbs.init = PROGRAM_MAIN_init;
-    cbs.cyclic = PROGRAM_MAIN_cyclic;
-    cbs.pre = PROGRAM_MAIN_pre;
-    cbs.post = PROGRAM_MAIN_post;
-    reg.add("MAIN", cbs);
+    cbs.init = PROGRAM_MAIN_STRUCT_init;
+    cbs.cyclic = PROGRAM_MAIN_STRUCT_cyclic;
+    cbs.pre = PROGRAM_MAIN_STRUCT_pre;
+    cbs.post = PROGRAM_MAIN_STRUCT_post;
+    reg.add("MAIN_STRUCT", cbs);
 }

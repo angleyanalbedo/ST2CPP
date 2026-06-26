@@ -1,5 +1,8 @@
 package staticCheckVisitor.strategy.var_decls.var_spec_init;
 
+import PLCSymbolAndScope.IDGenerator;
+import PLCSymbolAndScope.PLCScopeStack;
+import PLCSymbolAndScope.PLCSymbolTables.PLCTotalSymbolTable;
 import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCVariable;
 import antlr4.PLCSTPARSERParser;
@@ -27,6 +30,7 @@ public class VisitDirectNum implements Strategy {
             name = "_varAt" + location;
         }
         variable.setName(name);
+        variable.setLocation(location);
 
         PLCVariable varInfo = (PLCVariable) visitor.visit(ctx.loc_var_spec_init()).get(0);
 
@@ -34,6 +38,13 @@ public class VisitDirectNum implements Strategy {
         variable.setTypeId(varInfo.getTypeId());
         variable.setSort(varInfo.getSort());
         variable.setRuntimeTypeName(varInfo.getRuntimeTypeName());
+
+        // 注册到符号表
+        visitor.visitorTool.checkNameOnly(PLCScopeStack.currentSymbolTable, variable.getName());
+        variable.setSymbolId(IDGenerator.getIDGenerator().newSymbolId());
+        PLCScopeStack.currentSymbolTable.addSymbol(variable);
+        PLCTotalSymbolTable.addSymbol(variable);
+
         return visitor.packSymbols(variable);
     }
 }

@@ -8,13 +8,12 @@
 #include "core/event.h"
 #include "core/watchdog.h"
 #include "core/diag.h"
+#include "core/platform.h"
 #include "rt_plc.h"
 
 #include <cstdint>
 #include <cstring>
 #include <cstdio>
-#include <chrono>
-#include <thread>
 
 namespace rt_plc {
 
@@ -125,7 +124,7 @@ private:
     int     programCount_ = 0;
     int     taskOrder_[MAX_TASKS];
     bool    sortNeeded_   = false;
-    std::chrono::steady_clock::time_point runStartWall_;
+    int64_t runStartWall_ = 0;
 
     // 查找空闲槽位
     int findFreeTask();

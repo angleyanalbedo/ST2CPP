@@ -1,9 +1,9 @@
 #pragma once
 
 #include "types.h"
+#include "platform.h"
 #include <cstdint>
 #include <cstring>
-#include <cstdio>
 
 namespace rt_plc {
 
@@ -161,16 +161,16 @@ struct ErrorManager {
     }
 
     void printLog() const {
-        printf("=== Error Log (%d total) ===\n", totalCount);
+        RT_LOG_INFO("=== Error Log (%d total) ===\n", totalCount);
         int cnt = (totalCount < MAX_ERROR_LOG) ? totalCount : MAX_ERROR_LOG;
         for (int i = 0; i < cnt; i++) {
             int idx = (logIndex - cnt + i + MAX_ERROR_LOG) % MAX_ERROR_LOG;
             const ErrorEntry& e = log[idx];
-            printf("  [%lld] code=%d pou=%u line=%u opA=%lld opB=%lld msg='%s'\n",
+            RT_LOG_INFO("  [%lld] code=%d pou=%u line=%u opA=%lld opB=%lld msg='%s'\n",
                    (long long)e.timestamp, (int)e.code, e.pouId, e.lineNo,
                    (long long)e.operandA, (long long)e.operandB, e.message);
         }
-        printf("===========================\n");
+        RT_LOG_INFO("===========================\n");
     }
 
     int count() const { return totalCount; }

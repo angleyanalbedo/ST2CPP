@@ -43,7 +43,7 @@ public class TranslateProg_decl {
     }
 
     /**
-     * 生成变量初始化语句（GVL 写入）
+     * 生成变量初始化语句（GVL 写入 + I/O 映射注册）
      */
     private String emitVarInit(PLCSTPARSERParser.Prog_declContext ctx, PLCTranslatorNew translatorNew) {
         StringBuilder sb = new StringBuilder();
@@ -52,7 +52,7 @@ public class TranslateProg_decl {
             ArrayList<PLCSymbol> funcVarDecl = PLCTranslatorNew.properties.get(func_var_decl);
             for (PLCSymbol symbol : funcVarDecl) {
                 if (symbol instanceof PLCVariable varSymbol) {
-                    sb.append(translatorNew.codeGen.emitVarDecl(varSymbol.getName(), varSymbol.getRuntimeTypeName(), varSymbol.getAssignVar()));
+                    emitOneVarInit(sb, varSymbol, translatorNew);
                 }
             }
         }
@@ -61,7 +61,7 @@ public class TranslateProg_decl {
             ArrayList<PLCSymbol> tempVarDecl = PLCTranslatorNew.properties.get(temp_var_decl);
             for (PLCSymbol symbol : tempVarDecl) {
                 if (symbol instanceof PLCVariable varSymbol) {
-                    sb.append(translatorNew.codeGen.emitVarDecl(varSymbol.getName(), varSymbol.getRuntimeTypeName(), varSymbol.getAssignVar()));
+                    emitOneVarInit(sb, varSymbol, translatorNew);
                 }
             }
         }
@@ -70,12 +70,82 @@ public class TranslateProg_decl {
             ArrayList<PLCSymbol> otherVarDecl = PLCTranslatorNew.properties.get(other_var_decl);
             for (PLCSymbol symbol : otherVarDecl) {
                 if (symbol instanceof PLCVariable varSymbol) {
-                    sb.append(translatorNew.codeGen.emitVarDecl(varSymbol.getName(), varSymbol.getRuntimeTypeName(), varSymbol.getAssignVar()));
+                    emitOneVarInit(sb, varSymbol, translatorNew);
+                }
+            }
+        }
+
+        // 处理 loc_var_decls（VAR ... AT 地址 声明）
+        for (PLCSTPARSERParser.Loc_var_declsContext loc_var_decls : ctx.loc_var_decls()) {
+            for (PLCSTPARSERParser.Loc_var_declContext locVarDecl : loc_var_decls.loc_var_decl()) {
+                ArrayList<PLCSymbol> locVarList = PLCTranslatorNew.properties.get(locVarDecl);
+                for (PLCSymbol symbol : locVarList) {
+                    if (symbol instanceof PLCVariable varSymbol) {
+                        emitOneVarInit(sb, varSymbol, translatorNew);
+                    }
+                }
+            }
+        }
+
+        // 处理 io_var_decls（VAR_INPUT / VAR_OUTPUT / VAR_IN_OUT）
+        for (PLCSTPARSERParser.Io_var_declsContext io_var_decls : ctx.io_var_decls()) {
+            // input_decls, output_decls, in_out_decls 都使用 var_decl_init
+            // 通过 io_var_decls 下的 input_decls / output_decls / in_out_decls 获取变量
+            if (io_var_decls.input_decls() != null) {
+                for (PLCSTPARSERParser.Input_declContext inputDecl : io_var_decls.input_decls().input_decl()) {
+                    ArrayList<PLCSymbol> symbols = PLCTranslatorNew.properties.get(inputDecl);
+                    for (PLCSymbol symbol : symbols) {
+                        if (symbol instanceof PLCVariable varSymbol) {
+                            emitOneVarInit(sb, varSymbol, translatorNew);
+                        }
+                    }
+                }
+            }
+            if (io_var_decls.output_decls() != null) {
+                for (PLCSTPARSERParser.Output_declContext outputDecl : io_var_decls.output_decls().output_decl()) {
+                    ArrayList<PLCSymbol> symbols = PLCTranslatorNew.properties.get(outputDecl);
+                    for (PLCSymbol symbol : symbols) {
+                        if (symbol instanceof PLCVariable varSymbol) {
+                            emitOneVarInit(sb, varSymbol, translatorNew);
+                        }
+                    }
+                }
+            }
+            if (io_var_decls.in_out_decls() != null) {
+                for (PLCSTPARSERParser.In_out_var_declContext inOutDecl : io_var_decls.in_out_decls().in_out_var_decl()) {
+                    ArrayList<PLCSymbol> symbols = PLCTranslatorNew.properties.get(inOutDecl);
+                    for (PLCSymbol symbol : symbols) {
+                        if (symbol instanceof PLCVariable varSymbol) {
+                            emitOneVarInit(sb, varSymbol, translatorNew);
+                        }
+                    }
                 }
             }
         }
 
         return sb.toString();
+    }
+
+    /**
+     * 处理单个变量：有 AT 地址的注册为 I/O 映射变量，否则分配 GVL 偏移量
+     */
+    private void emitOneVarInit(StringBuilder sb, PLCVariable varSymbol, PLCTranslatorNew translatorNew) {
+        String location = varSymbol.getLocation();
+        if (location != null && !location.isEmpty()) {
+            // AT 地址变量：注册为 I/O 映射变量
+            translatorNew.codeGen.registerIOVariable(
+                varSymbol.getName(),
+                varSymbol.getRuntimeTypeName(),
+                location
+            );
+        } else {
+            // 普通变量：分配 GVL 偏移量
+            sb.append(translatorNew.codeGen.emitVarDecl(
+                varSymbol.getName(),
+                varSymbol.getRuntimeTypeName(),
+                varSymbol.getAssignVar()
+            ));
+        }
     }
 
     /**
@@ -103,6 +173,8 @@ public class TranslateProg_decl {
             int retainStart = Integer.MAX_VALUE;
             int retainEnd = 0;
             for (PLCVariable rv : retainVars) {
+                // 跳过 I/O 映射变量（无 GVL 偏移量）
+                if (translatorNew.codeGen.isIOVariable(rv.getName())) continue;
                 Integer off = offsets.get(rv.getName());
                 if (off != null) {
                     retainStart = Math.min(retainStart, off);

@@ -3,15 +3,20 @@
 #include "constants.h"
 #include "types.h"
 #include "error_manager.h"
+#include "platform.h"
 #include <cstdint>
 #include <cstring>
-#include <cstdio>
 
 namespace rt_plc {
 
 // 缓存行对齐的全局变量表
+#if defined(RT_PLATFORM_BARE_METAL)
+struct GVL {
+    uint8_t memory[GVL_SIZE];
+#else
 struct alignas(64) GVL {
     alignas(64) uint8_t memory[GVL_SIZE];
+#endif
 
     // RETAIN 区域标记：偏移 [retainStart, retainEnd) 在暖启动时保留
     size_t retainStart = 0;
@@ -34,7 +39,7 @@ struct alignas(64) GVL {
     template<typename T>
     T read(size_t offset) const {
         if (offset + sizeof(T) > GVL_SIZE) {
-            fprintf(stderr, "[GVL] read out of bounds: offset=%zu sizeof(T)=%zu GVL_SIZE=%zu\n",
+            RT_LOG_ERR("[GVL] read out of bounds: offset=%zu sizeof(T)=%zu GVL_SIZE=%zu\n",
                     offset, sizeof(T), GVL_SIZE);
             return T{};
         }
@@ -46,7 +51,7 @@ struct alignas(64) GVL {
     template<typename T>
     void write(size_t offset, T val) {
         if (offset + sizeof(T) > GVL_SIZE) {
-            fprintf(stderr, "[GVL] write out of bounds: offset=%zu sizeof(T)=%zu GVL_SIZE=%zu\n",
+            RT_LOG_ERR("[GVL] write out of bounds: offset=%zu sizeof(T)=%zu GVL_SIZE=%zu\n",
                     offset, sizeof(T), GVL_SIZE);
             return;
         }
@@ -58,7 +63,7 @@ struct alignas(64) GVL {
     template<typename T>
     T* ptr(size_t offset) {
         if (offset + sizeof(T) > GVL_SIZE) {
-            fprintf(stderr, "[GVL] ptr out of bounds: offset=%zu sizeof(T)=%zu GVL_SIZE=%zu\n",
+            RT_LOG_ERR("[GVL] ptr out of bounds: offset=%zu sizeof(T)=%zu GVL_SIZE=%zu\n",
                     offset, sizeof(T), GVL_SIZE);
             return nullptr;
         }
@@ -68,7 +73,7 @@ struct alignas(64) GVL {
     template<typename T>
     const T* ptr(size_t offset) const {
         if (offset + sizeof(T) > GVL_SIZE) {
-            fprintf(stderr, "[GVL] ptr out of bounds: offset=%zu sizeof(T)=%zu GVL_SIZE=%zu\n",
+            RT_LOG_ERR("[GVL] ptr out of bounds: offset=%zu sizeof(T)=%zu GVL_SIZE=%zu\n",
                     offset, sizeof(T), GVL_SIZE);
             return nullptr;
         }

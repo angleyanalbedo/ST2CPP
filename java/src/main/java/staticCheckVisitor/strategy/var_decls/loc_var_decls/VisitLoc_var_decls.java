@@ -22,12 +22,16 @@ public class VisitLoc_var_decls implements Strategy {
         //section
         infoVar.setVarSections(PLCModifierEnum.VarSections.VAR);
 
-        // ( 'CONSTANT' | 'RETAIN' )?
-        String modifier = ctx.getChild(1).getText();
-        if(modifier.equals("CONSTANT")){
-            infoVar.setIfConst(true);
-        }else if(modifier.equals("RETAIN")){
-            infoVar.setRetainQualifiers(PLCModifierEnum.RetainModifier.RETAIN);
+        // ( 'CONSTANT' | 'RETAIN' | 'NON_RETAIN' )?
+        if(ctx.getChildCount() > 1) {
+            String modifier = ctx.getChild(1).getText();
+            if(!"VAR".equals(modifier)) {
+                if("CONSTANT".equals(modifier)){
+                    infoVar.setIfConst(true);
+                }else if("RETAIN".equals(modifier)){
+                    infoVar.setRetainQualifiers(PLCModifierEnum.RetainModifier.RETAIN);
+                }
+            }
         }
 
         //loc_var_decl *
@@ -36,11 +40,11 @@ public class VisitLoc_var_decls implements Strategy {
             vars.addAll(visitor.visit(loc_var_declContext));
         }
 
-        //在此层组装信息 在decl层加入符号表
+        //在此层组装信息
         for (PLCSymbol var : vars) {
             visitor.visitorTool.settleVarAttrs(infoVar, (PLCVariable) var);
         }
 
-        return null;
+        return vars;
     }
 }

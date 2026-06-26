@@ -5,13 +5,13 @@
 using namespace rt_plc;
 
 
-void PROGRAM_P_init(GVL& gvl, ProcessImage& io) {
+void PROGRAM_P_Binit(GVL& gvl, ProcessImage& io) {
 		gvl.write<INT>(10, (0));
 		gvl.write<INT>(12, (0));
 }
-void PROGRAM_P_pre(GVL& gvl, ProcessImage& io) {
+void PROGRAM_P_Bpre(GVL& gvl, ProcessImage& io) {
 }
-void PROGRAM_P_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
+void PROGRAM_P_Bcyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 		gvl.write<INT>(12, (0));
 		INT I = (0);
 		for( ; I <= (4);I++){
@@ -20,14 +20,14 @@ void PROGRAM_P_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 		}
 		gvl.write<INT>(10, I);
 }
-void PROGRAM_P_post(GVL& gvl, ProcessImage& io) {
+void PROGRAM_P_Bpost(GVL& gvl, ProcessImage& io) {
 }
 // ─── Auto-generated POU Registration (test_array) ───
 void registerPOU_test_array(POURegistry& reg) {
     POUCallbacks cbs;
-    cbs.init = PROGRAM_P_init;
-    cbs.cyclic = PROGRAM_P_cyclic;
-    cbs.pre = PROGRAM_P_pre;
-    cbs.post = PROGRAM_P_post;
-    reg.add("P", cbs);
+    cbs.init = PROGRAM_P_Binit;
+    cbs.cyclic = PROGRAM_P_Bcyclic;
+    cbs.pre = PROGRAM_P_Bpre;
+    cbs.post = PROGRAM_P_Bpost;
+    reg.add("PB", cbs);
 }

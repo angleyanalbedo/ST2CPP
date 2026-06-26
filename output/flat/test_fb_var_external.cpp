@@ -17,26 +17,26 @@ struct MY_FB {
     }
 };
 
-void PROGRAM_MAIN_init(GVL& gvl, ProcessImage& io) {
+void PROGRAM_MAIN_FB_init(GVL& gvl, ProcessImage& io) {
 		gvl.write<INT>(0, (100));
 		gvl.write<INT>(12, (0));
 }
-void PROGRAM_MAIN_pre(GVL& gvl, ProcessImage& io) {
+void PROGRAM_MAIN_FB_pre(GVL& gvl, ProcessImage& io) {
 }
-void PROGRAM_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
+void PROGRAM_MAIN_FB_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 		gvl.write<INT>(6, (10));
 		gvl.ptr<MY_FB>(6)->update();
 		gvl.write<INT>(12, (gvl.read<MY_FB>(6).Y));
 }
-void PROGRAM_MAIN_post(GVL& gvl, ProcessImage& io) {
+void PROGRAM_MAIN_FB_post(GVL& gvl, ProcessImage& io) {
 }
 
 // ─── Auto-generated POU Registration (test_fb_var_external) ───
 void registerPOU_test_fb_var_external(POURegistry& reg) {
     POUCallbacks cbs;
-    cbs.init = PROGRAM_MAIN_init;
-    cbs.cyclic = PROGRAM_MAIN_cyclic;
-    cbs.pre = PROGRAM_MAIN_pre;
-    cbs.post = PROGRAM_MAIN_post;
-    reg.add("MAIN", cbs);
+    cbs.init = PROGRAM_MAIN_FB_init;
+    cbs.cyclic = PROGRAM_MAIN_FB_cyclic;
+    cbs.pre = PROGRAM_MAIN_FB_pre;
+    cbs.post = PROGRAM_MAIN_FB_post;
+    reg.add("MAIN_FB", cbs);
 }

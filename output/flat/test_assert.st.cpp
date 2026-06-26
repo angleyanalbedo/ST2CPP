@@ -5,14 +5,14 @@
 using namespace rt_plc;
 
 
-void PROGRAM_P_init(GVL& gvl, ProcessImage& io) {
+void PROGRAM_P_Cinit(GVL& gvl, ProcessImage& io) {
 		gvl.write<INT>(0, (42));
 		gvl.write<INT>(2, (0));
 		gvl.write<INT>(4, (0));
 }
-void PROGRAM_P_pre(GVL& gvl, ProcessImage& io) {
+void PROGRAM_P_Cpre(GVL& gvl, ProcessImage& io) {
 }
-void PROGRAM_P_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
+void PROGRAM_P_Ccyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 		printf("=== ASSERT Test ===");
 		printf("\n");
 		{ bool _st_assert = ((gvl.read<INT>(0)) ==((42)) );
@@ -64,14 +64,14 @@ void PROGRAM_P_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 		printf("Done");
 		printf("\n");
 }
-void PROGRAM_P_post(GVL& gvl, ProcessImage& io) {
+void PROGRAM_P_Cpost(GVL& gvl, ProcessImage& io) {
 }
 // ─── Auto-generated POU Registration (test_assert) ───
 void registerPOU_test_assert(POURegistry& reg) {
     POUCallbacks cbs;
-    cbs.init = PROGRAM_P_init;
-    cbs.cyclic = PROGRAM_P_cyclic;
-    cbs.pre = PROGRAM_P_pre;
-    cbs.post = PROGRAM_P_post;
-    reg.add("P", cbs);
+    cbs.init = PROGRAM_P_Cinit;
+    cbs.cyclic = PROGRAM_P_Ccyclic;
+    cbs.pre = PROGRAM_P_Cpre;
+    cbs.post = PROGRAM_P_Cpost;
+    reg.add("PC", cbs);
 }

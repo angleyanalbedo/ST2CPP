@@ -17,8 +17,7 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
-#include <thread>
-#include <chrono>
+#include "core/platform.h"
 
 using namespace rt_plc;
 
@@ -147,7 +146,7 @@ struct Config {
         Config cfg;
         std::ifstream file(path);
         if (!file.is_open()) {
-            std::printf("  [runtime] tasks.json not found, using defaults\n");
+            RT_LOG_INFO("  [runtime] tasks.json not found, using defaults\n");
             return cfg;
         }
         std::stringstream buf;
@@ -197,22 +196,22 @@ void registerAllPOUs(POURegistry& reg) {}
 // ═══════════════════════════════════════════════════════
 
 int main(int argc, char* argv[]) {
-    std::printf("=== ST2C++ Flat Runtime ===\n\n");
+    RT_LOG_INFO("=== ST2C++ Flat Runtime ===\n\n");
 
     // ── Step 1: Register all compiled POUs ──
     POURegistry reg;
     registerAllPOUs(reg);
-    std::printf("Registered %d POU(s):\n", reg.count());
+    RT_LOG_INFO("Registered %d POU(s):\n", reg.count());
     for (int i = 0; i < reg.count(); i++)
-        std::printf("  [%d] %s (init=%s cyclic=%s)\n", i, reg.entries()[i].name,
+        RT_LOG_INFO("  [%d] %s (init=%s cyclic=%s)\n", i, reg.entries()[i].name,
                     reg.entries()[i].cbs.init ? "Y" : "N",
                     reg.entries()[i].cbs.cyclic ? "Y" : "N");
-    std::printf("\n");
+    RT_LOG_INFO("\n");
 
     // ── Step 2: Load configuration ──
     const char* cfgPath = (argc > 1) ? argv[1] : "tasks.json";
     json_cfg::Config cfg = json_cfg::Config::loadOrDefault(cfgPath);
-    std::printf("Config: base_cycle=%dus  tasks=%zu\n\n",
+    RT_LOG_INFO("Config: base_cycle=%dus  tasks=%zu\n\n",
                 cfg.baseCycleUs, cfg.tasks.size());
 
     // ── Step 3: Create Scheduler ──
@@ -236,20 +235,20 @@ int main(int argc, char* argv[]) {
                     pousAdded++;
                 }
             } else {
-                std::printf("  [WARN] POU \"%s\" not found in registry\n", pouName.c_str());
+                RT_LOG_INFO("  [WARN] POU \"%s\" not found in registry\n", pouName.c_str());
             }
         }
         if (pousAdded > 0) {
             sched.setTaskWatchdog(taskIdx, T_us(tc.watchdogUs));
             anyPouScheduled = true;
-            std::printf("  Task: %s  priority=%d  interval=%dus  watchdog=%dus  pous=%d\n",
+            RT_LOG_INFO("  Task: %s  priority=%d  interval=%dus  watchdog=%dus  pous=%d\n",
                         tc.name.c_str(), tc.priority, tc.intervalUs, tc.watchdogUs, pousAdded);
         }
     }
 
     // ── Fallback: no tasks configured → register each POU in its own task ──
     if (!anyPouScheduled && reg.count() > 0) {
-        std::printf("  (no tasks configured — auto-registering each POU)\n");
+        RT_LOG_INFO("  (no tasks configured — auto-registering each POU)\n");
         for (int i = 0; i < reg.count(); i++) {
             const auto& e = reg.entries()[i];
             int taskIdx = sched.addCyclicTask(e.name, 5, T_ms(10));
@@ -258,21 +257,21 @@ int main(int argc, char* argv[]) {
                 sched.addProgramToTask(taskIdx, progIdx);
             }
             sched.setTaskWatchdog(taskIdx, T_ms(5));
-            std::printf("  Task: %s  priority=5  interval=10ms  watchdog=5ms\n",
+            RT_LOG_INFO("  Task: %s  priority=5  interval=10ms  watchdog=5ms\n",
                         e.name);
         }
     }
 
-    std::printf("\n--- Running 100 ticks ---\n\n");
+    RT_LOG_INFO("\n--- Running 100 ticks ---\n\n");
 
     for (int i = 0; i < 100; i++) {
         sched.tick();
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        platform::sleepUs(1000);  // 1ms
     }
 
-    std::printf("\n");
+    RT_LOG_INFO("\n");
     sched.printDiag();
-    std::printf("\n=== Runtime Complete ===\n");
+    RT_LOG_INFO("\n=== Runtime Complete ===\n");
     return 0;
 }
 

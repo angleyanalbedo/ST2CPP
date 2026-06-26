@@ -10,13 +10,13 @@ struct MY_POINT {
     INT Y;
 };
 
-void PROGRAM_MAIN_init(GVL& gvl, ProcessImage& io) {
+void PROGRAM_MAIN_ARRAY_init(GVL& gvl, ProcessImage& io) {
 		gvl.write<INT>(20, (0));
 		gvl.write<INT>(22, (0));
 }
-void PROGRAM_MAIN_pre(GVL& gvl, ProcessImage& io) {
+void PROGRAM_MAIN_ARRAY_pre(GVL& gvl, ProcessImage& io) {
 }
-void PROGRAM_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
+void PROGRAM_MAIN_ARRAY_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 		INT I = (0);
 		for( ; I <= (4);I = I + (1)){
 		gvl.safeArrayAt<MY_POINT>(0, I, 5).X = (I) *((10)) ;
@@ -25,14 +25,14 @@ void PROGRAM_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 		gvl.write<INT>(20, I);
 		gvl.write<INT>(22, ((gvl.safeArrayAt<MY_POINT>(0, 0, 5).X)) +((gvl.safeArrayAt<MY_POINT>(0, 1, 5).X)) );
 }
-void PROGRAM_MAIN_post(GVL& gvl, ProcessImage& io) {
+void PROGRAM_MAIN_ARRAY_post(GVL& gvl, ProcessImage& io) {
 }
 // ─── Auto-generated POU Registration (test_arr_struct) ───
 void registerPOU_test_arr_struct(POURegistry& reg) {
     POUCallbacks cbs;
-    cbs.init = PROGRAM_MAIN_init;
-    cbs.cyclic = PROGRAM_MAIN_cyclic;
-    cbs.pre = PROGRAM_MAIN_pre;
-    cbs.post = PROGRAM_MAIN_post;
-    reg.add("MAIN", cbs);
+    cbs.init = PROGRAM_MAIN_ARRAY_init;
+    cbs.cyclic = PROGRAM_MAIN_ARRAY_cyclic;
+    cbs.pre = PROGRAM_MAIN_ARRAY_pre;
+    cbs.post = PROGRAM_MAIN_ARRAY_post;
+    reg.add("MAIN_ARRAY", cbs);
 }

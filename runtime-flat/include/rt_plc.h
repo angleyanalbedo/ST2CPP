@@ -10,9 +10,13 @@
 
 #include "core/types.h"
 #include "core/error_manager.h"
+#include "core/platform.h"
+
+#if !defined(RT_PLATFORM_BARE_METAL)
 #include <functional>
 #include <thread>
 #include <atomic>
+#endif
 
 namespace rt_plc {
 
@@ -20,11 +24,21 @@ namespace rt_plc {
 // 过程映像（Process Image）
 // ═══════════════════════════════════════════════════════
 
+#if !defined(PROCESS_IMAGE_SIZE_OVERRIDE)
 constexpr size_t PROCESS_IMAGE_SIZE = 65536;
+#else
+constexpr size_t PROCESS_IMAGE_SIZE = PROCESS_IMAGE_SIZE_CFG;
+#endif
 
+#if defined(RT_PLATFORM_BARE_METAL)
+struct ProcessImage {
+    uint8_t inputs[PROCESS_IMAGE_SIZE];
+    uint8_t outputs[PROCESS_IMAGE_SIZE];
+#else
 struct alignas(64) ProcessImage {
     alignas(64) uint8_t inputs[PROCESS_IMAGE_SIZE];
     alignas(64) uint8_t outputs[PROCESS_IMAGE_SIZE];
+#endif
 
     void clearInputs()  { memset(inputs, 0, PROCESS_IMAGE_SIZE); }
     void clearOutputs() { memset(outputs, 0, PROCESS_IMAGE_SIZE); }
@@ -32,7 +46,7 @@ struct alignas(64) ProcessImage {
     template<typename T>
     T readInput(size_t offset) const {
         if (offset + sizeof(T) > PROCESS_IMAGE_SIZE) {
-            fprintf(stderr, "[ProcessImage] readInput out of bounds: offset=%zu sizeof(T)=%zu\n",
+            RT_LOG_ERR("[ProcessImage] readInput out of bounds: offset=%zu sizeof(T)=%zu\n",
                     offset, sizeof(T));
             return T{};
         }
@@ -44,7 +58,7 @@ struct alignas(64) ProcessImage {
     template<typename T>
     void writeOutput(size_t offset, T val) {
         if (offset + sizeof(T) > PROCESS_IMAGE_SIZE) {
-            fprintf(stderr, "[ProcessImage] writeOutput out of bounds: offset=%zu sizeof(T)=%zu\n",
+            RT_LOG_ERR("[ProcessImage] writeOutput out of bounds: offset=%zu sizeof(T)=%zu\n",
                     offset, sizeof(T));
             return;
         }
@@ -54,7 +68,7 @@ struct alignas(64) ProcessImage {
     template<typename T>
     T readOutput(size_t offset) const {
         if (offset + sizeof(T) > PROCESS_IMAGE_SIZE) {
-            fprintf(stderr, "[ProcessImage] readOutput out of bounds: offset=%zu sizeof(T)=%zu\n",
+            RT_LOG_ERR("[ProcessImage] readOutput out of bounds: offset=%zu sizeof(T)=%zu\n",
                     offset, sizeof(T));
             return T{};
         }
@@ -65,7 +79,7 @@ struct alignas(64) ProcessImage {
 
     BOOL readInputBit(size_t byteOff, int bitOff) const {
         if (byteOff >= PROCESS_IMAGE_SIZE || bitOff < 0 || bitOff > 7) {
-            fprintf(stderr, "[ProcessImage] readInputBit out of bounds: byteOff=%zu bitOff=%d\n",
+            RT_LOG_ERR("[ProcessImage] readInputBit out of bounds: byteOff=%zu bitOff=%d\n",
                     byteOff, bitOff);
             return FALSE;
         }
@@ -74,7 +88,7 @@ struct alignas(64) ProcessImage {
 
     void writeOutputBit(size_t byteOff, int bitOff, BOOL val) {
         if (byteOff >= PROCESS_IMAGE_SIZE || bitOff < 0 || bitOff > 7) {
-            fprintf(stderr, "[ProcessImage] writeOutputBit out of bounds: byteOff=%zu bitOff=%d\n",
+            RT_LOG_ERR("[ProcessImage] writeOutputBit out of bounds: byteOff=%zu bitOff=%d\n",
                     byteOff, bitOff);
             return;
         }
@@ -130,6 +144,8 @@ struct TCI {
 // 简单单扫描运行时（向后兼容）
 // ═══════════════════════════════════════════════════════
 
+typedef void (*RuntimeScanFunc)(void);
+
 struct Runtime {
     ProcessImage image;
     TCI*         tci            = nullptr;
@@ -140,6 +156,7 @@ struct Runtime {
     void setCycleTime(uint32_t us) { cycleTimeUs = us; }
     void setTCI(TCI* t) { tci = t; }
 
+#if !defined(RT_PLATFORM_BARE_METAL)
     void scanOnce(std::function<void()> userProgram) {
         if (tci) tci->syncInputs(image);
         userProgram();
@@ -160,6 +177,27 @@ struct Runtime {
             }
         }
     }
+#else
+    void scanOnce(RuntimeScanFunc userProgram) {
+        if (tci) tci->syncInputs(image);
+        if (userProgram) userProgram();
+        if (tci) tci->syncOutputs(image);
+        cycleCount++;
+    }
+
+    void run(RuntimeScanFunc userProgram) {
+        running = true;
+        while (running) {
+            int64_t start = platform::steadyUs();
+            scanOnce(userProgram);
+            int64_t elapsed = platform::steadyUs() - start;
+            int64_t sleep = (int64_t)cycleTimeUs - elapsed;
+            if (sleep > 0) {
+                platform::sleepUs(sleep);
+            }
+        }
+    }
+#endif
 
     void stop() { running = false; }
 };
@@ -181,6 +219,18 @@ struct Runtime {
 // 或用 RAII 包装：
 //   { plc_lock_guard g(lock); ... }
 
+#if defined(RT_PLATFORM_BARE_METAL)
+
+// 裸机：单线程无竞争，spinlock 为空操作
+// 多核裸机可替换为 LDREX/STREX 实现
+struct plc_lock {
+    void lock() {}
+    void unlock() {}
+    bool tryLock() { return true; }
+};
+
+#else
+
 struct plc_lock {
     std::atomic_flag flag = ATOMIC_FLAG_INIT;
 
@@ -197,6 +247,8 @@ struct plc_lock {
         return !flag.test_and_set(std::memory_order_acquire);
     }
 };
+
+#endif
 
 struct plc_lock_guard {
     plc_lock& lock_;

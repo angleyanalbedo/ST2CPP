@@ -29,6 +29,7 @@ public class VisitLoc_var_decl implements Strategy {
         }else{
             returnVar.setName("_varAt" + location);
         }
+        returnVar.setLocation(location);
 
         //带有类型信息、初始值的变量
         //loc_var_spec_init

@@ -12,7 +12,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
-#include <chrono>
+#include <cstdarg>
+#include "platform.h"
 
 namespace rt_plc {
 
@@ -199,10 +200,7 @@ inline DATE DT_to_date(DATE_AND_TIME dt) { return (DATE)(dt / 86400000000LL); }
 inline TIME_OF_DAY DT_to_tod(DATE_AND_TIME dt) { return dt % 86400000000LL; }
 
 inline DATE_AND_TIME NOW() {
-    auto now = std::chrono::system_clock::now();
-    auto us = std::chrono::duration_cast<std::chrono::microseconds>(
-        now.time_since_epoch()).count();
-    return (DATE_AND_TIME)us;
+    return (DATE_AND_TIME)platform::nowUs();
 }
 
 inline TIME_OF_DAY NOW_TOD() {
@@ -703,7 +701,7 @@ struct PLC_Array {
 
     T& at(size_t index) {
         if (index >= N) {
-            fprintf(stderr, "ARRAY out of bounds: index %zu, size %zu\n", index, N);
+            RT_LOG_ERR("ARRAY out of bounds: index %zu, size %zu\n", index, N);
             index = N - 1;
         }
         return elements[index];
@@ -711,7 +709,7 @@ struct PLC_Array {
 
     const T& at(size_t index) const {
         if (index >= N) {
-            fprintf(stderr, "ARRAY out of bounds: index %zu, size %zu\n", index, N);
+            RT_LOG_ERR("ARRAY out of bounds: index %zu, size %zu\n", index, N);
             index = N - 1;
         }
         return elements[index];
@@ -912,8 +910,8 @@ inline BOOL   str_eq(const STRING& a, const STRING& b) { return STR_EQ(a, b); }
 template<typename T>
 inline T& plc_deref(T* ptr, const char* varName = "") {
     if (!ptr) {
-        fprintf(stderr, "NULL pointer dereference: %s\n", varName);
-        thread_local T dummy{};
+        RT_LOG_ERR("NULL pointer dereference: %s\n", varName);
+        RT_THREAD_LOCAL T dummy{};
         return dummy;
     }
     return *ptr;

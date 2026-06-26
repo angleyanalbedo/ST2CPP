@@ -8,13 +8,13 @@ using namespace rt_plc;
 INT ADD_TEN(INT X) {
 		return (X) +((10)) ;
 }
-void PROGRAM_P_init(GVL& gvl, ProcessImage& io) {
+void PROGRAM_P_Tinit(GVL& gvl, ProcessImage& io) {
 		gvl.write<INT>(0, (0));
 		gvl.write<INT>(2, (0));
 }
-void PROGRAM_P_pre(GVL& gvl, ProcessImage& io) {
+void PROGRAM_P_Tpre(GVL& gvl, ProcessImage& io) {
 }
-void PROGRAM_P_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
+void PROGRAM_P_Tcyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 		INT A = (1);
 		for( ; A <= (5);A = A + (1)){
 		INT _X0=A;
@@ -22,14 +22,14 @@ void PROGRAM_P_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 		}
 		gvl.write<INT>(0, A);
 }
-void PROGRAM_P_post(GVL& gvl, ProcessImage& io) {
+void PROGRAM_P_Tpost(GVL& gvl, ProcessImage& io) {
 }
 // ─── Auto-generated POU Registration (test) ───
 void registerPOU_test(POURegistry& reg) {
     POUCallbacks cbs;
-    cbs.init = PROGRAM_P_init;
-    cbs.cyclic = PROGRAM_P_cyclic;
-    cbs.pre = PROGRAM_P_pre;
-    cbs.post = PROGRAM_P_post;
-    reg.add("P", cbs);
+    cbs.init = PROGRAM_P_Tinit;
+    cbs.cyclic = PROGRAM_P_Tcyclic;
+    cbs.pre = PROGRAM_P_Tpre;
+    cbs.post = PROGRAM_P_Tpost;
+    reg.add("PT", cbs);
 }

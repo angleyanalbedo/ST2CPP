@@ -71,35 +71,47 @@ public class PLCVisitor extends PLCSTPARSERBaseVisitor<ArrayList<PLCSymbol>> {
 
     @Override
     public ArrayList<PLCSymbol> visitInput_decls(PLCSTPARSERParser.Input_declsContext ctx) {
-        return factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
+        ArrayList<PLCSymbol> symbols = factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
+        this.properties.put(ctx, symbols);
+        return symbols;
     }
 
     @Override
     public ArrayList<PLCSymbol> visitInput_decl(PLCSTPARSERParser.Input_declContext ctx) {
-        return factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
+        ArrayList<PLCSymbol> symbols = factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
+        this.properties.put(ctx, symbols);
+        return symbols;
     }
 
 
     @Override
     public ArrayList<PLCSymbol> visitOutput_decls(PLCSTPARSERParser.Output_declsContext ctx) {
-        return factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
+        ArrayList<PLCSymbol> symbols = factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
+        this.properties.put(ctx, symbols);
+        return symbols;
     }
 
     @Override
     public ArrayList<PLCSymbol> visitOutput_decl(PLCSTPARSERParser.Output_declContext ctx) {
-        return factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
+        ArrayList<PLCSymbol> symbols = factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
+        this.properties.put(ctx, symbols);
+        return symbols;
     }
 
 
 
     @Override
     public ArrayList<PLCSymbol> visitIn_out_decls(PLCSTPARSERParser.In_out_declsContext ctx) {
-        return factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
+        ArrayList<PLCSymbol> symbols = factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
+        this.properties.put(ctx, symbols);
+        return symbols;
     }
 
     @Override
     public ArrayList<PLCSymbol> visitIn_out_var_decl(PLCSTPARSERParser.In_out_var_declContext ctx) {
-        return factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
+        ArrayList<PLCSymbol> symbols = factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
+        this.properties.put(ctx, symbols);
+        return symbols;
     }
 
     /*---------------------func var decls---------------------------------------------*/
@@ -232,7 +244,16 @@ public class PLCVisitor extends PLCSTPARSERBaseVisitor<ArrayList<PLCSymbol>> {
     /*----------------------------------visitLoc_var_decls------------------------------------------*/
     @Override
     public ArrayList<PLCSymbol> visitLoc_var_decls(PLCSTPARSERParser.Loc_var_declsContext ctx) {
-        return super.visitLoc_var_decls(ctx);
+        ArrayList<PLCSymbol> symbols = factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
+        this.properties.put(ctx, symbols);
+        return symbols;
+    }
+
+    @Override
+    public ArrayList<PLCSymbol> visitLoc_var_decl(PLCSTPARSERParser.Loc_var_declContext ctx) {
+        ArrayList<PLCSymbol> symbols = factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
+        this.properties.put(ctx, symbols);
+        return symbols;
     }
 
     @Override
@@ -657,7 +678,7 @@ public class PLCVisitor extends PLCSTPARSERBaseVisitor<ArrayList<PLCSymbol>> {
 
     @Override
     public ArrayList<PLCSymbol> visitDirectNum(PLCSTPARSERParser.DirectNumContext ctx) {
-        return factory.getStrategy(ctx.getRuleIndex()).invoke(ctx, this);
+        return factory.getStrategy(ctx.getRuleIndex(), 1).invoke(ctx, this);
     }
 
     @Override

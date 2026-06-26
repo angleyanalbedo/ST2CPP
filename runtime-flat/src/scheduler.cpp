@@ -134,7 +134,7 @@ void Scheduler::start(StartupMode mode) {
 
     // 6. 进入 RUN
     systemState = SystemState::RUN;
-    runStartWall_ = std::chrono::steady_clock::now();
+    runStartWall_ = platform::steadyUs();
 }
 
 void Scheduler::stop() {
@@ -182,15 +182,14 @@ void Scheduler::run(StartupMode mode) {
     start(mode);
 
     while (systemState == SystemState::RUN) {
-        auto loopStart = std::chrono::steady_clock::now();
+        int64_t loopStart = platform::steadyUs();
 
         tick();
 
-        auto elapsed = std::chrono::steady_clock::now() - loopStart;
-        auto sleepUs = std::chrono::microseconds(baseCycleTime) -
-                       std::chrono::duration_cast<std::chrono::microseconds>(elapsed);
-        if (sleepUs.count() > 0) {
-            std::this_thread::sleep_for(sleepUs);
+        int64_t elapsed = platform::steadyUs() - loopStart;
+        int64_t sleepUs = (int64_t)baseCycleTime - elapsed;
+        if (sleepUs > 0) {
+            platform::sleepUs(sleepUs);
         }
     }
 }
@@ -209,7 +208,7 @@ void Scheduler::tick() {
     if (systemState != SystemState::RUN) return;
 
 #ifdef ENABLE_DIAG
-    auto scanStart = std::chrono::steady_clock::now();
+    int64_t scanStart = platform::steadyUs();
 #endif
 
     // Phase 1: Read Inputs
@@ -218,9 +217,8 @@ void Scheduler::tick() {
 
     // 更新系统时间（仅诊断模式下精确计时）
 #ifdef ENABLE_DIAG
-    auto nowWall = std::chrono::steady_clock::now();
-    systemTime = std::chrono::duration_cast<std::chrono::microseconds>(
-        nowWall - runStartWall_).count();
+    int64_t nowWall = platform::steadyUs();
+    systemTime = nowWall - runStartWall_;
 #else
     // 非诊断模式：用 tick 计数代替精确时间
     systemTime = totalTicks * baseCycleTime;
@@ -239,7 +237,7 @@ void Scheduler::tick() {
         if (!shouldRun(task)) continue;
 
 #ifdef ENABLE_DIAG
-        auto execStart = std::chrono::steady_clock::now();
+        int64_t execStart = platform::steadyUs();
 #endif
         task.state = TaskState::RUNNING;
 
@@ -258,9 +256,8 @@ void Scheduler::tick() {
         task.lastRunTime = systemTime;
 
 #ifdef ENABLE_DIAG
-        auto execEnd = std::chrono::steady_clock::now();
-        task.lastExecTime = std::chrono::duration_cast<std::chrono::microseconds>(
-            execEnd - execStart).count();
+        int64_t execEnd = platform::steadyUs();
+        task.lastExecTime = execEnd - execStart;
         if (task.lastExecTime > task.maxExecTime) {
             task.maxExecTime = task.lastExecTime;
         }
@@ -272,7 +269,7 @@ void Scheduler::tick() {
             task.overrunCount++;
             diag.totalOverruns++;
 #ifdef ENABLE_DIAG
-            fprintf(stderr, "[Watchdog] Task '%s' overrun: %lld us (limit: %lld us)\n",
+            RT_LOG_ERR("[Watchdog] Task '%s' overrun: %lld us (limit: %lld us)\n",
                     task.name, (long long)task.lastExecTime,
                     (long long)(task.watchdogLimit > 0 ? task.watchdogLimit : watchdog.defaultLimit));
 #endif
@@ -303,9 +300,8 @@ void Scheduler::tick() {
     currentPhase = ScanPhase::HOUSEKEEPING;
 
 #ifdef ENABLE_DIAG
-    auto scanEnd = std::chrono::steady_clock::now();
-    TIME scanTime = std::chrono::duration_cast<std::chrono::microseconds>(
-        scanEnd - scanStart).count();
+    int64_t scanEnd = platform::steadyUs();
+    TIME scanTime = scanEnd - scanStart;
     diag.recordScan(scanTime);
 #endif
 
@@ -314,29 +310,29 @@ void Scheduler::tick() {
 }
 
 void Scheduler::printDiag() const {
-    printf("=== Scheduler Diagnostics ===\n");
-    printf("System: %s | Ticks: %llu | Time: %lld us\n",
+    RT_LOG_INFO("=== Scheduler Diagnostics ===\n");
+    RT_LOG_INFO("System: %s | Ticks: %llu | Time: %lld us\n",
            stateName(systemState),
            (unsigned long long)totalTicks,
            (long long)systemTime);
-    printf("Watchdog: %s\n", watchdog.tripped ? "TRIPPED" : "OK");
-    printf("Errors: %d (fatal: %s)\n",
+    RT_LOG_INFO("Watchdog: %s\n", watchdog.tripped ? "TRIPPED" : "OK");
+    RT_LOG_INFO("Errors: %d (fatal: %s)\n",
            errorMgr.totalCount, errorMgr.fatalMode ? "YES" : "NO");
 
-    printf("\nScan Times: last=%lld  avg=%lld  min=%lld  max=%lld us\n",
+    RT_LOG_INFO("\nScan Times: last=%lld  avg=%lld  min=%lld  max=%lld us\n",
            (long long)diag.lastScanTime,
            (long long)diag.avgScanTime(),
            (long long)diag.minScanTime,
            (long long)diag.maxScanTime);
-    printf("Total Overruns: %llu\n", (unsigned long long)diag.totalOverruns);
+    RT_LOG_INFO("Total Overruns: %llu\n", (unsigned long long)diag.totalOverruns);
 
-    printf("\n%-20s %-10s %-8s %-10s %-10s %-10s %-8s\n",
+    RT_LOG_INFO("\n%-20s %-10s %-8s %-10s %-10s %-10s %-8s\n",
            "Task", "Trigger", "Pri", "Cycles", "Last(us)", "Max(us)", "Overrun");
-    printf("%-20s %-10s %-8s %-10s %-10s %-10s %-8s\n",
+    RT_LOG_INFO("%-20s %-10s %-8s %-10s %-10s %-10s %-8s\n",
            "----", "-------", "---", "------", "--------", "--------", "-------");
     for (int i = 0; i < taskCount_; i++) {
         const Task& t = tasks_[i];
-        printf("%-20s %-10s %-8d %-10llu %-10lld %-10lld %-8u\n",
+        RT_LOG_INFO("%-20s %-10s %-8d %-10llu %-10lld %-10lld %-8u\n",
                t.name,
                triggerName(t.trigger),
                t.priority,
@@ -346,18 +342,18 @@ void Scheduler::printDiag() const {
                t.overrunCount);
     }
 
-    printf("\nPrograms:\n");
+    RT_LOG_INFO("\nPrograms:\n");
     for (int i = 0; i < programCount_; i++) {
         const ProgramInstance& p = programs_[i];
-        printf("  %-20s phase=%-12s cycles=%llu\n",
+        RT_LOG_INFO("  %-20s phase=%-12s cycles=%llu\n",
                p.name, phaseName(p.phase),
                (unsigned long long)p.cycleCount);
     }
 
-    printf("\nGVL used: %zu / %zu bytes (retain: [%zu, %zu))\n",
+    RT_LOG_INFO("\nGVL used: %zu / %zu bytes (retain: [%zu, %zu))\n",
            gvl.usedBytes(), GVL_SIZE,
            gvl.retainStart, gvl.retainEnd);
-    printf("=============================\n");
+    RT_LOG_INFO("=============================\n");
 }
 
 int Scheduler::findFreeTask() {
@@ -417,7 +413,7 @@ void Scheduler::checkEvents() {
             int taskIdx = events_[i].taskIndex;
             if (taskIdx >= 0 && taskIdx < MAX_TASKS) {
                 Task& task = tasks_[taskIdx];
-                auto execStart = std::chrono::steady_clock::now();
+                int64_t execStart = platform::steadyUs();
                 task.state = TaskState::RUNNING;
                 task.executePOUs(gvl, image, baseCycleTime);
                 // 事件任务也执行挂载的 PROGRAM
@@ -429,9 +425,8 @@ void Scheduler::checkEvents() {
                 }
                 task.cycleCount++;
                 task.lastRunTime = systemTime;
-                auto execEnd = std::chrono::steady_clock::now();
-                task.lastExecTime = std::chrono::duration_cast<std::chrono::microseconds>(
-                    execEnd - execStart).count();
+                int64_t execEnd = platform::steadyUs();
+                task.lastExecTime = execEnd - execStart;
                 if (task.lastExecTime > task.maxExecTime) {
                     task.maxExecTime = task.lastExecTime;
                 }

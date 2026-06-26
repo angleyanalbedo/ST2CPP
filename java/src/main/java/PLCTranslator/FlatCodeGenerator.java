@@ -43,6 +43,24 @@ public class FlatCodeGenerator implements CodeGenerator {
     // enum 类型名 → underlying 原生类型名
     private final Map<String, String> enumNameToUnderlying = new HashMap<>();
 
+    // ─── I/O 映射变量支持（AT 地址声明） ───
+
+    enum IODirection { INPUT, OUTPUT, MEMORY }
+
+    static class IOInfo {
+        IODirection dir;
+        int byteOffset;
+        int bitOffset = -1;  // -1 表示非位变量
+        String typeName;
+        IOInfo() {}
+        IOInfo(IODirection dir, int byteOffset, int bitOffset, String typeName) {
+            this.dir = dir; this.byteOffset = byteOffset;
+            this.bitOffset = bitOffset; this.typeName = typeName;
+        }
+    }
+
+    private final Map<String, IOInfo> ioVarMap = new LinkedHashMap<>();
+
     // ─── POU 注册表 ───
     // 当前文件中所有 PROGRAM 名称的列表（多文件场景下每文件独立收集）
     private final List<String> programNames = new ArrayList<>();
@@ -267,12 +285,136 @@ public class FlatCodeGenerator implements CodeGenerator {
         return symbolIdToNameMap.get(symbolId);
     }
 
+    // ═══ I/O 映射变量支持 ═══
+
+    /**
+     * 解析 IEC 61131-3 直接变量地址
+     * 格式: % [I|Q|M] [X|B|W|D|L] Unsigned_int (. Unsigned_int)?
+     * 例: %IW2, %QW4, %IX0.3, %IB3, %QB4
+     */
+    private IOInfo parseATAddress(String location) {
+        if (location == null || !location.startsWith("%")) return null;
+        IOInfo info = new IOInfo();
+        int pos = 1;
+
+        // 方向 (可选, 默认 I)
+        info.dir = IODirection.INPUT;
+        if (pos < location.length()) {
+            char c = location.charAt(pos);
+            if (c == 'I' || c == 'Q' || c == 'M') {
+                info.dir = (c == 'I') ? IODirection.INPUT
+                        : (c == 'Q') ? IODirection.OUTPUT : IODirection.MEMORY;
+                pos++;
+            }
+        }
+
+        // 大小前缀 (可选, 默认 B)
+        int sizeInBytes = 1;
+        boolean isBit = false;
+        if (pos < location.length()) {
+            char c = location.charAt(pos);
+            if (c == 'X') { isBit = true; sizeInBytes = 0; pos++; }
+            else if (c == 'B') { pos++; }
+            else if (c == 'W') { sizeInBytes = 2; pos++; }
+            else if (c == 'D') { sizeInBytes = 4; pos++; }
+            else if (c == 'L') { sizeInBytes = 8; pos++; }
+        }
+
+        // 数值部分
+        StringBuilder numStr = new StringBuilder();
+        while (pos < location.length() && Character.isDigit(location.charAt(pos))) {
+            numStr.append(location.charAt(pos));
+            pos++;
+        }
+        if (numStr.length() == 0) return null;
+        int value = Integer.parseInt(numStr.toString());
+
+        // 可选位偏移
+        int bitOffset = -1;
+        if (pos < location.length() && location.charAt(pos) == '.') {
+            pos++;
+            StringBuilder bitStr = new StringBuilder();
+            while (pos < location.length() && Character.isDigit(location.charAt(pos))) {
+                bitStr.append(location.charAt(pos));
+                pos++;
+            }
+            if (bitStr.length() > 0) bitOffset = Integer.parseInt(bitStr.toString());
+        }
+
+        if (isBit) {
+            info.byteOffset = value;
+            info.bitOffset = (bitOffset >= 0) ? bitOffset : 0;
+        } else {
+            info.byteOffset = value * sizeInBytes;
+            info.bitOffset = -1;
+        }
+        return info;
+    }
+
+    @Override
+    public void registerIOVariable(String varName, String typeName, String location) {
+        if (varName == null || location == null) return;
+        String cleanName = varName.startsWith("*") ? varName.substring(1) : varName;
+        IOInfo info = parseATAddress(location);
+        if (info == null) {
+            throw new RuntimeException("Invalid AT address: " + location + " for variable " + varName);
+        }
+        if (info.dir == IODirection.MEMORY) {
+            // %M 变量走 GVL, 不注册为 IO 变量
+            return;
+        }
+        info.typeName = toNativeType(typeName);
+        ioVarMap.put(cleanName, info);
+    }
+
+    @Override
+    public boolean isIOVariable(String varName) {
+        if (varName == null) return false;
+        String cleanName = varName.startsWith("*") ? varName.substring(1) : varName;
+        return ioVarMap.containsKey(cleanName);
+    }
+
+    @Override
+    public String emitIORead(String varName) {
+        if (varName == null) return null;
+        String cleanName = varName.startsWith("*") ? varName.substring(1) : varName;
+        IOInfo info = ioVarMap.get(cleanName);
+        if (info == null) return null;
+        if (info.dir == IODirection.MEMORY) return null;
+        String prefix = (info.dir == IODirection.INPUT) ? "io.readInput" : "io.readOutput";
+        if (info.bitOffset >= 0) {
+            return prefix + "Bit(" + info.byteOffset + ", " + info.bitOffset + ")";
+        }
+        return prefix + "<" + info.typeName + ">(" + info.byteOffset + ")";
+    }
+
+    @Override
+    public String emitIOWrite(String varName, String valueExpr) {
+        if (varName == null) return null;
+        String cleanName = varName.startsWith("*") ? varName.substring(1) : varName;
+        IOInfo info = ioVarMap.get(cleanName);
+        if (info == null) return null;
+        if (info.dir == IODirection.MEMORY) return null;
+        // 对于 AT 地址变量，写入操作始终写入 ProcessImage 输出缓冲区
+        // （输入映射变量也允许写入，尽管下次扫描会被硬件同步覆盖）
+        if (info.bitOffset >= 0) {
+            return "io.writeOutputBit(" + info.byteOffset + ", " + info.bitOffset + ", " + valueExpr + ")";
+        }
+        return "io.writeOutput<" + info.typeName + ">(" + info.byteOffset + ", " + valueExpr + ")";
+    }
+
     /**
      * 获取变量的 GVL 读取表达式
      */
     private String readExpr(String varName) {
         // 去掉解引用星号前缀
         String cleanName = varName.startsWith("*") ? varName.substring(1) : varName;
+
+        // I/O 映射变量（AT 地址）检查
+        if (ioVarMap.containsKey(cleanName)) {
+            String ioRead = emitIORead(cleanName);
+            if (ioRead != null) return ioRead;
+        }
 
         // 检测数组元素访问：ARR[I] 或 (ARR[I])
         String arrayElemPattern = "^\\(?([A-Z][A-Z0-9$_]*)\\[(.+)\\]\\)?$";
@@ -310,6 +452,13 @@ public class FlatCodeGenerator implements CodeGenerator {
     private String writeExpr(String varName, String valueExpr) {
         // 去掉解引用星号前缀
         String cleanName = varName.startsWith("*") ? varName.substring(1) : varName;
+
+        // I/O 映射变量（AT 地址）检查
+        if (ioVarMap.containsKey(cleanName)) {
+            String ioWrite = emitIOWrite(cleanName, valueExpr);
+            if (ioWrite != null) return ioWrite;
+        }
+
         // 处理函数返回值：*this->returnValue → return
         if (cleanName.trim().equals("this->returnValue")) {
             return "return " + valueExpr;
@@ -886,6 +1035,9 @@ public class FlatCodeGenerator implements CodeGenerator {
                     String nType = typeMap.getOrDefault(varName, nativeType);
                     if (offset != null) {
                         varMatcher.appendReplacement(sb, "gvl.read<" + nType + ">(" + offset + ")");
+                    } else if (isIOVariable(varName)) {
+                        String ioRead = emitIORead(varName);
+                        varMatcher.appendReplacement(sb, ioRead != null ? ioRead : varName);
                     } else {
                         varMatcher.appendReplacement(sb, varName);
                     }
@@ -922,6 +1074,9 @@ public class FlatCodeGenerator implements CodeGenerator {
                     String nType = typeMap.getOrDefault(varName, toNativeType(type));
                     if (offset != null) {
                         simpleVarMatcher.appendReplacement(sb, "gvl.read<" + nType + ">(" + offset + ")");
+                    } else if (isIOVariable(varName)) {
+                        String ioRead = emitIORead(varName);
+                        simpleVarMatcher.appendReplacement(sb, ioRead != null ? ioRead : varName);
                     } else {
                         simpleVarMatcher.appendReplacement(sb, varName);
                     }
@@ -977,22 +1132,34 @@ public class FlatCodeGenerator implements CodeGenerator {
         // *this->returnValue → returnValue
         result = result.replace("*this->returnValue", "returnValue");
 
-        // 7. GVL 变量替换：简单变量名 → gvl.read<TYPE>(offset)
-        // 遍历所有已注册的 GVL 变量，在表达式中替换为偏移量读取
-        // 注意：只替换独立的变量名（不在其他标识符内部）
-        // 跳过数组类型变量（数组元素访问需要特殊处理）
-        for (Map.Entry<String, Integer> entry : offsetMap.entrySet()) {
-            String varName = entry.getKey();
-            Integer offset = entry.getValue();
-            String type = typeMap.get(varName);
-            if (type == null || offset == null) continue;
-            // 跳过数组类型变量（类型名以 "ARRAY[" 开头）
-            if (type.startsWith("ARRAY[")) continue;
-            // 跳过被 FOR 循环局部变量遮盖的 GVL 变量（循环体内引用指向局部变量）
-            if (shadowedGvlVars.contains(varName)) continue;
+            // 7. GVL 变量替换：简单变量名 → gvl.read<TYPE>(offset)
+            // 遍历所有已注册的 GVL 变量，在表达式中替换为偏移量读取
+            // 注意：只替换独立的变量名（不在其他标识符内部）
+            // 跳过数组类型变量（数组元素访问需要特殊处理）
+            for (Map.Entry<String, Integer> entry : offsetMap.entrySet()) {
+                String varName = entry.getKey();
+                Integer offset = entry.getValue();
+                String type = typeMap.get(varName);
+                if (type == null || offset == null) continue;
+                // 跳过数组类型变量（类型名以 "ARRAY[" 开头）
+                if (type.startsWith("ARRAY[")) continue;
+                // 跳过被 FOR 循环局部变量遮盖的 GVL 变量（循环体内引用指向局部变量）
+                if (shadowedGvlVars.contains(varName)) continue;
+                // 跳过 I/O 映射变量（由 readExpr/writeExpr 处理，不通过 step 7 替换）
+                if (ioVarMap.containsKey(varName)) continue;
             // 使用正则匹配独立的变量名（前后不是字母/数字/下划线）
             String regex = "(?<![A-Za-z0-9_])" + Pattern.quote(varName) + "(?![A-Za-z0-9_])";
             result = result.replaceAll(regex, "gvl.read<" + type + ">(" + offset + ")");
+        }
+
+        // 7b. I/O 映射变量替换：简单变量名 → io.readInput<T>(offset) / io.readOutput<T>(offset)
+        for (String varName : ioVarMap.keySet()) {
+            if (shadowedGvlVars.contains(varName)) continue;
+            String ioRead = emitIORead(varName);
+            if (ioRead != null) {
+                String regex = "(?<![A-Za-z0-9_])" + Pattern.quote(varName) + "(?![A-Za-z0-9_])";
+                result = result.replaceAll(regex, ioRead);
+            }
         }
 
         return result;

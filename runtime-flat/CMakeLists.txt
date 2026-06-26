@@ -4,9 +4,33 @@ project(RT_PLC LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# ═══ 平台选项 ═══
+option(RT_BARE_METAL "Build for bare-metal (STM32 etc.) - no OS dependencies" OFF)
+
 # ═══ 编译优化选项 ═══
 set(CMAKE_BUILD_TYPE Release)
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -march=native")
+if(RT_BARE_METAL)
+    # 裸机：关闭 OS 依赖，使用最小 C++ 特性
+    add_compile_definitions(RT_PLATFORM_BARE_METAL)
+    set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
+else()
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -march=native")
+endif()
+
+# ═══ GVL / ProcessImage 大小可配（STM32 小 RAM 平台） ═══
+set(GVL_SIZE_OVERRIDE "" CACHE STRING "Override GVL size in bytes (e.g. 8192 for STM32)")
+set(GVL_RETAIN_SIZE_OVERRIDE "" CACHE STRING "Override GVL RETAIN size in bytes")
+set(PROCESS_IMAGE_SIZE_OVERRIDE "" CACHE STRING "Override ProcessImage size in bytes")
+
+if(GVL_SIZE_OVERRIDE)
+    add_compile_definitions(GVL_SIZE_OVERRIDE=${GVL_SIZE_OVERRIDE})
+endif()
+if(GVL_RETAIN_SIZE_OVERRIDE)
+    add_compile_definitions(GVL_RETAIN_SIZE_OVERRIDE=${GVL_RETAIN_SIZE_OVERRIDE})
+endif()
+if(PROCESS_IMAGE_SIZE_OVERRIDE)
+    add_compile_definitions(PROCESS_IMAGE_SIZE_OVERRIDE=${PROCESS_IMAGE_SIZE_OVERRIDE})
+endif()
 
 # ═══ 诊断开关 ═══
 option(ENABLE_DIAG "Enable runtime diagnostics (scan time, watchdog)" ON)
@@ -44,7 +68,8 @@ add_library(rt_scheduler STATIC ${RT_SCHEDULER_SOURCES})
 target_include_directories(rt_scheduler PUBLIC ${RT_INCLUDE_DIR})
 target_link_libraries(rt_scheduler PUBLIC rt_core)
 
-# ═══ 可执行文件：测试用例 ═══
+# ═══ 可执行文件：测试用例（仅桌面端） ═══
+if(NOT RT_BARE_METAL)
 
 # Fibonacci 基础类型测试
 add_executable(fibonacci tests/fibonacci.cpp)
@@ -73,7 +98,11 @@ if(MINGW)
     target_link_options(unit_test PRIVATE -mconsole)
 endif()
 
+endif() # NOT RT_BARE_METAL
+
 # ═══ 可执行文件：runtime（集成生成的 POU 代码） ═══
+
+if(NOT RT_BARE_METAL)
 
 # 编译器生成的 .cpp 目录（由 Java 编译器产出，CMake 不参与 ST 编译）
 set(GEN_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../output/flat/"
@@ -118,3 +147,5 @@ else()
     Compile ST sources first with Java compiler:
       java -cp ... Main --input file.st --output output/flat/build/file.cpp")
 endif()
+
+endif() # NOT RT_BARE_METAL

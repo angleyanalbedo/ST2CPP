@@ -267,6 +267,34 @@ public interface CodeGenerator {
     String emitPOURegistration(String fileId, List<String> progNames);
 
 
+    // ═══ I/O 映射变量支持（AT 地址声明） ═══
+
+    /**
+     * 注册一个具有 AT 地址的 I/O 映射变量。
+     * 该变量不在 GVL 中分配偏移量，而是映射到 ProcessImage 的输入/输出缓冲区。
+     *
+     * @param varName  变量名
+     * @param typeName 原生类型名
+     * @param location AT 地址字符串（如 "%IW2", "%QW4", "%IX0.3"）
+     */
+    void registerIOVariable(String varName, String typeName, String location);
+
+    /**
+     * 检查变量是否为 I/O 映射变量
+     */
+    boolean isIOVariable(String varName);
+
+    /**
+     * 生成 I/O 映射变量的读取表达式
+     */
+    String emitIORead(String varName);
+
+    /**
+     * 生成 I/O 映射变量的写入语句
+     */
+    String emitIOWrite(String varName, String valueExpr);
+
+
     // ═══ 底层输出 ═══
 
     /** 直接输出代码片段（用于特殊情况） */
