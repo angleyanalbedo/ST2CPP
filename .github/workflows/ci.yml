@@ -26,7 +26,12 @@ jobs:
           cache: maven
 
       - name: Build with Maven
-        run: mvn package -DskipTests -Plsp-server --file java/pom.xml
+        run: mvn package -DskipTests --file java/pom.xml
+
+      - name: Create LSP server JAR
+        run: |
+          cp java/target/st2c-jar-with-dependencies.jar java/target/st2c-lsp-server-jar-with-dependencies.jar
+          jar ufe java/target/st2c-lsp-server-jar-with-dependencies.jar com.st2c.lsp.ST2CLanguageServer
 
       - name: Upload JARs
         uses: actions/upload-artifact@v4
