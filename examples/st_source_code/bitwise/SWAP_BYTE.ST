@@ -1,9 +1,0 @@
-FUNCTION SWAP_BYTE:WORD
-
-	VAR_INPUT
-		IN :	WORD;
-	END_VAR
-
-	Swap_Byte := ROL(in,8);
-
-END_FUNCTION

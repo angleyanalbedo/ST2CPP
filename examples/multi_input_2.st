@@ -1,5 +1,0 @@
-PROGRAM P2
-    VAR
-        B : INT := 2;
-    END_VAR
-END_PROGRAM

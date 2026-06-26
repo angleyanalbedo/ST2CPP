@@ -1,8 +1,0 @@
-FUNCTION CIRCLE_A:REAL
-	VAR_INPUT
-		RX :	REAL;
-		AX :	REAL;
-	END_VAR
-
-	circle_A := Rx * RX * 8.726646E-3 * Ax;
-END_FUNCTION

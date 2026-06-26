@@ -1,9 +1,0 @@
-FUNCTION K_TO_C:REAL
-
-	VAR_INPUT
-		KELVIN :	REAL;
-	END_VAR
-
-	K_to_C := Kelvin + 273.15;
-
-END_FUNCTION

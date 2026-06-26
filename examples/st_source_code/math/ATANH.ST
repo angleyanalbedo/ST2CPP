@@ -1,8 +1,0 @@
-FUNCTION ATANH:REAL
-	VAR_INPUT
-		X :	REAL;
-	END_VAR
-
-	ATANH := LN((1.0 + x)/(1.0 - x)) * 0.5;
-
-END_FUNCTION

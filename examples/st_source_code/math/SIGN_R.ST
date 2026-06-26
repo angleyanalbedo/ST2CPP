@@ -1,7 +1,0 @@
-FUNCTION SIGN_R : BOOL
-  VAR_INPUT
-    IN : REAL;
-  END_VAR
-
-  SIGN_R := in < 0.0;
-END_FUNCTION
