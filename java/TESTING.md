@@ -9,8 +9,6 @@ tests/
 │   ├── PLCSymbolTableTest        — 符号表操作 (11)
 │   ├── PLCScopeTest              — 作用域栈 (12)
 │   ├── IDGeneratorTest           — ID 生成器 (8)
-│   ├── MainMultiInputTest        — 多文件编译 (2)
-│   ├── OscatLibraryTest          — 批量编译覆盖 (1 file, 729 ST)
 │   └── SnapshotTest              — 快照测试 (7, 持续增加)
 └── C++ runtime (doctest)  ← cmake --build . && ctest
     ├── framework_test            — 框架完整性 (112)
