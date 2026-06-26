@@ -76,6 +76,10 @@ public class FlatCodeGenerator implements CodeGenerator {
         programNameSet.add(name);
     }
 
+    private String mangleProgName(String progName) {
+        return fileId.isEmpty() ? progName : fileId + "_" + progName;
+    }
+
     public void setFileId(String id) {
         this.fileId = id;
     }
@@ -814,11 +818,12 @@ public class FlatCodeGenerator implements CodeGenerator {
         sb.append("\n// ─── Auto-generated POU Registration (").append(fileId).append(") ───\n");
         sb.append("void registerPOU_").append(fileId).append("(POURegistry& reg) {\n");
         for (String name : progNames) {
+            String mangled = mangleProgName(name);
             sb.append("    POUCallbacks cbs;\n");
-            sb.append("    cbs.init = PROGRAM_").append(name).append("_init;\n");
-            sb.append("    cbs.cyclic = PROGRAM_").append(name).append("_cyclic;\n");
-            sb.append("    cbs.pre = PROGRAM_").append(name).append("_pre;\n");
-            sb.append("    cbs.post = PROGRAM_").append(name).append("_post;\n");
+            sb.append("    cbs.init = PROGRAM_").append(mangled).append("_init;\n");
+            sb.append("    cbs.cyclic = PROGRAM_").append(mangled).append("_cyclic;\n");
+            sb.append("    cbs.pre = PROGRAM_").append(mangled).append("_pre;\n");
+            sb.append("    cbs.post = PROGRAM_").append(mangled).append("_post;\n");
             sb.append("    reg.add(\"").append(name).append("\", cbs);\n");
         }
         sb.append("}\n");
@@ -883,7 +888,7 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     @Override
     public String emitProgDeclBegin(String progName) {
-        return "\nvoid PROGRAM_" + progName + "(GVL& gvl, ProcessImage& io, TIME dt) {";
+        return "\nvoid PROGRAM_" + mangleProgName(progName) + "(GVL& gvl, ProcessImage& io, TIME dt) {";
     }
 
     @Override
@@ -905,22 +910,22 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     @Override
     public String emitProgInitBegin(String progName) {
-        return "\nvoid PROGRAM_" + progName + "_init(GVL& gvl, ProcessImage& io) {";
+        return "\nvoid PROGRAM_" + mangleProgName(progName) + "_init(GVL& gvl, ProcessImage& io) {";
     }
 
     @Override
     public String emitProgCyclicBegin(String progName) {
-        return "\nvoid PROGRAM_" + progName + "_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {";
+        return "\nvoid PROGRAM_" + mangleProgName(progName) + "_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {";
     }
 
     @Override
     public String emitProgPreBegin(String progName) {
-        return "\nvoid PROGRAM_" + progName + "_pre(GVL& gvl, ProcessImage& io) {";
+        return "\nvoid PROGRAM_" + mangleProgName(progName) + "_pre(GVL& gvl, ProcessImage& io) {";
     }
 
     @Override
     public String emitProgPostBegin(String progName) {
-        return "\nvoid PROGRAM_" + progName + "_post(GVL& gvl, ProcessImage& io) {";
+        return "\nvoid PROGRAM_" + mangleProgName(progName) + "_post(GVL& gvl, ProcessImage& io) {";
     }
 
     @Override
