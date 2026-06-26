@@ -34,7 +34,7 @@ jobs:
           jar ufe java/target/st2c-lsp-server-jar-with-dependencies.jar com.st2c.lsp.ST2CLanguageServer
 
       - name: Upload JARs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: st2c-jar
           path: |
