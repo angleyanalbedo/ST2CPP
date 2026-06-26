@@ -225,13 +225,7 @@ test.bat myprog.st    # 指定输入
 - [x] **CASE 翻译修复**：case_list_elem 已走 translateExpr
 - [x] **fileId 后缀修复**：从输入文件名派生，去掉 .st 后缀
 - [x] **ErrorManager 循环依赖**：提取到独立头文件 error_manager.h
-- [ ] **FB（功能块）翻译**：当前仅支持 FUNCTION 和 PROGRAM
-- [ ] **ENUM 类型声明**：TYPE...END_TYPE 中的 ENUM 在 PROGRAM 变量段输出 `// TODO` 注释
-- [ ] **VAR_INPUT/VAR_OUTPUT/VAR_IN_OUT**：PROGRAM 的 IO 参数声明未正确处理
-- [ ] **标准 FB 调用集成**：运行时有 TON/CTU 等实现，编译器不会生成调用代码
-- [ ] **FB 实例化**：无法 `VAR btn : TON; END_VAR`
-- [ ] **多文件同名 PROGRAM 链接冲突**：多个 .st 定义同名 PROGRAM 导致 multiple definition
-- [ ] **24 处无保护的 PLCVariable 强转**：多个 TranslateXxx 中强转未检查类型
+
 
 ### Runtime 架构扩展
 

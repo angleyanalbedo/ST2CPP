@@ -21,17 +21,7 @@ public class VisitFunc_call implements Strategy {
         //获得函数符号
         PLCBaseFUNDeclSymbol fcCopy = (PLCBaseFUNDeclSymbol) visitor.visit(ctx.func_access()).get(0);
 
-        // FB 实例调用: 返回合成变量
-        if ("fb_instance_call".equals(fcCopy.getRuntimeTypeName())) {
-            PLCVariable funcCallVar = new PLCVariable();
-            funcCallVar.setName(fcCopy.getName());
-            funcCallVar.setRuntimeName("*" + fcCopy.getName() + "::callFunc");
-            funcCallVar.setRuntimeTypeName("fb_instance_call");
-            funcCallVar.setTypeId(fcCopy.getTypeId());
-            funcCallVar.setAssignVar("*gvl.ptr<FB>(" + fcCopy.getName() + ")->update()");
-            funcCallVar.setSort(PLCModifierEnum.Sort.FB);
-            return visitor.packSymbols(funcCallVar);
-        }
+
 
         PLCBaseFUNDeclSymbol fc = (PLCBaseFUNDeclSymbol) PLCTotalSymbolTable.getTypeByTypeID(fcCopy.getTypeId());
         //获取参数列表

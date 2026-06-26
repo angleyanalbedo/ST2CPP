@@ -48,8 +48,6 @@ public class OscatLibraryTest {
         }
 
         List<File> stFiles = collectStFiles(ST_SOURCE_DIR);
-        // 采样测试：分期处理以控制内存 / 速度
-        // 改为 0 则处理全部文件
         int maxFiles = 0;
         if (maxFiles > 0 && stFiles.size() > maxFiles) {
             stFiles = stFiles.subList(0, maxFiles);
@@ -64,14 +62,12 @@ public class OscatLibraryTest {
             String content = readFile(f);
             String stem = f.getName();
 
-            // 统计 POU 类型
             if (content.contains("FUNCTION_BLOCK")) fbCount++;
             if (content.matches("(?s)^\\s*FUNCTION\\s.*")) funcCount++;
             if (content.matches("(?s)^\\s*PROGRAM\\s.*")) progCount++;
 
             scanSyntax(content, stem);
 
-            // 每个文件独立编译，重置符号表
             try { PLCSymbolAndScope.PLCScopeStack.reset(); } catch (Exception ignored) {}
 
             try {
@@ -81,14 +77,17 @@ public class OscatLibraryTest {
                 parseErrors.add(stem + " | " + truncate(e.getMessage(), 200));
             } catch (SemanticException e) {
                 String msg = e.getMessage() != null ? e.getMessage() : "";
-                // 提取 NPE 位置
+                boolean isNpe = false;
+                Throwable cause = e;
+                while (cause.getCause() != null && cause.getCause() != cause) cause = cause.getCause();
+                if (cause instanceof NullPointerException) isNpe = true;
                 String loc = extractLocation(e);
-                if (!loc.isEmpty()) msg = "NPE@" + loc + " | " + truncate(msg, 60);
+                if (isNpe && !loc.isEmpty()) msg = "NPE@" + loc + " | " + truncate(msg, 60);
                 semanticErrors.add(stem + " | " + truncate(msg, 120));
             } catch (CodegenException e) {
                 String msg = e.getMessage() != null ? e.getMessage() : "";
                 String loc = extractLocation(e);
-                if (!loc.isEmpty()) msg = "NPE@" + loc + " | " + truncate(msg, 60);
+                // NOTE: codegen 阶段 NPE 不另做处理
                 codegenErrors.add(stem + " | " + truncate(msg, 120));
             } catch (Exception e) {
                 String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
@@ -200,6 +199,35 @@ public class OscatLibraryTest {
         }
     }
 
+    private void printReport2(List<String> errors) {
+        System.out.println();
+        System.out.println("--- Full NPE/Semantic Detail ---");
+        Map<String, Integer> detailMap = new LinkedHashMap<>();
+        int otherCount = 0;
+        for (String e : errors) {
+            // extract the message part after the second "|" or just the message
+            String[] parts = e.split(" \\| ", 3);
+            String key;
+            if (parts.length >= 2) {
+                // check if it's "NPE at" format
+                key = parts[1].trim();
+                if (key.startsWith("NPE")) {
+                    String loc = key;
+                    if (parts.length >= 3) loc = loc + " | " + parts[2];
+                    detailMap.put(loc, detailMap.getOrDefault(loc, 0) + 1);
+                } else {
+                    detailMap.put(key, detailMap.getOrDefault(key, 0) + 1);
+                }
+            } else {
+                otherCount++;
+            }
+        }
+        detailMap.entrySet().stream()
+            .sorted((a, b) -> b.getValue() - a.getValue())
+            .forEach(e -> System.out.printf("  %3dx  %s%n", e.getValue(), e.getKey()));
+        if (otherCount > 0) System.out.printf("  %3dx  (other format)%n", otherCount);
+    }
+
     private void printReport(int funcCount, int fbCount, int progCount) {
         int pass = passFiles.size();
         int fail = totalFiles - pass;
@@ -227,7 +255,7 @@ public class OscatLibraryTest {
         System.out.println();
         System.out.println("--- Top Semantic Errors ---");
         Map<String, Integer> semanticCategories = categorize(semanticErrors);
-        printTop(semanticCategories, 10);
+        printTop(semanticCategories, 999);
         System.out.println();
         System.out.println("--- Top NPE Locations ---");
         printTopNpeLocations(semanticErrors, 10);
@@ -342,11 +370,14 @@ public class OscatLibraryTest {
     private void printTopNpeLocations(List<String> errors, int n) {
         Map<String, Integer> map = new LinkedHashMap<>();
         for (String e : errors) {
-            if (e.contains("NPE@")) {
-                int start = e.indexOf("NPE@") + 4;
+            String prefix = "NPE@";
+            int idx = e.indexOf(prefix);
+            if (idx < 0) { prefix = "NPE at "; idx = e.indexOf(prefix); }
+            if (idx >= 0) {
+                int start = idx + prefix.length();
                 int end = e.indexOf(" |", start);
                 if (end > start) {
-                    String loc = e.substring(start, end);
+                    String loc = e.substring(start, end).trim();
                     map.put(loc, map.getOrDefault(loc, 0) + 1);
                 }
             }
@@ -366,7 +397,7 @@ public class OscatLibraryTest {
 
     private void printMissingFeatures() {
         System.out.println("  FUNCTION_BLOCK      — 461 files (63% of total)");
-        System.out.println("  lowercase IDs       — causes most parse errors");
+        System.out.println("  lowercase IDs       — most NPEs due to case-insensitive lookup");
         System.out.println("  VAR_IN_OUT / ENUM   — semantic/codegen gaps");
         System.out.println("  CONFIGURATION       — removed, not needed");
     }
