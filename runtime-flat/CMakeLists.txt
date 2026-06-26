@@ -105,7 +105,7 @@ endif() # NOT RT_BARE_METAL
 if(NOT RT_BARE_METAL)
 
 # 编译器生成的 .cpp 目录（由 Java 编译器产出，CMake 不参与 ST 编译）
-set(GEN_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../output/flat/"
+set(GEN_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../output/flat/build"
     CACHE PATH "Directory containing generated POU .cpp files from Java compiler")
 file(GLOB GEN_POU_FILES "${GEN_CPP_DIR}/*.cpp")
 
