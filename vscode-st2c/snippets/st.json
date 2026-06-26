@@ -1,0 +1,171 @@
+{
+  "Program": {
+    "prefix": "program",
+    "body": [
+      "PROGRAM ${1:ProgramName}",
+      "  VAR",
+      "    ${2:}",
+      "  END_VAR",
+      "",
+      "  ${3:}",
+      "",
+      "END_PROGRAM"
+    ],
+    "description": "Create a PROGRAM block"
+  },
+  "Function": {
+    "prefix": "function",
+    "body": [
+      "FUNCTION ${1:FuncName} : ${2:INT}",
+      "  VAR_INPUT",
+      "    ${3:}",
+      "  END_VAR",
+      "",
+      "  ${4:}",
+      "",
+      "END_FUNCTION"
+    ],
+    "description": "Create a FUNCTION block"
+  },
+  "Function Block": {
+    "prefix": "function_block",
+    "body": [
+      "FUNCTION_BLOCK ${1:FBName}",
+      "  VAR_INPUT",
+      "    ${2:}",
+      "  END_VAR",
+      "  VAR_OUTPUT",
+      "    ${3:}",
+      "  END_VAR",
+      "  VAR",
+      "    ${4:}",
+      "  END_VAR",
+      "",
+      "  ${5:}",
+      "",
+      "END_FUNCTION_BLOCK"
+    ],
+    "description": "Create a FUNCTION_BLOCK"
+  },
+  "VAR": {
+    "prefix": "var",
+    "body": [
+      "VAR",
+      "  ${1:}",
+      "END_VAR"
+    ],
+    "description": "Create a VAR block"
+  },
+  "VAR_INPUT": {
+    "prefix": "var_input",
+    "body": [
+      "VAR_INPUT",
+      "  ${1:}",
+      "END_VAR"
+    ],
+    "description": "Create a VAR_INPUT block"
+  },
+  "VAR_OUTPUT": {
+    "prefix": "var_output",
+    "body": [
+      "VAR_OUTPUT",
+      "  ${1:}",
+      "END_VAR"
+    ],
+    "description": "Create a VAR_OUTPUT block"
+  },
+  "IF": {
+    "prefix": "if",
+    "body": [
+      "IF ${1:condition} THEN",
+      "  ${2:}",
+      "END_IF"
+    ],
+    "description": "Create an IF statement"
+  },
+  "IF ELSE": {
+    "prefix": "ifelse",
+    "body": [
+      "IF ${1:condition} THEN",
+      "  ${2:}",
+      "ELSE",
+      "  ${3:}",
+      "END_IF"
+    ],
+    "description": "Create an IF-ELSE statement"
+  },
+  "FOR": {
+    "prefix": "for",
+    "body": [
+      "FOR ${1:i} := ${2:0} TO ${3:10} DO",
+      "  ${4:}",
+      "END_FOR"
+    ],
+    "description": "Create a FOR loop"
+  },
+  "WHILE": {
+    "prefix": "while",
+    "body": [
+      "WHILE ${1:condition} DO",
+      "  ${2:}",
+      "END_WHILE"
+    ],
+    "description": "Create a WHILE loop"
+  },
+  "REPEAT": {
+    "prefix": "repeat",
+    "body": [
+      "REPEAT",
+      "  ${1:}",
+      "UNTIL ${2:condition}",
+      "END_REPEAT"
+    ],
+    "description": "Create a REPEAT loop"
+  },
+  "CASE": {
+    "prefix": "case",
+    "body": [
+      "CASE ${1:expression} OF",
+      "  ${2:0}:",
+      "    ${3:}",
+      "ELSE",
+      "  ${4:}",
+      "END_CASE"
+    ],
+    "description": "Create a CASE statement"
+  },
+  "TYPE STRUCT": {
+    "prefix": "struct",
+    "body": [
+      "TYPE ${1:StructName}:",
+      "  STRUCT",
+      "    ${2:}",
+      "  END_STRUCT",
+      "END_TYPE"
+    ],
+    "description": "Create a STRUCT type definition"
+  },
+  "ARRAY": {
+    "prefix": "array",
+    "body": [
+      "${1:VAR_NAME} : ARRAY[${2:0}..${3:9}] OF ${4:INT};"
+    ],
+    "description": "Declare an ARRAY variable"
+  },
+  "TON": {
+    "prefix": "ton",
+    "body": [
+      "${1:timer} : TON;",
+      "${1:timer}(IN := ${2:input}, PT := ${3:T#1s});"
+    ],
+    "description": "Use TON timer function block"
+  },
+  "CTU": {
+    "prefix": "ctu",
+    "body": [
+      "${1:counter} : CTU;",
+      "${1:counter}(CU := ${2:input}, R := ${3:reset}, PV := ${4:10});"
+    ],
+    "description": "Use CTU counter function block"
+  }
+}

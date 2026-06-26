@@ -45,6 +45,18 @@
       <version>2.9.0</version>
     </dependency>
 
+    <dependency>
+      <groupId>org.eclipse.lsp4j</groupId>
+      <artifactId>org.eclipse.lsp4j</artifactId>
+      <version>0.21.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.eclipse.lsp4j</groupId>
+      <artifactId>org.eclipse.lsp4j.jsonrpc</artifactId>
+      <version>0.21.0</version>
+    </dependency>
+
   </dependencies>
 
   <build>
@@ -114,6 +126,7 @@
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
         <configuration>
+          <finalName>st2c-jar-with-dependencies</finalName>
           <descriptorRefs>
             <descriptorRef>jar-with-dependencies</descriptorRef>
           </descriptorRefs>
@@ -135,4 +148,37 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>lsp-server</id>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <configuration>
+              <finalName>st2c-lsp-server</finalName>
+              <descriptorRefs>
+                <descriptorRef>jar-with-dependencies</descriptorRef>
+              </descriptorRefs>
+              <archive>
+                <manifest>
+                  <mainClass>com.st2c.lsp.ST2CLanguageServer</mainClass>
+                </manifest>
+              </archive>
+            </configuration>
+            <executions>
+              <execution>
+                <id>make-assembly-lsp</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

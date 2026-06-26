@@ -1,0 +1,58 @@
+{
+  "name": "st2c",
+  "displayName": "ST2C - Structured Text Language Support",
+  "description": "Language support for IEC 61131-3 Structured Text (ST) with LSP integration",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:st"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "st",
+        "aliases": [
+          "Structured Text",
+          "st"
+        ],
+        "extensions": [
+          ".st"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "st",
+        "scopeName": "source.st",
+        "path": "./syntaxes/st.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "st",
+        "path": "./snippets/st.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  }
+}

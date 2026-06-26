@@ -1,0 +1,246 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Structured Text",
+  "scopeName": "source.st",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#functions" },
+    { "include": "#function-blocks" },
+    { "include": "#operators" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#direct-variable" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.st",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.st",
+          "begin": "\\(\\*",
+          "end": "\\*\\)"
+        },
+        {
+          "name": "comment.block.st",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.st",
+          "match": "\\b(PROGRAM|END_PROGRAM|FUNCTION|END_FUNCTION|FUNCTION_BLOCK|END_FUNCTION_BLOCK|VAR|END_VAR|VAR_INPUT|VAR_OUTPUT|VAR_IN_OUT|VAR_TEMP|VAR_GLOBAL|VAR_EXTERNAL|RETAIN|CONSTANT|AT)\\b"
+        },
+        {
+          "name": "keyword.control.st",
+          "match": "\\b(IF|THEN|ELSIF|ELSE|END_IF|FOR|TO|BY|DO|END_FOR|WHILE|END_WHILE|REPEAT|UNTIL|END_REPEAT|CASE|OF|END_CASE|RETURN)\\b"
+        },
+        {
+          "name": "keyword.control.st",
+          "match": "\\b(TYPE|END_TYPE|STRUCT|END_STRUCT|ARRAY|OF|ENUM|NAMESPACE|END_NAMESPACE|USING|CONFIGURATION|END_CONFIGURATION|RESOURCE|END_RESOURCE)\\b"
+        },
+        {
+          "name": "keyword.operator.assignment.st",
+          "match": ":="
+        },
+        {
+          "name": "keyword.operator.logical.st",
+          "match": "\\b(AND|OR|NOT|XOR)\\b"
+        },
+        {
+          "name": "keyword.operator.comparison.st",
+          "match": "(=|<>|<=|>=|<|>)"
+        },
+        {
+          "name": "keyword.operator.arithmetic.st",
+          "match": "(\\+|-|\\*|/|\\*\\*)"
+        },
+        {
+          "name": "keyword.operator.modulo.st",
+          "match": "\\bMOD\\b"
+        },
+        {
+          "name": "keyword.operator.address.st",
+          "match": "&"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "support.type.integer.st",
+          "match": "\\b(SINT|INT|DINT|LINT|USINT|UINT|UDINT|ULINT)\\b"
+        },
+        {
+          "name": "support.type.float.st",
+          "match": "\\b(REAL|LREAL)\\b"
+        },
+        {
+          "name": "support.type.boolean.st",
+          "match": "\\bBOOL\\b"
+        },
+        {
+          "name": "support.type.string.st",
+          "match": "\\b(STRING|WSTRING|CHAR|WCHAR)\\b"
+        },
+        {
+          "name": "support.type.time.st",
+          "match": "\\b(TIME|LTIME|DATE|LDATE|TIME_OF_DAY|TOD|LTOD|DATE_AND_TIME|DT|LDT)\\b"
+        },
+        {
+          "name": "support.type.bits.st",
+          "match": "\\b(BYTE|WORD|DWORD|LWORD)\\b"
+        },
+        {
+          "name": "support.type.reference.st",
+          "match": "\\b(REF_TO|POINTER)\\b"
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "support.function.math.st",
+          "match": "\\b(ABS|SQRT|LN|LOG|EXP|EXPT|TRUNC)\\b"
+        },
+        {
+          "name": "support.function.trig.st",
+          "match": "\\b(SIN|COS|TAN|ASIN|ACOS|ATAN|ATAN2)\\b"
+        },
+        {
+          "name": "support.function.arithmetic.st",
+          "match": "\\b(ADD|SUB|MUL|DIV|MOD|MOVE)\\b"
+        },
+        {
+          "name": "support.function.bitwise.st",
+          "match": "\\b(SHL|SHR|ROL|ROR)\\b"
+        },
+        {
+          "name": "support.function.selection.st",
+          "match": "\\b(SEL|MAX|MIN|LIMIT|MUX)\\b"
+        },
+        {
+          "name": "support.function.comparison.st",
+          "match": "\\b(GT|GE|EQ|LE|LT|NE)\\b"
+        },
+        {
+          "name": "support.function.string.st",
+          "match": "\\b(LEN|LEFT|RIGHT|MID|CONCAT|INSERT|DELETE|REPLACE|FIND)\\b"
+        }
+      ]
+    },
+    "function-blocks": {
+      "patterns": [
+        {
+          "name": "support.class.timer.st",
+          "match": "\\b(TON|TOF|TP)\\b"
+        },
+        {
+          "name": "support.class.counter.st",
+          "match": "\\b(CTU|CTD|CTUD)\\b"
+        },
+        {
+          "name": "support.class.trigger.st",
+          "match": "\\b(R_TRIG|F_TRIG)\\b"
+        },
+        {
+          "name": "support.class.latch.st",
+          "match": "\\b(SR|RS)\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.st",
+          "match": "(:=|=>|\\?\\?=)"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.single.st",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.st",
+              "match": "''"
+            },
+            {
+              "name": "constant.character.escape.st",
+              "match": "\\$[LNPRT]"
+            },
+            {
+              "name": "constant.character.escape.st",
+              "match": "\\$[0-9A-Fa-f]{2}"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.double.st",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.st",
+              "match": "\"\""
+            },
+            {
+              "name": "constant.character.escape.st",
+              "match": "\\$[LNPRT]"
+            },
+            {
+              "name": "constant.character.escape.st",
+              "match": "\\$[0-9A-Fa-f]{4}"
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.time.st",
+          "match": "\\b(T|L|DATE_AND_TIME|DT|TIME_OF_DAY|TOD|LTOD|LDT)#[0-9_dhms]+\\b"
+        },
+        {
+          "name": "constant.numeric.hexadecimal.st",
+          "match": "\\b16#[0-9A-Fa-f]+\\b"
+        },
+        {
+          "name": "constant.numeric.binary.st",
+          "match": "\\b2#[01]+\\b"
+        },
+        {
+          "name": "constant.numeric.octal.st",
+          "match": "\\b8#[0-7]+\\b"
+        },
+        {
+          "name": "constant.numeric.float.st",
+          "match": "\\b[0-9]+\\.[0-9]+([Ee][+-]?[0-9]+)?\\b"
+        },
+        {
+          "name": "constant.numeric.integer.st",
+          "match": "\\b[0-9]+\\b"
+        }
+      ]
+    },
+    "direct-variable": {
+      "patterns": [
+        {
+          "name": "variable.other.direct.st",
+          "match": "%[IQM][XBWDL]?[0-9]+(\\.[0-9]+)?"
+        }
+      ]
+    }
+  }
+}
