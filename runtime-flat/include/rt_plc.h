@@ -56,6 +56,16 @@ struct alignas(64) ProcessImage {
     }
 
     template<typename T>
+    void writeInput(size_t offset, T val) {
+        if (offset + sizeof(T) > PROCESS_IMAGE_SIZE) {
+            RT_LOG_ERR("[ProcessImage] writeInput out of bounds: offset=%zu sizeof(T)=%zu\n",
+                    offset, sizeof(T));
+            return;
+        }
+        memcpy(inputs + offset, &val, sizeof(T));
+    }
+
+    template<typename T>
     void writeOutput(size_t offset, T val) {
         if (offset + sizeof(T) > PROCESS_IMAGE_SIZE) {
             RT_LOG_ERR("[ProcessImage] writeOutput out of bounds: offset=%zu sizeof(T)=%zu\n",
@@ -86,6 +96,16 @@ struct alignas(64) ProcessImage {
         return (inputs[byteOff] & (1 << bitOff)) ? TRUE : FALSE;
     }
 
+    void writeInputBit(size_t byteOff, int bitOff, BOOL val) {
+        if (byteOff >= PROCESS_IMAGE_SIZE || bitOff < 0 || bitOff > 7) {
+            RT_LOG_ERR("[ProcessImage] writeInputBit out of bounds: byteOff=%zu bitOff=%d\n",
+                    byteOff, bitOff);
+            return;
+        }
+        if (val) inputs[byteOff] |=  (1 << bitOff);
+        else     inputs[byteOff] &= ~(1 << bitOff);
+    }
+
     void writeOutputBit(size_t byteOff, int bitOff, BOOL val) {
         if (byteOff >= PROCESS_IMAGE_SIZE || bitOff < 0 || bitOff > 7) {
             RT_LOG_ERR("[ProcessImage] writeOutputBit out of bounds: byteOff=%zu bitOff=%d\n",
@@ -94,6 +114,15 @@ struct alignas(64) ProcessImage {
         }
         if (val) outputs[byteOff] |=  (1 << bitOff);
         else     outputs[byteOff] &= ~(1 << bitOff);
+    }
+
+    BOOL readOutputBit(size_t byteOff, int bitOff) const {
+        if (byteOff >= PROCESS_IMAGE_SIZE || bitOff < 0 || bitOff > 7) {
+            RT_LOG_ERR("[ProcessImage] readOutputBit out of bounds: byteOff=%zu bitOff=%d\n",
+                    byteOff, bitOff);
+            return FALSE;
+        }
+        return (outputs[byteOff] & (1 << bitOff)) ? TRUE : FALSE;
     }
 };
 
@@ -111,6 +140,18 @@ struct alignas(64) ProcessImage {
 #define PLC_QD(b)      ((size_t)(b))
 #define PLC_QL(b)      ((size_t)(b))
 #define PLC_QX(b, bit) ((size_t)(b)), ((int)(bit))
+
+// ─── 过程映像读写便捷宏（编译器生成代码用） ───
+
+#define PI_READ_INPUT(img, type, offset)       ((img).readInput<type>(offset))
+#define PI_WRITE_INPUT(img, type, offset, val) ((img).writeInput<type>((offset), (val)))
+#define PI_READ_OUTPUT(img, type, offset)      ((img).readOutput<type>(offset))
+#define PI_WRITE_OUTPUT(img, type, offset, val) ((img).writeOutput<type>((offset), (val)))
+
+#define PI_READ_INPUT_BIT(img, b, bit)         ((img).readInputBit((b), (bit)))
+#define PI_WRITE_INPUT_BIT(img, b, bit, val)   ((img).writeInputBit((b), (bit), (val)))
+#define PI_READ_OUTPUT_BIT(img, b, bit)        ((img).readOutputBit((b), (bit)))
+#define PI_WRITE_OUTPUT_BIT(img, b, bit, val)  ((img).writeOutputBit((b), (bit), (val)))
 
 
 // ─── TCI：硬件 I/O 抽象接口 ───

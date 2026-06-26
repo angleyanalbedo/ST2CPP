@@ -693,8 +693,59 @@ void test_process_image_bounds() {
     img.writeOutputBit(PLC_QX(5, 3), TRUE);
     BOOL b = img.readInputBit(5, 3);
     CHECK(b == FALSE, "输入位应为初始值");
-    // 验证输出位通过 outputs 数组直接检查
     CHECK((img.outputs[5] & (1 << 3)) != 0, "输出位应已设置");
+
+    // ─── writeInput / writeInputBit / readOutputBit 新增测试 ───
+
+    TEST("writeInput 正常写入 + readInput 回读");
+    img.writeInput<DINT>(20, 12345);
+    DINT inVal = img.readInput<DINT>(20);
+    CHECK(inVal == 12345, "writeInput/readInput 应配对");
+
+    TEST("writeInput 越界不崩溃");
+    img.writeInput<INT>(PROCESS_IMAGE_SIZE - 1, 999);
+    DINT inAfterOOB = img.readInput<DINT>(20);
+    CHECK(inAfterOOB == 12345, "越界写不应影响已有数据");
+
+    TEST("writeInputBit 正常写入 + readInputBit 回读");
+    img.writeInputBit(10, 5, TRUE);
+    BOOL inBit = img.readInputBit(10, 5);
+    CHECK(inBit == TRUE, "writeInputBit/readInputBit 应配对");
+    img.writeInputBit(10, 5, FALSE);
+    inBit = img.readInputBit(10, 5);
+    CHECK(inBit == FALSE, "writeInputBit(FALSE) 应清除位");
+
+    TEST("writeInputBit 越界不崩溃");
+    img.writeInputBit(PROCESS_IMAGE_SIZE, 0, TRUE);
+    CHECK(img.inputs[0] == 0x00, "越界位写不应影响数据");
+
+    TEST("readOutputBit 正常读取");
+    img.writeOutputBit(7, 2, TRUE);
+    BOOL outBit = img.readOutputBit(7, 2);
+    CHECK(outBit == TRUE, "readOutputBit 应返回 TRUE");
+    outBit = img.readOutputBit(7, 3);
+    CHECK(outBit == FALSE, "未设置的位应返回 FALSE");
+
+    TEST("readOutputBit 越界返回 FALSE");
+    BOOL outBitOOB = img.readOutputBit(PROCESS_IMAGE_SIZE, 0);
+    CHECK(outBitOOB == FALSE, "越界位读应返回 FALSE");
+    BOOL outBitOOB2 = img.readOutputBit(0, 8);
+    CHECK(outBitOOB2 == FALSE, "位偏移>7应返回 FALSE");
+
+    TEST("PI_WRITE_INPUT / PI_READ_INPUT 宏正常");
+    PI_WRITE_INPUT(img, REAL, 100, 3.14f);
+    REAL macroVal = PI_READ_INPUT(img, REAL, 100);
+    CHECK(macroVal > 3.13f && macroVal < 3.15f, "宏读写应配对");
+
+    TEST("PI_WRITE_INPUT_BIT / PI_READ_INPUT_BIT 宏正常");
+    PI_WRITE_INPUT_BIT(img, 15, 4, TRUE);
+    BOOL macroBit = PI_READ_INPUT_BIT(img, 15, 4);
+    CHECK(macroBit == TRUE, "宏位读写应配对");
+
+    TEST("PI_READ_OUTPUT_BIT / PI_WRITE_OUTPUT_BIT 宏正常");
+    PI_WRITE_OUTPUT_BIT(img, 20, 6, TRUE);
+    BOOL macroOutBit = PI_READ_OUTPUT_BIT(img, 20, 6);
+    CHECK(macroOutBit == TRUE, "宏输出位读写应配对");
 }
 
 
