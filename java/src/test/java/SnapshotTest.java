@@ -1,9 +1,14 @@
+import PLCSymbolAndScope.CompilerState;
+
+import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -16,7 +21,6 @@ import static org.junit.Assert.assertTrue;
 public class SnapshotTest {
 
     private static final File SNAPSHOT_DIR = new File("src/test/resources/snapshots");
-    private static final File JAR = new File("target/st2c-jar-with-dependencies.jar");
     private static final boolean UPDATE_MODE = "true".equalsIgnoreCase(
         System.getProperty("updateSnapshots", "false"));
 
@@ -43,29 +47,26 @@ public class SnapshotTest {
         return params;
     }
 
-    @BeforeClass
-    public static void checkJar() {
-        assertTrue("JAR not found, run: mvn package -DskipTests", JAR.exists());
-    }
-
     @Test
     public void testSnapshot() throws Exception {
         File tmp = File.createTempFile("snapshot-", ".cpp");
         tmp.deleteOnExit();
 
-        // 子进程编译，完全隔离静态状态
-        ProcessBuilder pb = new ProcessBuilder(
-            "java", "-jar", JAR.getAbsolutePath(),
-            "--input", stFile.getAbsolutePath(),
-            "--output", tmp.getAbsolutePath(),
-            "--file-id", stem
-        );
-        pb.redirectErrorStream(true);
-        Process proc = pb.start();
-        String output = new String(proc.getInputStream().readAllBytes());
-        int exitCode = proc.waitFor();
+        // 重定向 stdout 以抑制 Main 的输出
+        PrintStream originalOut = System.out;
+        ByteArrayOutputStream capture = new ByteArrayOutputStream();
+        System.setOut(new PrintStream(capture));
 
-        assertTrue("Compilation failed for " + stem + ":\n" + output, exitCode == 0);
+        try {
+            Main.main(new String[]{
+                "--input", stFile.getAbsolutePath(),
+                "--output", tmp.getAbsolutePath(),
+                "--file-id", stem
+            });
+        } finally {
+            System.setOut(originalOut);
+        }
+
         assertTrue("Output file not generated", tmp.exists());
 
         String actual = new String(Files.readAllBytes(tmp.toPath()))

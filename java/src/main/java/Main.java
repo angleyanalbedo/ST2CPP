@@ -131,6 +131,9 @@ public class Main {
             outputParentDir.mkdirs();
         }
 
+        // 重置编译器静态状态，确保干净编译
+        PLCSymbolAndScope.CompilerState.reset();
+
         long startTime = System.currentTimeMillis();
 
         // 选择代码生成器（仅 Flat 后端）

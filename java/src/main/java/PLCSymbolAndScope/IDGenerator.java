@@ -64,5 +64,12 @@ public class IDGenerator {
         return tempVarId++;
     }
 
+    static public void resetStatic() {
+        symbolId = count;
+        typeId = count;
+        tableId = 0;
+        scopeId = 0;
+        tempVarId = 0;
+    }
 
 }

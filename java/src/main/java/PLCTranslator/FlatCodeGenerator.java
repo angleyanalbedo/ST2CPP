@@ -181,7 +181,7 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     // 类型 → 字节大小
     private static final Map<String, Integer> SIZE_MAP = new HashMap<>();
-    static {
+    private static void initSizeMap() {
         SIZE_MAP.put("SINT", 1);
         SIZE_MAP.put("INT", 2);
         SIZE_MAP.put("DINT", 4);
@@ -198,6 +198,13 @@ public class FlatCodeGenerator implements CodeGenerator {
         SIZE_MAP.put("DATE", 4);
         SIZE_MAP.put("TIME_OF_DAY", 8);
         SIZE_MAP.put("DATE_AND_TIME", 8);
+    }
+    static { initSizeMap(); }
+
+    /** 重置静态状态（测试用）：清除注册的 struct 类型，还原原始类型大小表 */
+    public static void resetStatic() {
+        SIZE_MAP.clear();
+        initSizeMap();
     }
 
     @Override public String toNativeType(String typeName) {
