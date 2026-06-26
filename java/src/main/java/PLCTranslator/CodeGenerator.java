@@ -137,6 +137,18 @@ public interface CodeGenerator {
     String emitFBBodyBegin();
     String emitFBBodyEnd();
 
+    /**
+     * 生成 FB 实例调用代码。
+     * 将输入参数写入 FB 实例的 struct 字段，然后调用 update()。
+     *
+     * @param fbInstanceName FB 实例变量名
+     * @param fbTypeName     FB 类型名（C++ struct 名）
+     * @param paramNames     输入参数名列表（与 FB struct 字段名一致）
+     * @param paramValues    输入参数值表达式列表（已翻译为 flat 风格）
+     */
+    String emitFBCall(String fbInstanceName, String fbTypeName,
+                      List<String> paramNames, List<String> paramValues);
+
 
     // ═══ 初始化 ═══
 

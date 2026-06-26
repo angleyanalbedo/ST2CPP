@@ -90,15 +90,22 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     }
 
     /**
-     * 安全获取 PLCVariable：从 properties 中提取第一个符号并强转为 PLCVariable。
-     * 如果符号不存在或类型不匹配，抛出带有上下文信息的异常。
+     * 安全获取 ParseTreeProperty 中的第一个符号。
      */
-    public static PLCVariable getVariable(org.antlr.v4.runtime.tree.ParseTree node, String context) {
+    public static PLCSymbol getSymbol(org.antlr.v4.runtime.tree.ParseTree node, String context) {
         java.util.ArrayList<PLCSymbol> symbols = properties.get(node);
         if (symbols == null || symbols.isEmpty()) {
             throw new RuntimeException("Code generation error: no symbols found for " + context);
         }
-        PLCSymbol sym = symbols.get(0);
+        return symbols.get(0);
+    }
+
+    /**
+     * 安全获取 PLCVariable：从 properties 中提取第一个符号并强转为 PLCVariable。
+     * 如果符号不存在或类型不匹配，抛出带有上下文信息的异常。
+     */
+    public static PLCVariable getVariable(org.antlr.v4.runtime.tree.ParseTree node, String context) {
+        PLCSymbol sym = getSymbol(node, context);
         if (!(sym instanceof PLCVariable)) {
             throw new RuntimeException("Code generation error: expected PLCVariable for " + context
                     + " but got " + sym.getClass().getSimpleName() + " (" + sym.getName() + ")");

@@ -158,24 +158,36 @@ public class VisitFunc_access implements Strategy {
                         basicFunc = (PLCBaseFUNDeclSymbol) function;
                     }
                 }
-            }else{//method(),直接在当前作用域进行深搜索
+                }else{//method(),直接在当前作用域进行深搜索
                 PLCSymbol function = scope.deepFindSymbol(funcName);
-                ArrayList<PLCModifierEnum.Sort> validSorts = new ArrayList<>(Arrays.asList(PLCModifierEnum.Sort.METHOD_DECL, PLCModifierEnum.Sort.FC_DECL));
-                if(function == null || !validSorts.contains(function.getSort())){
-
+                ArrayList<PLCModifierEnum.Sort> validFuncSorts = new ArrayList<>(Arrays.asList(PLCModifierEnum.Sort.METHOD_DECL, PLCModifierEnum.Sort.FC_DECL));
+                if(function != null && validFuncSorts.contains(function.getSort())){
+                    basicFunc = (PLCBaseFUNDeclSymbol) function;
+                }else if(function != null && function.getSort() == PLCModifierEnum.Sort.FB){
+                    PLCVariable fbVar = (PLCVariable) function;
+                    PLCTypeDeclSymbol typeSym = PLCTotalSymbolTable.getTypeByTypeID(fbVar.getTypeId());
+                    if(typeSym instanceof PLCFBDeclSymbol){
+                        PLCFBCallSymbol fbCallSym = new PLCFBCallSymbol();
+                        fbCallSym.setFbInstanceName(fbVar.getName());
+                        fbCallSym.setFbTypeId(fbVar.getTypeId());
+                        fbCallSym.setName(fbVar.getName());
+                        fbCallSym.setRuntimeName(fbVar.getName());
+                        fbCallSym.setSymbolId(fbVar.getSymbolId());
+                        return visitor.packSymbols(fbCallSym);
+                    }else{
+                        throw new PLCSemanticException("can not find method or function : " + funcName + "  from : " + ctx.getText());
+                    }
+                }else{
                     throw new PLCSemanticException("can not find method or function : " + funcName + "  from : " + ctx.getText());
-				}
-                basicFunc = (PLCBaseFUNDeclSymbol) function;
+                }
             }
 
 
             if(basicFunc == null){
                 throw new PLCSemanticException("can not locate function or method : " + funcName + " from : " + ctx.getText());
             }
-            //添加函数名
-            runtimeTypeName.append(basicFunc.getRuntimeName());
-            //组装返回
             PLCBaseFUNDeclSymbol targetVar = new PLCBaseFUNDeclSymbol(basicFunc);
+            runtimeTypeName.append(basicFunc.getRuntimeName());
             targetVar.setRuntimeTypeName(new String(runtimeTypeName));
 
             return visitor.packSymbols(targetVar);

@@ -124,6 +124,32 @@ public class FlatCodeGenerator implements CodeGenerator {
         return null;
     }
 
+    /**
+     * 获取 struct 字段的类型名
+     */
+    public String getStructFieldType(String structTypeName, String fieldName) {
+        StructLayout layout = structLayoutMap.get(structTypeName);
+        if (layout == null) return null;
+        for (StructField f : layout.fields) {
+            if (f.name.equals(fieldName)) return f.type;
+        }
+        return null;
+    }
+
+    /**
+     * 获取变量的 GVL 偏移量
+     */
+    public Integer getVarOffset(String varName) {
+        return offsetMap.get(varName);
+    }
+
+    /**
+     * 获取变量的类型名
+     */
+    public String getVarType(String varName) {
+        return typeMap.get(varName);
+    }
+
     // ST 类型名 → 原生 C++ 类型名
     private static final Map<String, String> TYPE_MAP = new HashMap<>();
     static {
@@ -733,6 +759,31 @@ public class FlatCodeGenerator implements CodeGenerator {
     @Override
     public String emitFBBodyEnd() {
         return "";
+    }
+
+    @Override
+    public String emitFBCall(String fbInstanceName, String fbTypeName,
+                              List<String> paramNames, List<String> paramValues) {
+        StringBuilder sb = new StringBuilder();
+        Integer fbOffset = offsetMap.get(fbInstanceName);
+        if (fbOffset == null) {
+            sb.append("\n\t\t// FB instance ").append(fbInstanceName).append(" not in GVL, direct call");
+            sb.append("\n\t\t").append(fbInstanceName).append(".update();");
+            return sb.toString();
+        }
+        for (int i = 0; i < paramNames.size(); i++) {
+            String fieldName = paramNames.get(i);
+            String value = paramValues.get(i);
+            Integer fieldOffset = getStructFieldOffset(fbTypeName, fieldName);
+            if (fieldOffset != null) {
+                String fieldType = getStructFieldType(fbTypeName, fieldName);
+                sb.append("\n\t\tgvl.write<").append(fieldType).append(">(")
+                  .append(fbOffset + fieldOffset).append(", ").append(value).append(");");
+            }
+        }
+        sb.append("\n\t\tgvl.ptr<").append(fbTypeName).append(">(")
+          .append(fbOffset).append(")->update();");
+        return sb.toString();
     }
 
 

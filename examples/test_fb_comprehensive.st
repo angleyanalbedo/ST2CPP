@@ -1,0 +1,136 @@
+FUNCTION_BLOCK COUNTER
+    VAR_INPUT
+        IN : BOOL;
+        RESET : BOOL;
+    END_VAR
+    VAR_OUTPUT
+        COUNT : INT;
+        DONE : BOOL;
+    END_VAR
+    VAR
+        CNT : INT;
+    END_VAR
+    IF RESET THEN
+        CNT := 0;
+    ELSIF IN THEN
+        CNT := CNT + 1;
+    END_IF;
+    COUNT := CNT;
+    DONE := CNT >= 10;
+END_FUNCTION_BLOCK
+
+FUNCTION_BLOCK MOTOR_CONTROL
+    VAR_INPUT
+        START : BOOL;
+        STOP : BOOL;
+        SPEED_REF : INT;
+    END_VAR
+    VAR_OUTPUT
+        RUNNING : BOOL;
+        CURRENT_SPEED : INT;
+        FAULT : BOOL;
+    END_VAR
+    VAR
+        ACTUAL_SPEED : INT;
+    END_VAR
+    IF STOP THEN
+        ACTUAL_SPEED := 0;
+        RUNNING := FALSE;
+    ELSIF START THEN
+        ACTUAL_SPEED := SPEED_REF;
+        RUNNING := TRUE;
+    END_IF;
+    CURRENT_SPEED := ACTUAL_SPEED;
+    FAULT := ACTUAL_SPEED > 100;
+END_FUNCTION_BLOCK
+
+FUNCTION_BLOCK DELAY_TIMER
+    VAR_INPUT
+        TRIG : BOOL;
+        DELAY_MS : INT;
+    END_VAR
+    VAR_OUTPUT
+        Q : BOOL;
+        ELAPSED : INT;
+    END_VAR
+    VAR
+        TIMER_CNT : INT;
+        TRIG_PREV : BOOL;
+        ACTIVE : BOOL;
+    END_VAR
+    IF TRIG AND NOT TRIG_PREV THEN
+        ACTIVE := TRUE;
+        TIMER_CNT := 0;
+    END_IF;
+    TRIG_PREV := TRIG;
+    IF ACTIVE THEN
+        TIMER_CNT := TIMER_CNT + 1;
+        ELAPSED := TIMER_CNT;
+        IF TIMER_CNT >= DELAY_MS THEN
+            Q := TRUE;
+            ACTIVE := FALSE;
+        END_IF;
+    ELSE
+        Q := FALSE;
+    END_IF;
+END_FUNCTION_BLOCK
+
+FUNCTION_BLOCK PULSE_GENERATOR
+    VAR_INPUT
+        ENABLE : BOOL;
+        PERIOD_MS : INT;
+    END_VAR
+    VAR_OUTPUT
+        PULSE : BOOL;
+    END_VAR
+    VAR
+        CNT : INT;
+    END_VAR
+    IF ENABLE THEN
+        CNT := CNT + 1;
+        IF CNT >= PERIOD_MS THEN
+            PULSE := NOT PULSE;
+            CNT := 0;
+        END_IF;
+    ELSE
+        CNT := 0;
+        PULSE := FALSE;
+    END_IF;
+END_FUNCTION_BLOCK
+
+PROGRAM MAIN
+    VAR
+        BTN_START : BOOL;
+        BTN_STOP : BOOL;
+        BTN_RESET : BOOL;
+        SPEED_SET : INT;
+        MOTOR1 : MOTOR_CONTROL;
+        MOTOR2 : MOTOR_CONTROL;
+        CNT1 : COUNTER;
+        CNT2 : COUNTER;
+        TIMER1 : DELAY_TIMER;
+        PULSE1 : PULSE_GENERATOR;
+        STATUS_MOTOR1 : BOOL;
+        STATUS_MOTOR2 : BOOL;
+        SPEED_MOTOR1 : INT;
+        SPEED_MOTOR2 : INT;
+        COUNT1 : INT;
+        COUNT2 : INT;
+        TIMER_Q : BOOL;
+        PULSE_OUT : BOOL;
+    END_VAR
+    MOTOR1(START := BTN_START, STOP := BTN_STOP, SPEED_REF := SPEED_SET);
+    MOTOR2(START := BTN_START, STOP := BTN_STOP, SPEED_REF := 50);
+    CNT1(IN := BTN_START, RESET := BTN_RESET);
+    CNT2(IN := MOTOR1.RUNNING, RESET := BTN_RESET);
+    TIMER1(TRIG := BTN_START, DELAY_MS := 1000);
+    PULSE1(ENABLE := MOTOR1.RUNNING, PERIOD_MS := 500);
+    STATUS_MOTOR1 := MOTOR1.RUNNING;
+    STATUS_MOTOR2 := MOTOR2.RUNNING;
+    SPEED_MOTOR1 := MOTOR1.CURRENT_SPEED;
+    SPEED_MOTOR2 := MOTOR2.CURRENT_SPEED;
+    COUNT1 := CNT1.COUNT;
+    COUNT2 := CNT2.COUNT;
+    TIMER_Q := TIMER1.Q;
+    PULSE_OUT := PULSE1.PULSE;
+END_PROGRAM

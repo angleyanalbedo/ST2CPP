@@ -1,5 +1,7 @@
 package PLCTranslator.TranslateType.Stmt.Subprog_ctrl_stmt;
 
+import PLCSymbolAndScope.PLCSymbols.PLCFBCallSymbol;
+import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCVariable;
 
 
@@ -8,23 +10,40 @@ import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class TranslateCallFunc {
     public String translateNode(PLCSTPARSERParser.CallFuncContext ctx, PLCTranslatorNew translatorNew){
         StringBuilder sb = new StringBuilder();
         if(ctx.getChild(0) instanceof PLCSTPARSERParser.Func_callContext childCtx){
-            PLCVariable funcSymbol = PLCTranslatorNew.getVariable(childCtx, "call function");
-            for (PLCSTPARSERParser.Param_assignContext param_assignContext : childCtx.param_assign()) {
-                PLCVariable plcVariable = PLCTranslatorNew.getVariable(param_assignContext, "call parameter");
-                String typeName = plcVariable.getRuntimeTypeName();
-                if (typeName == null || typeName.isEmpty()) {
-                    typeName = "INT";
+            PLCSymbol firstSym = PLCTranslatorNew.getSymbol(childCtx, "call function");
+            if(firstSym instanceof PLCFBCallSymbol fbCallSym){
+                FlatCodeGenerator flatGen = (FlatCodeGenerator) translatorNew.codeGen;
+                String fbInstanceName = fbCallSym.getFbInstanceName();
+                String fbTypeName = flatGen.getVarType(fbInstanceName);
+                if(fbTypeName == null) fbTypeName = fbInstanceName;
+                List<String> paramNames = new ArrayList<>();
+                List<String> paramValues = new ArrayList<>();
+                for(PLCSTPARSERParser.Param_assignContext param_assignContext : childCtx.param_assign()){
+                    PLCVariable plcVariable = PLCTranslatorNew.getVariable(param_assignContext, "call parameter");
+                    paramNames.add(plcVariable.getName());
+                    paramValues.add(translatorNew.codeGen.translateExpr(plcVariable.getAssignVar()));
                 }
-                typeName = ((FlatCodeGenerator) translatorNew.codeGen).toNativeType(typeName);
-                sb.append("\n\t\t" + typeName + " " + plcVariable.getRuntimeName() + "=" + translatorNew.codeGen.translateExpr(plcVariable.getAssignVar()) + ";");
+                sb.append(flatGen.emitFBCall(fbInstanceName, fbTypeName, paramNames, paramValues));
+            }else{
+                PLCVariable funcSymbol = (PLCVariable) firstSym;
+                for (PLCSTPARSERParser.Param_assignContext param_assignContext : childCtx.param_assign()) {
+                    PLCVariable plcVariable = PLCTranslatorNew.getVariable(param_assignContext, "call parameter");
+                    String typeName = plcVariable.getRuntimeTypeName();
+                    if (typeName == null || typeName.isEmpty()) {
+                        typeName = "INT";
+                    }
+                    typeName = ((FlatCodeGenerator) translatorNew.codeGen).toNativeType(typeName);
+                    sb.append("\n\t\t" + typeName + " " + plcVariable.getRuntimeName() + "=" + translatorNew.codeGen.translateExpr(plcVariable.getAssignVar()) + ";");
+                }
+                String var = translatorNew.codeGen.translateExpr(funcSymbol.getAssignVar()).substring(1);
+                sb.append("\n\t\t" + var + ";");
             }
-            String var = translatorNew.codeGen.translateExpr(funcSymbol.getAssignVar()).substring(1);
-            sb.append("\n\t\t" + var + ";");
         }else{
             String result = translatorNew.visit(ctx.getChild(0));
             sb.append(result);
