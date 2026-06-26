@@ -83,6 +83,10 @@ target_link_libraries(multitask_demo rt_scheduler)
 add_executable(framework_test tests/framework_test.cpp)
 target_link_libraries(framework_test rt_scheduler)
 
+# Runtime 集成测试（假 POU callback，验证全链路）
+add_executable(runtime_integration_test tests/runtime_integration_test.cpp)
+target_link_libraries(runtime_integration_test rt_scheduler)
+
 # 单元测试合集（doctest 框架，单目标编译，一次链接）
 add_executable(unit_test
     tests/test_main.cpp

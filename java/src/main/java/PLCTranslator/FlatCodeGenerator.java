@@ -499,6 +499,21 @@ public class FlatCodeGenerator implements CodeGenerator {
             String baseVar = stripped.substring(0, dotIdx);
             String fieldPart = stripped.substring(dotIdx + 1);
 
+            // 情况0：baseVar 是 IO 变量（AT 地址映射的 struct）
+            IOInfo ioInfo = ioVarMap.get(baseVar);
+            if (ioInfo != null) {
+                String structTypeName = ioInfo.typeName;
+                StructLayout sLayout = structLayoutMap.get(structTypeName);
+                if (sLayout != null) {
+                    for (StructField f : sLayout.fields) {
+                        if (f.name.equals(fieldPart)) {
+                            return "io.writeOutput<" + f.type + ">("
+                                + (ioInfo.byteOffset + f.offset) + ", " + valueExpr + ")";
+                        }
+                    }
+                }
+            }
+
             // 情况1：baseVar 是简单 GVL 变量（如 MY_STRUCT）
             Integer baseOffset = offsetMap.get(baseVar);
             String baseTypeName = typeMap.get(baseVar);
