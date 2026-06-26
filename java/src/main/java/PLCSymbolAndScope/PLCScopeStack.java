@@ -42,19 +42,24 @@ public final class PLCScopeStack {
     }
 
     // 重置：清空所有状态，重新初始化（测试用）
+    // 安全调用：未初始化时也是安全的（getScopeSymbolTable() 可能返回 null）
     static public void reset() {
         scopeStack.clear();
         currentScope = null;
         currentSymbolTable = null;
         globalScope.childScopeList.clear();
-        globalScope.getScopeSymbolTable().symbolNameHashMap.clear();
-        globalScope.getScopeSymbolTable().symbolIDHashMap.clear();
+        if (globalScope.getScopeSymbolTable() != null) {
+            globalScope.getScopeSymbolTable().symbolNameHashMap.clear();
+            globalScope.getScopeSymbolTable().symbolIDHashMap.clear();
+        }
         basicTypeTable.symbolNameHashMap.clear();
         basicTypeTable.symbolIDHashMap.clear();
         PLCTotalSymbolTable.totalTypeMap.clear();
         PLCTotalSymbolTable.totalSymbolMap.clear();
         PLCTotalSymbolTable.totalScopeMap.clear();
         PLCTotalSymbolTable.totalTableMap.clear();
+        PLCTotalSymbolTable.arraySymbolMap.clear();
+        PLCTotalSymbolTable.refSymbolMap.clear();
         // stackInit 和 GenerateBasicTypes 由 PLCVisitor 构造函数调用
     }
 
