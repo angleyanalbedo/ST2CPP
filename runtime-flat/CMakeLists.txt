@@ -69,7 +69,9 @@ add_executable(unit_test
 )
 target_link_libraries(unit_test rt_core)
 target_include_directories(unit_test PRIVATE ${RT_INCLUDE_DIR} tests)
-target_link_options(unit_test PRIVATE -mconsole)
+if(MINGW)
+    target_link_options(unit_test PRIVATE -mconsole)
+endif()
 
 # ═══ 可执行文件：runtime（集成生成的 POU 代码） ═══
 

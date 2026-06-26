@@ -32,12 +32,6 @@ ST2C-master/
 │           ├── ST2CTextDocumentService.java
 │           ├── ST2CWorkspaceService.java
 │           └── analyzers/
-├── vscode-st2c/                 # VS Code 扩展（新增）
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── src/extension.ts
-│   ├── syntaxes/st.tmLanguage.json
-│   └── language-configuration.json
 ├── runtime-flat/                # 实时 Runtime（Flat 后端）
 │   ├── include/
 │   │   ├── rt_plc.h             # 类型系统 + 功能块 + 内置函数
@@ -150,31 +144,6 @@ test.bat myprog.st    # 指定输入
 ```
 
 `test.bat` 自动执行 Java 编译 → CMake 构建 → 运行的全流程。
-
-### VS Code 扩展（vscode-st2c/）
-
-VS Code 扩展提供 ST 语言的语法高亮、代码补全和 LSP 集成。
-
-**构建 LSP Server**：
-```bash
-cd java
-mvn package -DskipTests -Plsp-server
-# 产出: target/st2c-lsp-server-jar-with-dependencies.jar
-```
-
-**构建 VS Code 扩展**：
-```bash
-cd vscode-st2c
-npm install
-npm run compile
-# 按 F5 启动扩展开发宿主
-```
-
-**功能**：
-- 语法高亮（TextMate grammar）
-- 代码补全（关键字、类型、函数、功能块）
-- 代码片段（PROGRAM、FUNCTION、IF、FOR 等模板）
-- LSP 集成（诊断、悬停、跳转定义）
 
 ## 代码约定
 
