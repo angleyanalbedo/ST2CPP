@@ -93,7 +93,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: st2c-jar
-          path: java/target/
 
       - name: Compile ST examples with JAR
         shell: powershell
@@ -147,19 +146,17 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: st2c-jar
-          path: dist/java/
 
       - name: Download runtime binaries
         uses: actions/download-artifact@v4
         with:
           name: runtime-binaries
-          path: dist/runtime/
 
       - name: Package into ZIP
         run: |
           New-Item -ItemType Directory -Force -Path st2c-release
-          Copy-Item dist/java/*.jar st2c-release/
-          Copy-Item dist/runtime/*.exe st2c-release/
+          Copy-Item java/target/*.jar st2c-release/
+          Copy-Item runtime-flat/build/*.exe st2c-release/
           Copy-Item -Recurse examples st2c-release/examples/
           Copy-Item -Recurse runtime-flat/include st2c-release/include/
           Copy-Item README.md st2c-release/

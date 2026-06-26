@@ -137,18 +137,21 @@ test.bat examples/test_print.st   # 指定输入
 ### 手动构建
 
 ```bash
-# 1. ST → C++
+# 1. 构建 JAR（首次）
 cd java
-mvn compile
-java -cp "target/classes;lib/antlr4-runtime-4.10.1.jar;lib/slf4j-api-1.7.32.jar;lib/slf4j-simple-1.7.32.jar" \
-  Main --input ../examples/test.st --output ../output/flat/main.cpp
+mvn package -DskipTests
+# 产出: target/st2c-jar-with-dependencies.jar
 
-# 2. CMake 构建 C++
+# 2. ST → C++
+java -jar target/st2c-jar-with-dependencies.jar \
+  --input ../examples/test.st --output-dir ../output/flat/build
+
+# 3. CMake 构建 C++
 cd runtime-flat/build
-cmake .. -G "MinGW Makefiles" -DGEN_CPP_DIR=../../output/flat
+cmake .. -G "MinGW Makefiles" -DGEN_CPP_DIR=../../output/flat/build
 cmake --build .
 
-# 3. 运行
+# 4. 运行
 ./runtime.exe
 ```
 
