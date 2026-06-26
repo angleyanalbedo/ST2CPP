@@ -9,3 +9,4 @@ runtime-flat/*.o
 output/flat/build
 output/test/
 tmp_output/
+.mimocode/

@@ -20,7 +20,7 @@
 import paramiko
 client = paramiko.SSHClient()
 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-client.connect("192.168.5.128", 22, "pi", "123456", timeout=10)
+client.connect("ip", 22, "pi", "passwd", timeout=10)
 ```
 
 ### Step 2: 获取 home 目录
