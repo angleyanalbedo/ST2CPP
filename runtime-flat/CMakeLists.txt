@@ -148,8 +148,7 @@ if(GEN_POU_FILES)
     message(STATUS "runtime target: found ${GEN_POU_FILES}")
 else()
     message(WARNING "GEN_CPP_DIR=${GEN_CPP_DIR} is empty — no POU code to link.
-    Compile ST sources first with Java compiler:
-      java -cp ... Main --input file.st --output output/flat/build/file.cpp")
+    Compile ST sources first with Java compiler to generate C++ code, then re-run CMake to build runtime.")
 endif()
 
 endif() # NOT RT_BARE_METAL
