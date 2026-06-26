@@ -168,8 +168,6 @@ jobs:
           Copy-Item -Recurse examples st2c-release/examples/
           Copy-Item -Recurse runtime-flat/include st2c-release/include/
           Copy-Item README.md st2c-release/
-          Copy-Item compiler-to-runtime.md st2c-release/
-          Copy-Item st-support.md st2c-release/
           Compress-Archive -Path st2c-release/* -DestinationPath st2c-build.zip
 
       - name: Upload ZIP artifact
