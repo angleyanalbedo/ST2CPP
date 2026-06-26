@@ -4,56 +4,62 @@
 
 Linux 用户态 + PREEMPT_RT 内核。非裸机。
 
-## 精度指标
-
-| 内核 | 周期 | 抖动 |
-|------|------|------|
-| PREEMPT_RT (Ubuntu/Raspbian) | 1ms | <50us |
-| 标准内核 | 10ms+ | <500us |
-| SCHED_FIFO + mlockall | 1ms | <30us |
-
 ## 快速开始
 
-### 1. 交叉编译（在 PC 上）
+### 1. 编译 ST → C++（在 PC 上）
 
 ```bash
-# 安装交叉编译器
-sudo apt install gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
+cd java && mvn package -DskipTests
+java -jar target/st2c-jar-with-dependencies.jar \
+  --input ../../examples/test.st \
+  --output-dir ../../output/flat/build
+```
 
-# 编译
+### 2. 编译运行时
+
+```bash
 cd target/rpi
-make                    # RPi 4
-make RPI_VER=5          # RPi 5
-make jitter-test        # 抖动测试版
+
+# 本地编译（在 Pi 上）
+make
+
+# 交叉编译（在 PC 上）
+make CROSS=aarch64-linux-gnu-
 ```
 
-### 2. 部署
+Makefile 自动完成：
+- 扫描 `output/flat/build/*.cpp`（编译器生成的 POU 代码）
+- 自动生成 `pou_registry.gen.cpp`（registerAllPOUs 桥接）
+- 编译所有源文件
+
+### 3. 部署到 Pi
 
 ```bash
-./deploy.sh              # 编译 + 部署
-./deploy.sh jitter       # 抖动测试版
-./deploy.sh run          # 编译 + 部署 + 启动
+# 一键编译+上传
+make deploy
+
+# 上传+运行
+make run
+
+# 指定 Pi 的 IP
+RPI_IP=192.168.1.100 make deploy
 ```
 
-或手动：
+### 4. 在 Pi 上运行
 
 ```bash
-make deploy RPI_IP=192.168.5.50
-```
-
-### 3. 树莓派上运行
-
-```bash
-# 普通运行
 sudo ./plc_runtime_rpi --cycle-us 1000
-
-# 最高实时优先级
-sudo chrt -f 99 ./plc_runtime_rpi --cycle-us 1000
-
-# 安装为 systemd 服务
-sudo systemctl enable plc-runtime
-sudo systemctl start plc-runtime
 ```
+
+## 配置
+
+| 环境变量 | 默认值 | 说明 |
+|---------|--------|------|
+| `RPI_IP` | 192.168.5.128 | Pi 的 IP 地址 |
+| `RPI_USER` | pi | SSH 用户名 |
+| `RPI_DIR` | ~/st2c-runtime | 远端部署目录 |
+| `CYCLE_US` | 1000 | PLC 周期（微秒） |
+| `CROSS` | (空) | 交叉编译前缀 |
 
 ## 示波器测抖动
 
@@ -61,24 +67,8 @@ sudo systemctl start plc-runtime
 2. 运行时每个 tick 翻转 GPIO18
 3. 示波器测量上升沿间的周期抖动
 
-GPIO 默认引脚：
-
 | 功能 | GPIO | 物理引脚 |
 |------|------|----------|
-| Jitter 测试（tick 翻转） | 18 | 12 |
+| Jitter 测试 | 18 | 12 |
 | LED 心跳 | 17 | 11 |
 | 错误指示 | 27 | 13 |
-
-## 编译 Java 编译器 + 完整流程
-
-```bash
-# 编译 ST → C++
-cd java && mvn package -DskipTests
-java -jar target/st2c-jar-with-dependencies.jar \
-  --input ../../examples/test.st \
-  --output-dir ../../output/flat/build
-
-# 交叉编译运行时
-cd ../target/rpi
-make
-```
