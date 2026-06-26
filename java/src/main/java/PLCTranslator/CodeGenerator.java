@@ -223,6 +223,20 @@ public interface CodeGenerator {
     /** 注册 struct 类型 */
     void registerStructType(String typeName, String runtimeType, StructLayout layout);
 
+    /**
+     * 注册 enum 类型，将枚举的运行时类型名（PLC_Enum_Value<ID>）映射到 underlying 原生类型。
+     * 用于 toNativeType/getTypeSize 解析 enum 类型变量为 underlying 类型。
+     */
+    void registerEnumType(String enumName, String runtimeTypeName, String underlyingNativeType);
+
+    /**
+     * 生成 enum class 声明。
+     * @param enumName 枚举类型名
+     * @param underlyingType underlying 原生类型（如 "INT"）
+     * @param entries 枚举值条目列表，每个形如 "ValName" 或 "ValName = <literal>"
+     */
+    String emitEnumDecl(String enumName, String underlyingType, List<String> entries);
+
     /** 获取变量的 GVL 偏移量 */
     Integer getVarOffset(String varName);
 

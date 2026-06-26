@@ -54,7 +54,7 @@ public class VisitEnum_value implements Strategy {
             enumSymbol.setTypeId(enumConstTypeId);
             enumSymbol.setSort(enumConstSort);
             enumSymbol.setIfConst(true);
-            enumSymbol.setAssignVar(conversedVar.getUniqueName());
+            enumSymbol.setAssignVar(conversedVar.getAssignVar());
             return visitor.packSymbols(enumSymbol);
 
         }

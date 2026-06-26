@@ -77,6 +77,8 @@ public class VisitEnum_type_decl implements Strategy{
                 if(protoType == null){
                     throw new PLCSemanticException("can not find type : " + ctx.elem_type_name());
                 }
+                //允许枚举类型变量从 underlying type 赋值
+                enumDeclSymbol.addAssignableType(protoTypeId);
                 //检查枚举常量的类型
                 ArrayList<PLCVariable> enumValues = enumDeclSymbol.getEnumValues();
                 for (PLCVariable enumValue : enumValues) {

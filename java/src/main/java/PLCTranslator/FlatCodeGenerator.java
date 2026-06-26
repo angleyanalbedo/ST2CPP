@@ -35,6 +35,14 @@ public class FlatCodeGenerator implements CodeGenerator {
     // PLC_Struct_Value<ID> → struct 类型名映射
     private final Map<String, String> structTypeToName = new HashMap<>();
 
+    // ─── Enum 类型支持 ───
+
+    // enum 运行时类型名（PLC_Enum_Value<ID>）→ underlying 原生类型名
+    private final Map<String, String> enumRuntimeToUnderlying = new HashMap<>();
+
+    // enum 类型名 → underlying 原生类型名
+    private final Map<String, String> enumNameToUnderlying = new HashMap<>();
+
     // ─── POU 注册表 ───
     // 当前文件中所有 PROGRAM 名称的列表（多文件场景下每文件独立收集）
     private final List<String> programNames = new ArrayList<>();
@@ -84,6 +92,23 @@ public class FlatCodeGenerator implements CodeGenerator {
         structTypeToName.put(runtimeType, typeName);
         // 注册到 SIZE_MAP 用于偏移量计算
         SIZE_MAP.put(typeName, layout.totalSize);
+    }
+
+    @Override public void registerEnumType(String enumName, String runtimeTypeName, String underlyingNativeType) {
+        enumRuntimeToUnderlying.put(runtimeTypeName, underlyingNativeType);
+        enumNameToUnderlying.put(enumName, underlyingNativeType);
+    }
+
+    @Override
+    public String emitEnumDecl(String enumName, String underlyingType, List<String> entries) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("\nenum class ").append(enumName).append(" : ").append(underlyingType).append(" {");
+        for (int i = 0; i < entries.size(); i++) {
+            String entry = entries.get(i);
+            sb.append(i == 0 ? "\n    " : ",\n    ").append(entry);
+        }
+        sb.append("\n};\n");
+        return sb.toString();
     }
 
     /**
@@ -177,10 +202,16 @@ public class FlatCodeGenerator implements CodeGenerator {
 
     @Override public String toNativeType(String typeName) {
         if (typeName == null) return typeName;
-        // 优先查运行时类型名 → C++ struct 映射
-        String mapped = structTypeToName.get(typeName);
+        // 优先查 enum 运行时类型名映射（PLC_Enum_Value<ID> → underlying type）
+        String mapped = enumRuntimeToUnderlying.get(typeName);
         if (mapped != null) return mapped;
-        // 再查静态类型映射
+        // 再查 struct 运行时类型名 → C++ struct 映射
+        mapped = structTypeToName.get(typeName);
+        if (mapped != null) return mapped;
+        // 再查 enum 类型名 → underlying type 映射
+        mapped = enumNameToUnderlying.get(typeName);
+        if (mapped != null) return mapped;
+        // 最后查静态类型映射
         mapped = TYPE_MAP.get(typeName);
         return mapped != null ? mapped : typeName;
     }
@@ -191,7 +222,11 @@ public class FlatCodeGenerator implements CodeGenerator {
         if (size != null) return size;
         // 检查是否已注册的 struct 类型
         StructLayout layout = structLayoutMap.get(nativeType);
-        return layout != null ? layout.totalSize : 4;
+        if (layout != null) return layout.totalSize;
+        // 检查是否 enum 类型名，使用 underlying type 的大小
+        String underlying = enumNameToUnderlying.get(nativeType);
+        if (underlying != null) return getTypeSize(underlying);
+        return 4;
     }
 
     /**

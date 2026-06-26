@@ -1,7 +1,10 @@
 package PLCTranslator;
 
+import PLCSymbolAndScope.PLCSymbolTables.PLCTotalSymbolTable;
+import PLCSymbolAndScope.PLCSymbols.PLCEnumDeclSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCStructDeclSymbol;
+import PLCSymbolAndScope.PLCSymbols.PLCTypeDeclSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCVariable;
 import PLCTranslator.TranslateType.Class_decl.TranslateClass_decl;
 import java.util.List;
@@ -534,8 +537,7 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
      * @return 生成的代码字符串
      */
     @Override public String visitEnum_type_decl(PLCSTPARSERParser.Enum_type_declContext ctx) {
-        TranslateEnum_type_decl translateEnum_type_decl = new TranslateEnum_type_decl();
-        return translateEnum_type_decl.translateNode(ctx, this);
+        return translateEnumTypeDeclFlat(ctx, codeGen);
     }
 
     /**
@@ -627,6 +629,38 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
         codeGen.registerVariable(structName, String.valueOf(structSymbol.getSymbolId()));
 
         return sb.toString();
+    }
+
+    private String translateEnumTypeDeclFlat(PLCSTPARSERParser.Enum_type_declContext ctx, CodeGenerator codeGen) {
+        PLCEnumDeclSymbol enumSymbol = (PLCEnumDeclSymbol) properties.get(ctx).get(0);
+        String enumName = enumSymbol.getName();
+
+        // 获取 underlying type 的原生 C++ 类型名
+        int protoTypeId = enumSymbol.getEnumConstTypeId();
+        PLCTypeDeclSymbol protoType = PLCTotalSymbolTable.getTypeByTypeID(protoTypeId);
+        String underlyingType = protoType != null ? codeGen.toNativeType(protoType.getRuntimeName()) : "INT";
+
+        // 注册 enum 类型（使 toNativeType / getTypeSize 能正确解析）
+        String runtimeTypeName = "PLC_Enum_Value<" + enumSymbol.getTypeId() + ">";
+        codeGen.registerEnumType(enumName, runtimeTypeName, underlyingType);
+
+        // 构建枚举值条目
+        List<String> entries = new ArrayList<>();
+        for (PLCVariable var : enumSymbol.getEnumValues()) {
+            String valueExpr = codeGen.translateExpr(var.getAssignVar()).trim();
+            // 去除外层括号以判断默认值
+            String stripped = valueExpr.startsWith("(") && valueExpr.endsWith(")")
+                ? valueExpr.substring(1, valueExpr.length() - 1).trim()
+                : valueExpr;
+            // 如果是默认值 "0" 则省略 = Value，由 C++ 编译器自动编号
+            if (stripped.equals("0")) {
+                entries.add(var.getName());
+            } else {
+                entries.add(var.getName() + " = " + valueExpr);
+            }
+        }
+
+        return codeGen.emitEnumDecl(enumName, underlyingType, entries);
     }
 
     /**
