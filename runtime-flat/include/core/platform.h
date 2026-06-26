@@ -3,15 +3,10 @@
 // ═══════════════════════════════════════════════════════
 // Platform Abstraction Layer
 //
-// 桌面端（默认）：使用 <chrono>, <thread>, <atomic>, fprintf
-// 裸机端（STM32 等）：定义 RT_PLATFORM_BARE_METAL，提供自己的实现
-//
-// STM32 裸机用户需要实现以下函数：
-//   int64_t  rt_plc::platform::nowUs()       — 系统时钟微秒（如 HAL_GetTick * 1000）
-//   int64_t  rt_plc::platform::steadyUs()    — 单调时钟微秒（如 DWT cycle counter）
-//   void     rt_plc::platform::sleepUs(int64_t) — 延时微秒（或 no-op）
-//   void     rt_plc::platform::logErr(const char* fmt, ...)  — 错误输出
-//   void     rt_plc::platform::logInfo(const char* fmt, ...) — 信息输出
+// 三种平台：
+//   1. 默认（Windows/macOS）：使用 <chrono>, <thread>, fprintf
+//   2. RT_PLATFORM_LINUX：使用 clock_gettime (Linux 用户态，精度更高)
+//   3. RT_PLATFORM_BARE_METAL：用户提供实现（STM32 等裸机）
 // ═══════════════════════════════════════════════════════
 
 #if defined(RT_PLATFORM_BARE_METAL)
@@ -32,15 +27,63 @@ void logInfo(const char* fmt, ...);
 
 }} // namespace rt_plc::platform
 
-// 裸机上 thread_local 不可用，用 static 替代
 #define RT_THREAD_LOCAL static
+
+#elif defined(RT_PLATFORM_LINUX)
+
+// ─── Linux：clock_gettime 纳秒精度 ───
+
+#include <time.h>
+#include <unistd.h>
+#include <cstdio>
+#include <cstdarg>
+
+namespace rt_plc { namespace platform {
+
+inline int64_t nowUs() {
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    return (int64_t)ts.tv_sec * 1000000LL + ts.tv_nsec / 1000;
+}
+
+inline int64_t steadyUs() {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+    return (int64_t)ts.tv_sec * 1000000LL + ts.tv_nsec / 1000;
+}
+
+inline void sleepUs(int64_t us) {
+    struct timespec ts;
+    ts.tv_sec  = us / 1000000;
+    ts.tv_nsec = (us % 1000000) * 1000;
+    nanosleep(&ts, nullptr);
+}
+
+inline void logErr(const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(stderr, fmt, args);
+    va_end(args);
+}
+
+inline void logInfo(const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(stdout, fmt, args);
+    va_end(args);
+}
+
+}} // namespace rt_plc::platform
+
+#define RT_THREAD_LOCAL thread_local
 
 #else
 
-// ─── 桌面端：使用标准库 ───
+// ─── 桌面端（Windows/macOS）：使用标准库 ───
 
 #include <chrono>
 #include <cstdio>
+#include <cstdarg>
 #include <thread>
 
 namespace rt_plc { namespace platform {
@@ -79,7 +122,7 @@ inline void logInfo(const char* fmt, ...) {
 
 #define RT_THREAD_LOCAL thread_local
 
-#endif // RT_PLATFORM_BARE_METAL
+#endif // RT_PLATFORM_BARE_METAL / RT_PLATFORM_LINUX
 
 // ─── 统一日志宏 ───
 
