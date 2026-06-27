@@ -296,35 +296,32 @@ REAL MAX(REAL IN0, REAL IN1);
 REAL MIN(REAL IN0, REAL IN1);
 
 
-struct MY_POINT {
-    INT X;
-    INT Y;
-};
-
-void PROGRAM_test_arr_struct_MAIN_init(GVL& gvl, ProcessImage& io) {
-		gvl.write<INT>(20, (0));
-		gvl.write<INT>(22, (0));
+INT ADD_TEN(INT X) {
+		return (X) +((10)) ;
 }
-void PROGRAM_test_arr_struct_MAIN_pre(GVL& gvl, ProcessImage& io) {
+void PROGRAM_test_P_init(GVL& gvl, ProcessImage& io) {
+		gvl.write<INT>(0, (0));
+		gvl.write<INT>(2, (0));
 }
-void PROGRAM_test_arr_struct_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
-		INT I = (0);
-		for( ; I <= (4);I = I + (1)){
-		gvl.safeArrayAt<MY_POINT>(0, I, 5).X = (I) *((10)) ;
-		gvl.safeArrayAt<MY_POINT>(0, I, 5).Y = (I) *((20)) ;
+void PROGRAM_test_P_pre(GVL& gvl, ProcessImage& io) {
+}
+void PROGRAM_test_P_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
+		INT A = (1);
+		for( ; A <= (5);A = A + (1)){
+		INT _X0=A;
+		gvl.write<INT>(2, ADD_TEN(_X0));
 		}
-		gvl.write<INT>(20, I);
-		gvl.write<INT>(22, ((gvl.safeArrayAt<MY_POINT>(0, 0, 5).X)) +((gvl.safeArrayAt<MY_POINT>(0, 1, 5).X)) );
+		gvl.write<INT>(0, A);
 }
-void PROGRAM_test_arr_struct_MAIN_post(GVL& gvl, ProcessImage& io) {
+void PROGRAM_test_P_post(GVL& gvl, ProcessImage& io) {
 }
 
-// ─── Auto-generated POU Registration (test_arr_struct) ───
-void registerPOU_test_arr_struct(POURegistry& reg) {
+// ─── Auto-generated POU Registration (test) ───
+void registerPOU_test(POURegistry& reg) {
     POUCallbacks cbs;
-    cbs.init = PROGRAM_test_arr_struct_MAIN_init;
-    cbs.cyclic = PROGRAM_test_arr_struct_MAIN_cyclic;
-    cbs.pre = PROGRAM_test_arr_struct_MAIN_pre;
-    cbs.post = PROGRAM_test_arr_struct_MAIN_post;
-    reg.add("MAIN", cbs);
+    cbs.init = PROGRAM_test_P_init;
+    cbs.cyclic = PROGRAM_test_P_cyclic;
+    cbs.pre = PROGRAM_test_P_pre;
+    cbs.post = PROGRAM_test_P_post;
+    reg.add("P", cbs);
 }

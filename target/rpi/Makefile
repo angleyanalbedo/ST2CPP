@@ -97,8 +97,8 @@ clean:
 	rm -f $(TARGET) $(STUB_TARGET) $(ECAT_TARGET) $(REGISTRY)
 
 # ═══ EtherCAT (SOEM) 构建 ═══
-SOEM_DIR  = ../soem/soem
-ECAT_SRC  = ../soem/ethercat_tci.cpp
+SOEM_DIR  = soem
+ECAT_SRC  = ethercat_tci.cpp
 SOEM_CFLAGS = -O2 -D_GNU_SOURCE -DRT_PLATFORM_LINUX -DSOEM_LINUX \
               -I$(SOEM_DIR)/include \
               -I$(SOEM_DIR)/oshw/linux \

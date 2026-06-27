@@ -25,13 +25,12 @@ public class VisitArray_conformand implements Strategy {
         PLCSTPARSERParser.Array_conformandContext ctx = (PLCSTPARSERParser.Array_conformandContext) parserCtx;
         //获取数组名称
         PLCSymbol elementType = visitor.visit(ctx.data_type_access()).get(0);
-        int elemTypeId = elementType.getTypeId();
         int dim=ctx.getChildCount()/2-2;
         if(dim > GenerateArrayTypes.MAX_DIMENSION){
             throw new PLCSemanticException("max dimension is 15, from :" + ctx.getText());
         }
 
-        PLCArrayDeclSymbol arrayDeclSymbol = PLCTotalSymbolTable.arraySymbolMap.get(elemTypeId).get(dim);
+        PLCArrayDeclSymbol arrayDeclSymbol = PLCTotalSymbolTable.arraySymbolMap.get(elementType.getSymbolId()).get(dim);
         return visitor.packSymbols(arrayDeclSymbol);
     }
 }

@@ -1,6 +1,5 @@
 package PLCTranslator.TranslateType.Method_prototype;
 
-import PLCSymbolAndScope.PLCSymbols.PLCModifierEnum;
 import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCTypeDeclSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCVariable;
@@ -10,41 +9,32 @@ import antlr4.PLCSTPARSERParser;
 import java.util.ArrayList;
 
 public class TranslateMethod_prototype {
-    //接口参数语句
-    ArrayList<String> interfaceParaSentences = new ArrayList<>();
 
     public String translateNode(PLCSTPARSERParser.Method_prototypeContext ctx, PLCTranslatorNew translatorNew){
         StringBuilder sb = new StringBuilder();
-        //方法原型名称
-        String MethodProtoTypeName = ctx.method_name().getText();
-        //方法原型返回类型
-        String methodProtoReTypeName = "void";
+        String methodName = ctx.method_name().getText();
+        String returnType = "void";
         if(ctx.data_type_access()!=null) {
-            PLCTypeDeclSymbol methodProtoReType = (PLCTypeDeclSymbol) PLCTranslatorNew.properties.get(ctx.data_type_access()).get(0);
-            methodProtoReTypeName = methodProtoReType.getRuntimeTypeName();
+            PLCTypeDeclSymbol retType = (PLCTypeDeclSymbol) PLCTranslatorNew.properties.get(ctx.data_type_access()).get(0);
+            returnType = translatorNew.gvlCtx.toNativeType(retType.getRuntimeTypeName());
         }
-        //********************************************************方法原型类声明*******************************************
-        sb.append("\n\tclass "+MethodProtoTypeName +": public METHODPROTO {");
 
-        //******************************************************方法原型参数变量翻译****************************************
+        ArrayList<String> params = new ArrayList<>();
         for (PLCSTPARSERParser.Io_var_declsContext io_var_decl : ctx.io_var_decls()) {
             ArrayList<PLCSymbol> ioList = PLCTranslatorNew.properties.get(io_var_decl);
             for (PLCSymbol symbol : ioList) {
-                PLCVariable interfaceIOVarSymbol = (PLCVariable) symbol;
-                //接口参数语句
-                this.interfaceParaSentences.add(interfaceIOVarSymbol.getRuntimeTypeName() + interfaceIOVarSymbol.getRuntimeName() +"= new "
-                        +interfaceIOVarSymbol.getRuntimeTypeName()+"("+interfaceIOVarSymbol.getAssignVar()+")");
+                PLCVariable var = (PLCVariable) symbol;
+                String nativeType = translatorNew.gvlCtx.toNativeType(var.getRuntimeTypeName());
+                params.add(nativeType + " " + var.getName());
             }
         }
 
-        //******************************************************接口类中纯虚函数翻译****************************************
-        sb.append("\n\t\tvirtual "+methodProtoReTypeName+ " callFunc(");
-        sb.append(MethodProtoTypeName+"* meth");
-        for (String interfaceParaSentence : this.interfaceParaSentences) {
-            sb.append(","+interfaceParaSentence);
+        sb.append("\n\tvirtual ").append(returnType).append(" ").append(methodName).append("(");
+        for (int i = 0; i < params.size(); i++) {
+            if (i > 0) sb.append(", ");
+            sb.append(params.get(i));
         }
         sb.append(") = 0;\n");
-        sb.append("\t};");
         return sb.toString();
     }
 }

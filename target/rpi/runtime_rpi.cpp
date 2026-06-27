@@ -13,7 +13,7 @@
 #include "hal/gpio_tci.h"
 
 #if defined(RT_ETHERCAT_ENABLED)
-#include "../soem/ethercat_tci.h"
+#include "ethercat_tci.h"
 #endif
 
 #include <csignal>

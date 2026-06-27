@@ -32,7 +32,6 @@ public class VisitArray_spec implements Strategy {
         PLCSTPARSERParser.Array_specContext ctx = (PLCSTPARSERParser.Array_specContext) parserCtx;
         //获取数组名称
         PLCSymbol elementType = visitor.visit(ctx.data_type_access()).get(0);
-        int elemTypeId = elementType.getTypeId();
 
         int dimension = ctx.subrange().size();
 
@@ -43,7 +42,7 @@ public class VisitArray_spec implements Strategy {
         for (PLCSTPARSERParser.SubrangeContext subrangeContext : ctx.subrange()) {
             visitor.visit(subrangeContext);
         }
-        PLCArrayDeclSymbol arrayDeclSymbol = PLCTotalSymbolTable.arraySymbolMap.get(elemTypeId).get(dimension-1);
+        PLCArrayDeclSymbol arrayDeclSymbol = PLCTotalSymbolTable.arraySymbolMap.get(elementType.getSymbolId()).get(dimension-1);
 
         PLCTypeDeclSymbol infoSymbol = new PLCTypeDeclSymbol();
         infoSymbol.setInitVar(arrayDeclSymbol.getInitVar());

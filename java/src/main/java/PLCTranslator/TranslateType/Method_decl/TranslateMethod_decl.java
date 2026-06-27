@@ -1,6 +1,7 @@
 package PLCTranslator.TranslateType.Method_decl;
 
 import PLCSymbolAndScope.PLCSymbols.*;
+import PLCTranslator.GvlContext;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
 
@@ -29,12 +30,12 @@ public class TranslateMethod_decl {
 
         PLCMethodDeclSymbol methodDeclSymbol = (PLCMethodDeclSymbol) PLCTranslatorNew.properties.get(ctx).get(0);
         String className = getClassName(ctx);
-        packageMethodIOVarSentences(methodDeclSymbol.getVariableMap(), className);
+        packageMethodIOVarSentences(methodDeclSymbol.getVariableMap(), className, translatorNew.gvlCtx);
 
         // Flat 模式：方法变为普通函数，第一个参数为类实例指针
         String returnType;
         if(returnOrNot == 1){
-            returnType = methodDeclSymbol.getRuntimeTypeName() != null ? mapToNativeType(methodDeclSymbol.getRuntimeTypeName()) : "auto";
+            returnType = methodDeclSymbol.getRuntimeTypeName() != null ? translatorNew.gvlCtx.toNativeType(methodDeclSymbol.getRuntimeTypeName()) : "auto";
         }else{
             returnType = "void";
         }
@@ -63,9 +64,9 @@ public class TranslateMethod_decl {
         return sb.toString();
     }
 
-    void packageMethodIOVarSentences(Map<String, PLCVariable> valueMap, String className){
+    void packageMethodIOVarSentences(Map<String, PLCVariable> valueMap, String className, GvlContext gvlCtx){
         for (PLCVariable value : valueMap.values()) {
-            String nativeType = mapToNativeType(value.getRuntimeTypeName());
+            String nativeType = gvlCtx.toNativeType(value.getRuntimeTypeName());
             if(value.getVarSections() == PLCModifierEnum.VarSections.VAR_INPUT){
                 this.callFuncParaSentences.add(value.getName());
                 this.funcParaSentences.add(nativeType + " " + value.getName());
@@ -93,25 +94,6 @@ public class TranslateMethod_decl {
         }
         // 如果无法推断，返回默认名称
         return "UnknownClass";
-    }
-
-    /**
-     * 将运行时类型名映射为原生 C++ 类型名
-     */
-    private String mapToNativeType(String runtimeTypeName) {
-        if (runtimeTypeName == null) return "int";
-        switch (runtimeTypeName) {
-            case "PLC_SINT_Value": return "SINT";
-            case "PLC_INT_Value": return "INT";
-            case "PLC_DINT_Value": return "DINT";
-            case "PLC_LINT_Value": return "LINT";
-            case "PLC_Real_Value": return "REAL";
-            case "PLC_LReal_Value": return "LREAL";
-            case "PLC_Bool_Value": return "BOOL";
-            case "PLC_String_Value": return "STRING";
-            default:
-                return runtimeTypeName;
-        }
     }
 
 }
