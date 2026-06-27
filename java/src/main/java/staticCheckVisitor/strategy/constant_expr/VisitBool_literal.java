@@ -29,14 +29,7 @@ public class VisitBool_literal implements Strategy {
             boolLit = ctx.getText();
         }
 
-        StringBuilder assignVar = new StringBuilder();
-        assignVar.append("(*").
-                append("(new ").
-                append("BOOL").
-                append("(").
-                append(boolLit).
-                append(")").append(")").append(")");
-        plcSymbol.setAssignVar(new String(assignVar));
+        plcSymbol.setAssignVar(boolLit);
 
         return visitor.packSymbols(plcSymbol);
     }
