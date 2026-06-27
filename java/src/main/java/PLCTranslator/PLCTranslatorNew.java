@@ -131,11 +131,11 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     public static String translateBinaryChain(ParserRuleContext ctx, int opStartIndex, int opStep,
                                               PLCTranslatorNew t) {
         StringBuilder sb = new StringBuilder();
-        sb.append(translateChild(ctx.getChild(0), t));
+        sb.append(t.visit(ctx.getChild(0)));
         for (int i = opStartIndex; i < ctx.getChildCount(); i += opStep) {
             String op = ctx.getChild(i).getText();
             sb.append(" ").append(mapOperator(op)).append(" ");
-            sb.append(translateChild(ctx.getChild(i + 1), t));
+            sb.append(t.visit(ctx.getChild(i + 1)));
         }
         return sb.toString();
     }
@@ -198,7 +198,76 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
         return new PLCTranslator.TranslateType.Expr.TranslateExpression().translateNode(ctx, t);
     }
 
-    // ─── Statement visitors ───
+    // ─── Expression visit overrides ───
+
+    @Override public String visitExpression(PLCSTPARSERParser.ExpressionContext ctx) {
+        return new PLCTranslator.TranslateType.Expr.TranslateExpression().translateNode(ctx, this);
+    }
+
+    @Override public String visitXor_expr(PLCSTPARSERParser.Xor_exprContext ctx) {
+        return translateBinaryChain(ctx, 1, 2, this);
+    }
+
+    @Override public String visitAnd_expr(PLCSTPARSERParser.And_exprContext ctx) {
+        return translateBinaryChain(ctx, 1, 2, this);
+    }
+
+    @Override public String visitCompare_expr(PLCSTPARSERParser.Compare_exprContext ctx) {
+        return translateBinaryChain(ctx, 1, 2, this);
+    }
+
+    @Override public String visitEqu_expr(PLCSTPARSERParser.Equ_exprContext ctx) {
+        return translateBinaryChain(ctx, 1, 2, this);
+    }
+
+    @Override public String visitAdd_expr(PLCSTPARSERParser.Add_exprContext ctx) {
+        return translateBinaryChain(ctx, 1, 2, this);
+    }
+
+    @Override public String visitTerm(PLCSTPARSERParser.TermContext ctx) {
+        return translateBinaryChain(ctx, 1, 2, this);
+    }
+
+    @Override public String visitPower_expr(PLCSTPARSERParser.Power_exprContext ctx) {
+        return translateBinaryChain(ctx, 1, 2, this);
+    }
+
+    @Override public String visitUnary_expr(PLCSTPARSERParser.Unary_exprContext ctx) {
+        return new PLCTranslator.TranslateType.Expr.TranslateUnary_expr().translateNode(ctx, this);
+    }
+
+    @Override public String visitPrimary_expr(PLCSTPARSERParser.Primary_exprContext ctx) {
+        if (ctx.expression() != null) {
+            return "(" + visit(ctx.expression()) + ")";
+        }
+        if (ctx.variable_access() != null) {
+            return new PLCTranslator.TranslateType.Expr.TranslateVariable_access().translateNode(ctx.variable_access(), this);
+        }
+        if (ctx.func_call() != null) {
+            PLCSTPARSERParser.Func_callContext fc = ctx.func_call();
+            PLCSymbol sym = getSymbol(fc, "func_call in expression");
+            String funcName = sym instanceof PLCBaseFUNDeclSymbol fd ? fd.getStdFunction() : fc.func_access().getText();
+            StringBuilder args = new StringBuilder();
+            for (int i = 0; i < fc.param_assign().size(); i++) {
+                if (i > 0) args.append(", ");
+                PLCSTPARSERParser.Param_assignContext p = fc.param_assign(i);
+                if (p instanceof PLCSTPARSERParser.InputParamContext ip) {
+                    args.append(visit(ip.expression()));
+                } else {
+                    args.append(p.getText());
+                }
+            }
+            return funcName + "(" + args + ")";
+        }
+        if (ctx.constant() != null) return ctx.constant().getText();
+        if (ctx.enum_value() != null) return ctx.enum_value().getText();
+        if (ctx.ref_value() != null) return ctx.ref_value().getText();
+        return ctx.getChild(0).getText();
+    }
+
+    @Override public String visitVariable_access(PLCSTPARSERParser.Variable_accessContext ctx) {
+        return new PLCTranslator.TranslateType.Expr.TranslateVariable_access().translateNode(ctx, this);
+    }
 
     @Override
     public String visitStartpoint(PLCSTPARSERParser.StartpointContext ctx) {

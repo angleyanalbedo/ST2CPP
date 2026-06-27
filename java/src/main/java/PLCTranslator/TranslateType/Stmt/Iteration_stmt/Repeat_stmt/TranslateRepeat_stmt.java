@@ -11,7 +11,7 @@ public class TranslateRepeat_stmt {
         if (bodyResult != null) {
             sb.append(bodyResult);
         }
-        sb.append("\n\t\t}while(!(").append(PLCTranslatorNew.translateExpression(ctx.expression(), translatorNew)).append("));");
+        sb.append("\n\t\t}while(!(").append(translatorNew.visit(ctx.expression())).append("));");
         return sb.toString();
     }
 }

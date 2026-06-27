@@ -14,7 +14,7 @@ public class TranslateVariableAssignExpression {
             String translated = PLCTranslatorNew.gvlCtx.translateExpr(varSymbol.getAssignVar());
             sb.append("\n\t\t").append(PLCTranslatorNew.gvlCtx.writeExpr(varSymbol.getName(), translated)).append(";");
         }else{
-            String translated = PLCTranslatorNew.translateExpression(ctx.expression(), translatorNew);
+            String translated = translatorNew.visit(ctx.expression());
             sb.append("\n\t\treturn ").append(translated).append(";");
         }
         return sb.toString();

@@ -6,7 +6,7 @@ import antlr4.PLCSTPARSERParser;
 public class TranslateElsif_stmt {
     public String translateNode(PLCSTPARSERParser.Elsif_stmtContext ctx, PLCTranslatorNew translatorNew){
         StringBuilder sb = new StringBuilder();
-        sb.append("\n\t\t}else if(").append(PLCTranslatorNew.translateExpression(ctx.expression(), translatorNew)).append("){");
+        sb.append("\n\t\t}else if(").append(translatorNew.visit(ctx.expression())).append("){");
         String stmtListResult = translatorNew.visit(ctx.stmt_list());
         if (stmtListResult != null) {
             sb.append(stmtListResult);

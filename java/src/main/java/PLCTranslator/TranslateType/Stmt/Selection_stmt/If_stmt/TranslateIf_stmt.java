@@ -7,7 +7,7 @@ public class TranslateIf_stmt {
     public String translateNode(PLCSTPARSERParser.If_stmtContext ctx, PLCTranslatorNew translatorNew){
         StringBuilder sb = new StringBuilder();
 
-        sb.append("\n\t\tif(").append(PLCTranslatorNew.translateExpression(ctx.expression(), translatorNew)).append("){");
+        sb.append("\n\t\tif(").append(translatorNew.visit(ctx.expression())).append("){");
         String stmtListResult = translatorNew.visit(ctx.stmt_list());
         if (stmtListResult != null) {
             sb.append(stmtListResult);
