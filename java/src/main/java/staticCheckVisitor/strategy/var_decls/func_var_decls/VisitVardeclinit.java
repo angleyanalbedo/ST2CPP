@@ -47,6 +47,7 @@ public class VisitVardeclinit  implements Strategy {
             returnVar.setAssignVar(typeInfoSymbol.getAssignVar());
             returnVar.setDeclSymbol(typeInfoSymbol.getDeclSymbol());
             returnVar.setRuntimeTypeName(typeInfoSymbol.getRuntimeTypeName());
+            returnVar.setArrayBounds(typeInfoSymbol.getArrayBounds());
 
             //检查名称
             visitor.visitorTool.checkNameOnly(PLCScopeStack.currentSymbolTable, returnVar.getName());

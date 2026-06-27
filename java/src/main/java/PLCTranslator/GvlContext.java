@@ -9,6 +9,10 @@ public class GvlContext {
     // GVL 偏移量分配
     public final Map<String, Integer> offsetMap = new LinkedHashMap<>();
     public final Map<String, String> typeMap = new LinkedHashMap<>();
+    // 数组变量的维度信息：变量名 → 每个维度 [lower, upper, count]
+    public final Map<String, int[][]> arrayBoundsMap = new LinkedHashMap<>();
+    // 数组元素类型：变量名 → 元素类型名
+    public final Map<String, String> arrayElemTypeMap = new LinkedHashMap<>();
     public int currentOffset = 0;
 
     // symbolId → 变量名 映射
@@ -395,8 +399,8 @@ public class GvlContext {
     // ═══ 数组类型信息 ═══
 
     public static class ArrayInfo {
-        int count;
-        String elemType;
+        public int count;
+        public String elemType;
     }
 
     public ArrayInfo parseArrayType(String typeName) {

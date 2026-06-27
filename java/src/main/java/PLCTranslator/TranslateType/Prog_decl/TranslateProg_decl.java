@@ -140,7 +140,7 @@ public class TranslateProg_decl {
                 location
             );
         } else {
-            emitVarDeclInline(sb, varSymbol.getName(), varSymbol.getRuntimeTypeName(), varSymbol.getAssignVar(), varSymbol.getTypeId(), translatorNew.gvlCtx);
+            emitVarDeclInline(sb, varSymbol, translatorNew.gvlCtx);
         }
     }
 
@@ -186,31 +186,35 @@ public class TranslateProg_decl {
         return sb.toString();
     }
 
-    private void emitVarDeclInline(StringBuilder sb, String name, String typeName, String assignVar, int typeId, GvlContext gvlCtx) {
-        if (typeName != null && typeName.startsWith("ARRAY")) {
-            int count = 0;
-            String elemType = "INT";
-            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
-                "ARRAY\\[(\\d+)\\.\\.(\\d+)\\]\\s+OF\\s+(\\w+)");
-            java.util.regex.Matcher matcher = pattern.matcher(typeName);
-            if (matcher.find()) {
-                int low = Integer.parseInt(matcher.group(1));
-                int high = Integer.parseInt(matcher.group(2));
-                count = high - low + 1;
-                elemType = gvlCtx.toNativeType(matcher.group(3));
+    private void emitVarDeclInline(StringBuilder sb, PLCVariable varSymbol, GvlContext gvlCtx) {
+        String name = varSymbol.getName();
+        String typeName = varSymbol.getRuntimeTypeName();
+        int typeId = varSymbol.getTypeId();
+        int[][] arrayBounds = varSymbol.getArrayBounds();
+
+        if (arrayBounds != null) {
+            // 数组类型：通过 arrayBounds 计算 count 和 elemType
+            PLCArrayDeclSymbol arrayDecl = (PLCArrayDeclSymbol) PLCTotalSymbolTable.getTypeByTypeID(typeId);
+            String elemTypeNative = "INT";
+            if (arrayDecl != null) {
+                PLCTypeDeclSymbol elemTypeDecl = PLCTotalSymbolTable.getTypeByTypeID(arrayDecl.getElementTypeId());
+                if (elemTypeDecl != null) {
+                    elemTypeNative = gvlCtx.toNativeType(elemTypeDecl.getName());
+                }
             }
-            if (count > 0) {
-                int elemSize = gvlCtx.getTypeSize(elemType);
-                int totalSize = elemSize * count;
-                int aligned = (gvlCtx.currentOffset + elemSize - 1) / elemSize * elemSize;
-                gvlCtx.offsetMap.put(name, aligned);
-                gvlCtx.typeMap.put(name, "ARRAY[" + count + "] OF " + elemType);
-                gvlCtx.currentOffset = aligned + totalSize;
-                return;
-            }
+            int totalCount = varSymbol.getArrayTotalCount();
+            int elemSize = gvlCtx.getTypeSize(elemTypeNative);
+            int totalSize = elemSize * totalCount;
+            int aligned = (gvlCtx.currentOffset + elemSize - 1) / elemSize * elemSize;
+            gvlCtx.offsetMap.put(name, aligned);
+            gvlCtx.typeMap.put(name, "ARRAY[" + totalCount + "] OF " + elemTypeNative);
+            gvlCtx.arrayBoundsMap.put(name, arrayBounds);
+            gvlCtx.arrayElemTypeMap.put(name, elemTypeNative);
+            gvlCtx.currentOffset = aligned + totalSize;
+            return;
         }
 
-        // 枚举变量不分配 GVL 偏移，通过语义检查阶段的 typeId 判断
+        // 枚举变量不分配 GVL 偏移
         if (typeId != 0) {
             PLCTypeDeclSymbol typeDecl = PLCTotalSymbolTable.getTypeByTypeID(typeId);
             if (typeDecl instanceof PLCEnumDeclSymbol) {
@@ -220,6 +224,7 @@ public class TranslateProg_decl {
 
         String nativeType = gvlCtx.toNativeType(typeName);
         gvlCtx.allocateOffset(name, nativeType);
+        String assignVar = varSymbol.getAssignVar();
         if (assignVar != null && !assignVar.isEmpty() && !"0".equals(assignVar) && !"\"\"".equals(assignVar)) {
             String initValue = stripParens(assignVar);
             String type = gvlCtx.typeMap.get(name);
@@ -253,9 +258,24 @@ public class TranslateProg_decl {
             int offset = entry.getValue();
             String type = gvlCtx.typeMap.get(varName);
             if (type == null) continue;
-            if (type.startsWith("ARRAY[")) continue;
             if (gvlCtx.ioVarMap.containsKey(varName)) continue;
-            // 声明局部变量 + 从 GVL 加载
+            if (type.startsWith("ARRAY[")) {
+                int[][] bounds = gvlCtx.arrayBoundsMap.get(varName);
+                String elemType = gvlCtx.arrayElemTypeMap.getOrDefault(varName, "INT");
+                int totalCount = (bounds != null) ? bounds[0][2] : 0; // 一维数组
+                if (totalCount > 0) {
+                    int elemSize = gvlCtx.getTypeSize(elemType);
+                    sb.append("\n\t").append(elemType).append(" ")
+                      .append(varName).append("[").append(totalCount).append("];");
+                    for (int i = 0; i < totalCount; i++) {
+                        int elemOffset = offset + i * elemSize;
+                        sb.append("\n\t").append(varName).append("[").append(i)
+                          .append("] = gvl.read<").append(elemType).append(">(")
+                          .append(elemOffset).append(");");
+                    }
+                }
+                continue;
+            }
             sb.append("\n\t").append(type).append(" ").append(varName).append(" = gvl.read<")
               .append(type).append(">(").append(offset).append(");");
         }
@@ -273,8 +293,22 @@ public class TranslateProg_decl {
             int offset = entry.getValue();
             String type = gvlCtx.typeMap.get(varName);
             if (type == null) continue;
-            if (type.startsWith("ARRAY[")) continue;
             if (gvlCtx.ioVarMap.containsKey(varName)) continue;
+            if (type.startsWith("ARRAY[")) {
+                int[][] bounds = gvlCtx.arrayBoundsMap.get(varName);
+                String elemType = gvlCtx.arrayElemTypeMap.getOrDefault(varName, "INT");
+                int totalCount = (bounds != null) ? bounds[0][2] : 0;
+                if (totalCount > 0) {
+                    int elemSize = gvlCtx.getTypeSize(elemType);
+                    for (int i = 0; i < totalCount; i++) {
+                        int elemOffset = offset + i * elemSize;
+                        sb.append("\n\tgvl.write<").append(elemType).append(">(")
+                          .append(elemOffset).append(", ").append(varName).append("[")
+                          .append(i).append("]);");
+                    }
+                }
+                continue;
+            }
             sb.append("\n\tgvl.write<").append(type).append(">(").append(offset)
               .append(", ").append(varName).append(");");
         }

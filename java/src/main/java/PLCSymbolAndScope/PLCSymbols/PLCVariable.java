@@ -93,6 +93,24 @@ public class PLCVariable extends PLCSymbol{
     //变量符号对应的声明的符号
     private PLCTypeDeclSymbol declSymbol;
 
+    // 数组变量的维度上下界信息，每个维度存 [lower, upper, count]
+    // 例如 ARRAY[0..5] OF INT → arrayBounds = [[0, 5, 6]]
+    // 例如 ARRAY[1..10, 0..3] → arrayBounds = [[1, 10, 10], [0, 3, 4]]
+    private int[][] arrayBounds;
+
+    public int[][] getArrayBounds() { return arrayBounds; }
+    public void setArrayBounds(int[][] bounds) { this.arrayBounds = bounds; }
+
+    /** 获取数组总元素个数（所有维度 count 的乘积），非数组返回 0 */
+    public int getArrayTotalCount() {
+        if (arrayBounds == null) return 0;
+        int total = 1;
+        for (int[] dim : arrayBounds) {
+            total *= dim[2]; // count = upper - lower + 1
+        }
+        return total;
+    }
+
     public PLCVariable(){
         super();
     }
