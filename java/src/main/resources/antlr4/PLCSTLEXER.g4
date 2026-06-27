@@ -142,15 +142,7 @@ Bool_Type_Name : 'BOOL';
 Multibits_Type_Name: Multibits_Type;
 fragment Multibits_Type : 'BYTE' | 'WORD' | 'DWORD' | 'LWORD';
 
-Std_Func_Name : 'TRUNC' | 'ABS' | 'SQRT' | 'LN' | 'LOG' | 'EXP'
-| 'SIN' | 'COS' | 'TAN' | 'ASIN' | 'ACOS' | 'ATAN' | 'ATAN2 '
-| 'ADD' | 'SUB' | 'MUL' | 'DIV' | 'MOD' | 'EXPT' | 'MOVE '
-| 'SHL' | 'SHR' | 'ROL' | 'ROR'
-| 'AND' | 'OR' | 'XOR' | 'NOT'
-| 'SEL' | 'MAX' | 'MIN' | 'LIMIT' | 'MUX '
-| 'GT' | 'GE' | 'EQ' | 'LE' | 'LT' | 'NE'
-| 'LEN' | 'LEFT' | 'RIGHT' | 'MID' | 'CONCAT' | 'INSERT' | 'DELETE' | 'REPLACE' | 'FIND';
-Std_FB_Name : 'SR' | 'RS' | 'R_TRIG' | 'F_TRIG' | 'CTU'| 'CTD' | 'CTUD' | 'TP' | 'TON' | 'TOF';
+
 
 Access_Spec : Access;
 fragment  Access: 'PUBLIC' | 'PROTECTED' | 'PRIVATE' | 'INTERNAL';

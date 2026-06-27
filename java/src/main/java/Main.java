@@ -14,6 +14,8 @@ import staticCheckVisitor.register.Registrant;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,7 +33,8 @@ public class Main {
         String outputFile = null;
         String outputDir = null;
         String fileId = null;
-        String stdlibFile = null;
+        boolean noStdlib = false;
+        String customStdlib = null;
         boolean verbose = false;
 
         // 解析命令行参数
@@ -66,8 +69,11 @@ public class Main {
                 case "--file-id":
                     if (i + 1 < args.length) fileId = args[++i];
                     break;
+                case "--no-stdlib":
+                    noStdlib = true;
+                    break;
                 case "--stdlib":
-                    if (i + 1 < args.length) stdlibFile = args[++i];
+                    if (i + 1 < args.length) customStdlib = args[++i];
                     break;
                 case "--verbose":
                     verbose = true;
@@ -105,17 +111,8 @@ public class Main {
             }
         }
 
-        // 如果指定了 stdlib，插入到输入文件列表最前面
-        if (stdlibFile != null) {
-            File stdlib = new File(stdlibFile);
-            if (!stdlib.exists()) {
-                System.err.println("Error: stdlib file not found: " + stdlibFile);
-                System.exit(1);
-            }
-            inputFiles.add(0, stdlibFile);
-        }
+        // 验证输入文件存在
 
-        // 验证其余输入文件存在
         for (String inputPath : inputFiles) {
             File input = new File(inputPath);
             if (!input.exists()) {
@@ -154,28 +151,35 @@ public class Main {
         PLCTranslatorNew translatorNew = new PLCTranslatorNew(property, codeGen);
 
         StringBuilder fullCodeBuilder = new StringBuilder();
+        int fileIndex = 0;
 
-        for (int fileIndex = 0; fileIndex < inputFiles.size(); fileIndex++) {
-            String inputPath = inputFiles.get(fileIndex);
-            if (fileIndex > 0) {
-                fullCodeBuilder.append("\n");
+        // 加载标准库（默认从内置 resource 加载，可通过 --stdlib 覆盖，--no-stdlib 禁用）
+        if (!noStdlib) {
+            CharStream stdlibStream = null;
+            if (customStdlib != null) {
+                File f = new File(customStdlib);
+                if (!f.exists()) {
+                    System.err.println("Error: stdlib file not found: " + customStdlib);
+                    System.exit(1);
+                }
+                stdlibStream = CharStreams.fromFileName(customStdlib);
+            } else {
+                InputStream is = Main.class.getClassLoader().getResourceAsStream("iec_stdlib.st");
+                if (is != null) {
+                    stdlibStream = CharStreams.fromStream(is, StandardCharsets.UTF_8);
+                } else {
+                    System.err.println("Warning: built-in stdlib not found, skipping");
+                }
             }
+            if (stdlibStream != null) {
+                fullCodeBuilder.append(processStream(stdlibStream, plcVisitor, translatorNew, fileIndex++));
+            }
+        }
 
+        // 处理用户输入文件
+        for (String inputPath : inputFiles) {
             CharStream charStream = CharStreams.fromFileName(inputPath);
-            PLCSTPARSERLexer plcLexer = new PLCSTPARSERLexer(charStream);
-            CommonTokenStream commonTokenStream = new CommonTokenStream(plcLexer);
-            PLCSTPARSERParser helloParser = new PLCSTPARSERParser(commonTokenStream);
-
-            ParseTree parseTree = helloParser.startpoint();
-
-            plcVisitor.visit(parseTree);
-
-            translatorNew.setEmitHeader(fileIndex == 0);
-            translatorNew.setEmitPOURegistration(false);
-            String fileCode = translatorNew.visit(parseTree);
-            if (fileCode != null) {
-                fullCodeBuilder.append(fileCode);
-            }
+            fullCodeBuilder.append(processStream(charStream, plcVisitor, translatorNew, fileIndex++));
         }
 
         // 统一一次性写入文件
@@ -203,6 +207,19 @@ public class Main {
         System.out.println("Translation completed: " + outputFile);
     }
 
+    private static String processStream(CharStream charStream, PLCVisitor plcVisitor,
+                                         PLCTranslatorNew translatorNew, int fileIndex) {
+        PLCSTPARSERLexer lexer = new PLCSTPARSERLexer(charStream);
+        CommonTokenStream tokens = new CommonTokenStream(lexer);
+        PLCSTPARSERParser parser = new PLCSTPARSERParser(tokens);
+        ParseTree tree = parser.startpoint();
+        plcVisitor.visit(tree);
+        translatorNew.setEmitHeader(fileIndex == 0);
+        translatorNew.setEmitPOURegistration(false);
+        String code = translatorNew.visit(tree);
+        return (code != null ? (fileIndex > 0 ? "\n" : "") + code : "");
+    }
+
     private static void printHelp() {
         System.out.println("ST2C++ - Structured Text to C++ Translator");
         System.out.println("Version: " + VERSION);
@@ -217,11 +234,13 @@ public class Main {
         System.out.println("  --output <file>      Output C++ file (.cpp)");
         System.out.println("  --output-dir <dir>   Auto-name output as <dir>/<stem>.cpp");
         System.out.println("  --file-id <id>       POU registration ID (default: output stem)");
-        System.out.println("  --stdlib <file>      Standard library ST file (preloaded before user input)");
+        System.out.println("  --no-stdlib          Disable built-in standard library");
+        System.out.println("  --stdlib <file>      Override built-in standard library with custom file");
         System.out.println("  --verbose            Print detailed translation statistics");
         System.out.println();
         System.out.println("Examples:");
         System.out.println("  java -jar st2c.jar --input program.st --output out.cpp");
         System.out.println("  java -jar st2c.jar --input test.st --output-dir output/flat/build");
+        System.out.println("  java -jar st2c.jar --input pou.st --no-stdlib");
     }
 }

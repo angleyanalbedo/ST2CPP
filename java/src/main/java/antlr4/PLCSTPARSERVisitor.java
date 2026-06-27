@@ -1,4 +1,4 @@
-// Generated from D:\source\Project\ST2C-master\java\src\main\resources\antlr4\PLCSTPARSER.g4 by ANTLR 4.10.1
+// Generated from PLCSTPARSER.g4 by ANTLR 4.10.1
 package antlr4;
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
@@ -2014,16 +2014,4 @@ public interface PLCSTPARSERVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitReservedKeyword(PLCSTPARSERParser.ReservedKeywordContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link PLCSTPARSERParser#std_func_name}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitStd_func_name(PLCSTPARSERParser.Std_func_nameContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link PLCSTPARSERParser#std_fb_name}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitStd_fb_name(PLCSTPARSERParser.Std_fb_nameContext ctx);
 }

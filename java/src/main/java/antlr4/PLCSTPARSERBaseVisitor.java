@@ -1,4 +1,4 @@
-// Generated from D:\source\Project\ST2C-master\java\src\main\resources\antlr4\PLCSTPARSER.g4 by ANTLR 4.10.1
+// Generated from PLCSTPARSER.g4 by ANTLR 4.10.1
 package antlr4;
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 
@@ -2328,18 +2328,4 @@ public class PLCSTPARSERBaseVisitor<T> extends AbstractParseTreeVisitor<T> imple
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
 	@Override public T visitReservedKeyword(PLCSTPARSERParser.ReservedKeywordContext ctx) { return visitChildren(ctx); }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation returns the result of calling
-	 * {@link #visitChildren} on {@code ctx}.</p>
-	 */
-	@Override public T visitStd_func_name(PLCSTPARSERParser.Std_func_nameContext ctx) { return visitChildren(ctx); }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation returns the result of calling
-	 * {@link #visitChildren} on {@code ctx}.</p>
-	 */
-	@Override public T visitStd_fb_name(PLCSTPARSERParser.Std_fb_nameContext ctx) { return visitChildren(ctx); }
 }

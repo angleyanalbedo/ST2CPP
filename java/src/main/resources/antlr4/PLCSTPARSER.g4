@@ -1113,8 +1113,7 @@ var_spec            //SC DONE
 // Table 19 - Function declaration
 
 func_name
-                : std_func_name
-                | derived_func_name
+                : derived_func_name
                 ;
 
 func_access     : (THIS_KW '.')?               //SC DONE
@@ -1128,7 +1127,6 @@ scope_name : identifier '^'*;
 
 derived_func_name
                 : identifier
-                | std_func_name
                 ;
 
 func_decl       : 'FUNCTION'
@@ -1165,8 +1163,7 @@ func_body       : ladder_diagram
 // Table 41 - Function block instance declaration
 
 fb_type_name
-                : std_fb_name
-                | derived_fb_name
+                : derived_fb_name
                 ;
 
 fb_type_access            //SC DONE
@@ -2351,17 +2348,6 @@ Multibits_Type
                 | 'DWORD'
                 | 'LWORD'
                 ;
-
-std_func_name : 'TRUNC' | 'ABS' | 'SQRT' | 'LN' | 'LOG' | 'EXP'
-  | 'SIN' | 'COS' | 'TAN' | 'ASIN' | 'ACOS' | 'ATAN' | 'ATAN2 '
-  | 'ADD' | 'SUB' | 'MUL' | 'DIV' | 'MOD' | 'EXPT' | 'MOVE '
-  | 'SHL' | 'SHR' | 'ROL' | 'ROR'
-  | 'AND' | 'OR' | 'XOR' | 'NOT'
-  | 'SEL' | 'MAX' | 'MIN' | 'LIMIT' | 'MUX '
-  | 'GT' | 'GE' | 'EQ' | 'LE' | 'LT' | 'NE'
-  | 'LEN' | 'LEFT' | 'RIGHT' | 'MID' | 'CONCAT' | 'INSERT' | 'DELETE' | 'REPLACE' | 'FIND';
-
-std_fb_name : 'SR' | 'RS' | 'R_TRIG' | 'F_TRIG' | 'CTU'| 'CTD' | 'CTUD' | 'TP' | 'TON' | 'TOF';
 
 Access_Direction : 'READ_WRITE' | 'READ_ONLY';
 IL_Expr_Operator : 'IL_Expr_Operator';

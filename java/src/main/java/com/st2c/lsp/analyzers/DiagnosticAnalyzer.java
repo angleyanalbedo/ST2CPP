@@ -13,7 +13,7 @@ import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.DiagnosticSeverity;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
-import antlr4.PLCSTLEXER;
+import antlr4.PLCSTPARSERLexer;
 import antlr4.PLCSTPARSERParser;
 import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
 import staticCheckVisitor.PLCVisitor;
@@ -25,7 +25,7 @@ public class DiagnosticAnalyzer {
         List<Diagnostic> diagnostics = new ArrayList<>();
         try {
             CharStream charStream = CharStreams.fromString(content);
-            PLCSTLEXER lexer = new PLCSTLEXER(charStream);
+            PLCSTPARSERLexer lexer = new PLCSTPARSERLexer(charStream);
             CommonTokenStream tokens = new CommonTokenStream(lexer);
             PLCSTPARSERParser parser = new PLCSTPARSERParser(tokens);
             ParseTree tree = parser.startpoint();
