@@ -115,12 +115,7 @@ public class CheckFuncCall {
                     throw new PLCSemanticException("type mismatch");
                 }
 
-                String paramExpr = param.getAssignVar();
-                if (paramExpr != null && isSimpleExpr(paramExpr)) {
-                    paramList.put(paramName, paramExpr);
-                } else {
-                    paramList.put(paramName, param.getRuntimeName());
-                }
+                paramList.put(paramName, param.getRuntimeName());
             }
 
 

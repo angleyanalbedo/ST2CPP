@@ -6,13 +6,7 @@ import antlr4.PLCSTPARSERParser;
 public class TranslateIf_stmt {
     public String translateNode(PLCSTPARSERParser.If_stmtContext ctx, PLCTranslatorNew translatorNew){
         StringBuilder sb = new StringBuilder();
-
-        String condResult = translatorNew.visit(ctx.expression());
-        for (String decl : translatorNew.pendingDecls) {
-            sb.append(decl);
-        }
-        translatorNew.pendingDecls.clear();
-        sb.append("\n\t\tif(").append(condResult).append("){");
+        sb.append("\n\t\tif(").append(translatorNew.visit(ctx.expression())).append("){");
         String stmtListResult = translatorNew.visit(ctx.stmt_list());
         if (stmtListResult != null) {
             sb.append(stmtListResult);

@@ -11,12 +11,7 @@ public class TranslateRepeat_stmt {
         if (bodyResult != null) {
             sb.append(bodyResult);
         }
-        String condResult = translatorNew.visit(ctx.expression());
-        for (String decl : translatorNew.pendingDecls) {
-            sb.append(decl);
-        }
-        translatorNew.pendingDecls.clear();
-        sb.append("\n\t\t}while(!(").append(condResult).append("));");
+        sb.append("\n\t\t}while(!(").append(translatorNew.visit(ctx.expression())).append("));");
         return sb.toString();
     }
 }

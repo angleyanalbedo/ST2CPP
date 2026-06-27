@@ -23,6 +23,27 @@ public class TranslateFunc_call {
                 paramStr.append(pv.getName()).append(" := ").append(translatorNew.visit(p));
             }
             sb.append("\n\t\t").append(fbInstanceName).append("(").append(paramStr).append(").update();");
+        }else if(firstSym instanceof PLCVariable funcVar){
+            // 语义检查阶段 CheckFuncCall 返回的 PLCVariable
+            // 遍历每个参数，生成临时变量声明，最后输出函数调用
+            for (PLCSTPARSERParser.Param_assignContext param_assignContext : ctx.param_assign()) {
+                PLCVariable plcVariable = PLCTranslatorNew.getVariable(param_assignContext, "function parameter");
+                String typeName = plcVariable.getRuntimeTypeName();
+                if (typeName == null || typeName.isEmpty()) {
+                    typeName = "INT";
+                }
+                typeName = translatorNew.gvlCtx.toNativeType(typeName);
+                String translatedAssignVar = PLCTranslatorNew.gvlCtx.translateExpr(plcVariable.getAssignVar());
+                sb.append("\n\t\t").append(typeName).append(" ").append(plcVariable.getRuntimeName())
+                  .append("=").append(translatedAssignVar).append(";");
+            }
+            // 输出函数调用本身（去掉前导星号）
+            String translatedFuncCall = PLCTranslatorNew.gvlCtx.translateExpr(funcVar.getAssignVar());
+            String cleanCall = translatedFuncCall;
+            if (cleanCall.startsWith("*")) {
+                cleanCall = cleanCall.substring(1);
+            }
+            sb.append("\n\t\t").append(cleanCall).append(";");
         }else if(firstSym instanceof PLCBaseFUNDeclSymbol funDecl){
             String funcName = funDecl.getStdFunction();
             StringBuilder args = new StringBuilder();
@@ -46,11 +67,6 @@ public class TranslateFunc_call {
                 }
             }
             sb.append(funcName).append("(").append(args).append(")");
-        }else if(firstSym instanceof PLCVariable funcVar){
-            // 语义检查阶段 CheckFuncCall 返回的 PLCVariable
-            // assignVar 已包含完整函数调用表达式（如 WRAP_ANGLE(VAL)）
-            String translated = PLCTranslatorNew.gvlCtx.translateExpr(funcVar.getAssignVar());
-            sb.append(translated);
         }
         return sb.toString();
     }
