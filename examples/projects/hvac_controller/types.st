@@ -8,8 +8,8 @@ TYPE
         KI  : REAL;
         KD  : REAL;
         TS  : REAL;
-        MIN : REAL;
-        MAX : REAL;
+        MN  : REAL;
+        MX  : REAL;
     END_STRUCT;
 
     (* 区域运行状态 *)
@@ -24,7 +24,7 @@ TYPE
         MODE      : INT;
         ENABLED   : BOOL;
         ALARM     : BOOL;
-        OVERRIDE  : BOOL;
+        OVRD      : BOOL;
     END_STRUCT;
 
     (* 传感器量程配置 *)
@@ -50,15 +50,7 @@ TYPE
     STRUCT
         CODE    : INT;
         VALUE   : REAL;
-        LATCh   : BOOL;
+        LATch   : BOOL;
         ACK     : BOOL;
     END_STRUCT;
-
-    (* 8 区域配置数组类型 *)
-    ZONE_CFG_ARR :
-    ARRAY[0..7] OF ZONE_CFG;
-
-    (* 4 通道量程数组类型 *)
-    SCALE_ARR :
-    ARRAY[0..3] OF SCALE_RANGE;
 END_TYPE

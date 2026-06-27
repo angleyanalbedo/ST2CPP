@@ -33,8 +33,8 @@ PROGRAM HVAC_MAIN
         AnyAlarm    : BOOL := FALSE;
 
         (* PID 参数 *)
-        PID_HOT     : PID_PARAMS := (KP := 2.0, KI := 0.5, KD := 0.1, TS := 1.0, MIN := 0.0, MAX := 100.0);
-        PID_COLD    : PID_PARAMS := (KP := 1.8, KI := 0.3, KD := 0.15, TS := 1.0, MIN := -100.0, MAX := 0.0);
+        PID_HOT     : PID_PARAMS := (KP := 2.0, KI := 0.5, KD := 0.1, TS := 1.0, MN := 0.0, MX := 100.0);
+        PID_COLD    : PID_PARAMS := (KP := 1.8, KI := 0.3, KD := 0.15, TS := 1.0, MN := -100.0, MX := 0.0);
 
         (* 状态 *)
         SysMode     : INT := 0;

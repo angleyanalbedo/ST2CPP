@@ -14,7 +14,7 @@ FUNCTION SCALE_AI : REAL
     ELSIF RAW < SCALE.RAW_MIN THEN
         NORM := 0.0;
     ELSE
-        NORM := INT_TO_REAL(RAW - SCALE.RAW_MIN) / INT_TO_REAL(SCALE.RAW_MAX - SCALE.RAW_MIN);
+        NORM := (RAW - SCALE.RAW_MIN) * 1.0 / (SCALE.RAW_MAX - SCALE.RAW_MIN);
     END_IF;
 
     SCALE_AI := SCALE.ENG_MIN + NORM * (SCALE.ENG_MAX - SCALE.ENG_MIN);
@@ -38,7 +38,7 @@ FUNCTION SCALE_AO : INT
         NORM := 0.0;
     END_IF;
 
-    RESULT := SCALE.RAW_MIN + REAL_TO_INT(NORM * INT_TO_REAL(SCALE.RAW_MAX - SCALE.RAW_MIN));
+    RESULT := SCALE.RAW_MIN + NORM * (SCALE.RAW_MAX - SCALE.RAW_MIN);
     SCALE_AO := RESULT;
 END_FUNCTION
 
@@ -47,11 +47,7 @@ FUNCTION PID_CALC : REAL
         SP      : REAL;
         PV      : REAL;
         P       : PID_PARAMS;
-        DT      : REAL;
-    END_VAR
-    VAR_IN_OUT
-        INTEGRAL  : REAL;
-        PREV_ERROR : REAL;
+        DT_VAL  : REAL;
     END_VAR
     VAR
         ERR     : REAL;
@@ -59,25 +55,27 @@ FUNCTION PID_CALC : REAL
         I_TERM  : REAL;
         D_TERM  : REAL;
         OUTPUT  : REAL;
+        INTEGRAL  : REAL := 0.0;
+        PREV_ERR : REAL := 0.0;
     END_VAR
 
     ERR := SP - PV;
 
     P_TERM := P.KP * ERR;
 
-    INTEGRAL := INTEGRAL + ERR * DT;
+    INTEGRAL := INTEGRAL + ERR * DT_VAL;
     I_TERM := P.KI * INTEGRAL;
 
-    D_TERM := P.KD * (ERR - PREV_ERROR) / DT;
-    PREV_ERROR := ERR;
+    D_TERM := P.KD * (ERR - PREV_ERR) / DT_VAL;
+    PREV_ERR := ERR;
 
     OUTPUT := P_TERM + I_TERM + D_TERM;
 
-    IF OUTPUT > P.MAX THEN
-        OUTPUT := P.MAX;
+    IF OUTPUT > P.MX THEN
+        OUTPUT := P.MX;
     END_IF;
-    IF OUTPUT < P.MIN THEN
-        OUTPUT := P.MIN;
+    IF OUTPUT < P.MN THEN
+        OUTPUT := P.MN;
     END_IF;
 
     PID_CALC := OUTPUT;

@@ -20,18 +20,15 @@ FUNCTION_BLOCK ZONE_CTRL
     END_VAR
     VAR
         STATE       : ZONE_STATE;
-        PID_INT     : REAL := 0.0;
-        PID_PREV    : REAL := 0.0;
         HYSTERESIS  : REAL := 2.0;
         MODE_CMD    : INT := 0;
         MODE_PREV   : INT := 0;
         FAULT_CNT   : INT := 0;
         I           : INT := 0;
-        DT          : REAL := 1.0;
     END_VAR
 
     (* 温度工程值转换 *)
-    STATE.TEMP := SCALE_AI(RAW_TEMP, SCALE);
+    STATE.TEMP := SCALE_AI(RAW := RAW_TEMP, SCALE := SCALE);
 
     STATE.SETPOINT := SETPOINT;
     STATE.ENABLED := ENABLE;
@@ -44,19 +41,17 @@ FUNCTION_BLOCK ZONE_CTRL
             SP := SETPOINT,
             PV := STATE.TEMP,
             P := PID_P,
-            DT := DT,
-            INTEGRAL := PID_INT,
-            PREV_ERROR := PID_PREV
+            DT_VAL := 1.0
         );
 
         (* 模式选择 *)
-        MODE_CMD := TEMP_TO_MODE(STATE.TEMP, SETPOINT, HYSTERESIS);
+        MODE_CMD := TEMP_TO_MODE(TEMP := STATE.TEMP, SP := SETPOINT, HYST := HYSTERESIS);
 
         (* 状态机 *)
         CASE MODE_CMD OF
             1:
                 (* 加热模式 *)
-                VALVE_POS := SCALE_AO(STATE.OUTPUT, AO_SCALE);
+                VALVE_POS := SCALE_AO(ENG := STATE.OUTPUT, SCALE := AO_SCALE);
                 HEAT_OUT := STATE.OUTPUT > 0.0;
                 COOL_OUT := FALSE;
                 FAN_OUT := TRUE;
@@ -64,7 +59,7 @@ FUNCTION_BLOCK ZONE_CTRL
 
             2:
                 (* 制冷模式 *)
-                VALVE_POS := SCALE_AO(REAL_TO_DINT(-STATE.OUTPUT), AO_SCALE);
+                VALVE_POS := SCALE_AO(ENG := (0.0 - STATE.OUTPUT), SCALE := AO_SCALE);
                 HEAT_OUT := FALSE;
                 COOL_OUT := STATE.OUTPUT < -5.0;
                 FAN_OUT := TRUE;
