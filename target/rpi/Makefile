@@ -3,6 +3,7 @@
 # 用法：
 #   make                     # 本地编译（含 POU）
 #   make stub                # 最小编译（无 POU，纯运行时 + GPIO）
+#   make ethercat            # EtherCAT 编译（需要 SOEM + libpcap）
 #   make CROSS=aarch64-linux-gnu-  # 交叉编译（生成 ARM 二进制）
 #   make run                 # 本地编译 + 运行
 #   make clean               # 清理
@@ -93,4 +94,65 @@ stub-run: stub
 	sudo ./$(STUB_TARGET) --cycle-us $(CYCLE_US)
 
 clean:
-	rm -f $(TARGET) $(STUB_TARGET) $(REGISTRY)
+	rm -f $(TARGET) $(STUB_TARGET) $(ECAT_TARGET) $(REGISTRY)
+
+# ═══ EtherCAT (SOEM) 构建 ═══
+SOEM_DIR  = ../soem/soem
+ECAT_SRC  = ../soem/ethercat_tci.cpp
+SOEM_CFLAGS = -O2 -D_GNU_SOURCE -DRT_PLATFORM_LINUX -DSOEM_LINUX \
+              -I$(SOEM_DIR)/include \
+              -I$(SOEM_DIR)/oshw/linux \
+              -I$(SOEM_DIR)/oshw \
+              -I$(SOEM_DIR)/osal/linux \
+              -I$(SOEM_DIR)/osal
+ECAT_CXXFLAGS = -DRT_ETHERCAT_ENABLED \
+                -I$(RT_DIR)/include \
+                -I$(SOEM_DIR)/include \
+                -I$(SOEM_DIR)/oshw/linux \
+                -I$(SOEM_DIR)/oshw \
+                -I$(SOEM_DIR)/osal/linux \
+                -I$(SOEM_DIR)/osal
+ECAT_TARGET = plc_runtime_ecat
+
+# SOEM C 文件（Linux 平台，用 gcc 编译）
+SOEM_C_OBJS = $(patsubst $(SOEM_DIR)/src/%.c,/tmp/soem_%.o,$(wildcard $(SOEM_DIR)/src/*.c)) \
+              /tmp/soem_oshw.o /tmp/soem_osal.o /tmp/soem_nicdrv.o
+
+# EtherCAT stub 模式（无 POU + SOEM）
+ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(MAIN_SRC) $(HAL_SRC) $(ECAT_SRC) pou_stub.cpp
+
+# 编译 SOEM C 文件
+/tmp/soem_%.o: $(SOEM_DIR)/src/%.c
+	$(CC) $(SOEM_CFLAGS) -c $< -o $@
+
+/tmp/soem_oshw.o: $(SOEM_DIR)/oshw/linux/oshw.c
+	$(CC) $(SOEM_CFLAGS) -c $< -o $@
+
+/tmp/soem_osal.o: $(SOEM_DIR)/osal/linux/osal.c
+	$(CC) $(SOEM_CFLAGS) -c $< -o $@
+
+/tmp/soem_nicdrv.o: $(SOEM_DIR)/oshw/linux/nicdrv.c
+	$(CC) $(SOEM_CFLAGS) -c $< -o $@
+
+ethercat: $(ECAT_TARGET)
+
+$(ECAT_TARGET): $(ECAT_CPP_SRCS) $(SOEM_C_OBJS)
+	$(CXX) $(CXXFLAGS) $(ECAT_CXXFLAGS) -o $@ $(ECAT_CPP_SRCS) $(SOEM_C_OBJS) $(LDFLAGS) -lpcap
+	@echo "=== Build (ethercat): $@ ==="
+
+ECAT_CYCLES ?= 1000
+ECAT_IF     ?= eth0
+
+ethercat-run: ethercat
+ifeq ($(CROSS),)
+	taskset -c 3 sudo ./$(ECAT_TARGET) --cycle-us $(ECAT_CYCLES) --tci ethercat --ecat-if $(ECAT_IF)
+else
+	@echo "交叉编译模式，请手动将 $(ECAT_TARGET) 上传到树莓派运行"
+endif
+
+ethercat-both: ethercat
+ifeq ($(CROSS),)
+	taskset -c 3 sudo ./$(ECAT_TARGET) --cycle-us $(ECAT_CYCLES) --tci both --ecat-if $(ECAT_IF)
+else
+	@echo "交叉编译模式，请手动将 $(ECAT_TARGET) 上传到树莓派运行"
+endif

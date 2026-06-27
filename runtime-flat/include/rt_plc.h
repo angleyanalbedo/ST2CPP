@@ -162,6 +162,24 @@ struct TCI {
     virtual void syncOutputs(ProcessImage& img) = 0;
 };
 
+// ─── CompositeTCI：组合多个 TCI（如 GPIO + EtherCAT） ───
+
+struct CompositeTCI : public TCI {
+    static constexpr int MAX_TCI = 4;
+    TCI* list[MAX_TCI] = {};
+    int count_ = 0;
+
+    void add(TCI* t) { if (count_ < MAX_TCI) list[count_++] = t; }
+    int count() const { return count_; }
+
+    void syncInputs(ProcessImage& img) override {
+        for (int i = 0; i < count_; i++) list[i]->syncInputs(img);
+    }
+    void syncOutputs(ProcessImage& img) override {
+        for (int i = 0; i < count_; i++) list[i]->syncOutputs(img);
+    }
+};
+
 
 // ═══════════════════════════════════════════════════════
 // 安全运算宏（依赖 ErrorManager）

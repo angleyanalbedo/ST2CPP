@@ -2,17 +2,19 @@
  * runtime_rpi.cpp — Raspberry Pi Linux PLC 运行时入口
  *
  * 启动方式：
- *   sudo ./plc_runtime_rpi                    # 默认 1ms 周期
- *   sudo ./plc_runtime_rpi --cycle-us 500     # 500us 周期
- *   sudo chrt -f 99 ./plc_runtime_rpi         # SCHED_FIFO 最高优先级
- *
- * 编译：
- *   g++ -O2 -DRT_PLATFORM_LINUX -I include/ src/*.cpp platform_rpi.cpp runtime_rpi.cpp \
- *       -lpthread -o plc_runtime_rpi
+ *   sudo ./plc_runtime_rpi                         # 默认 GPIO, 1ms 周期
+ *   sudo ./plc_runtime_rpi --cycle-us 500           # 500us 周期
+ *   sudo ./plc_runtime_rpi --tci ethercat           # EtherCAT 模式
+ *   sudo ./plc_runtime_rpi --tci both               # GPIO + EtherCAT 同时
+ *   sudo ./plc_runtime_rpi --tci both --ecat-if eth0
  */
 #include "rt_runtime.h"
 #include "rt_plc.h"
 #include "hal/gpio_tci.h"
+
+#if defined(RT_ETHERCAT_ENABLED)
+#include "../soem/ethercat_tci.h"
+#endif
 
 #include <csignal>
 #include <unistd.h>
@@ -31,9 +33,14 @@ extern "C" void plc_rpi_jitter_sample();
 extern "C" void plc_rpi_jitter_set_target(int64_t targetUs);
 
 static Scheduler sched;
-static RpiGpioTCI gpioTCI;
+static CompositeTCI compositeTCI;
 static bool initialized = false;
 static int64_t cycleUs = 1000;
+
+// TCI 配置
+enum class TciMode { GPIO, ETHERCAT, BOTH };
+static TciMode tciMode = TciMode::GPIO;
+static char ecatIfname[32] = "eth0";
 
 static void plc_init() {
     POURegistry reg;
@@ -42,11 +49,38 @@ static void plc_init() {
     sched.setBaseCycle(T_us(cycleUs));
     sched.gvl.errorMgr = &sched.errorMgr;
 
-    // 注册 GPIO I/O 同步
-    if (gpioTCI.init() == 0) {
-        sched.setTCI(&gpioTCI);
+    // ─── 初始化 TCI ───
+    if (tciMode == TciMode::GPIO || tciMode == TciMode::BOTH) {
+        static RpiGpioTCI gpioTCI;
+        if (gpioTCI.init() == 0) {
+            compositeTCI.add(&gpioTCI);
+            platform::logInfo("GPIO TCI registered\n");
+        } else {
+            platform::logErr("GPIO TCI init failed\n");
+        }
+    }
+
+#if defined(RT_ETHERCAT_ENABLED)
+    if (tciMode == TciMode::ETHERCAT || tciMode == TciMode::BOTH) {
+        static EthercatTCI ecatTCI;
+        if (ecatTCI.init(ecatIfname) == 0) {
+            compositeTCI.add(&ecatTCI);
+            platform::logInfo("EtherCAT TCI registered on %s\n", ecatIfname);
+        } else {
+            platform::logErr("EtherCAT TCI init failed on %s\n", ecatIfname);
+        }
+    }
+#else
+    if (tciMode == TciMode::ETHERCAT || tciMode == TciMode::BOTH) {
+        platform::logErr("EtherCAT not enabled at compile time. Rebuild with -DRT_ETHERCAT_ENABLED\n");
+    }
+#endif
+
+    if (compositeTCI.count() > 0) {
+        sched.setTCI(&compositeTCI);
+        platform::logInfo("TCI: %d backend(s) active\n", compositeTCI.count());
     } else {
-        fprintf(stderr, "[WARN] GPIO TCI init failed, running without hardware I/O\n");
+        platform::logErr("No TCI backends active, running without hardware I/O\n");
     }
 
     int mainTask = sched.addCyclicTask("Main", 5, T_us(cycleUs));
@@ -88,8 +122,20 @@ int main(int argc, char* argv[]) {
         if (strcmp(argv[i], "--cycle-us") == 0 && i + 1 < argc) {
             cycleUs = atol(argv[i + 1]);
             i++;
+        } else if (strcmp(argv[i], "--tci") == 0 && i + 1 < argc) {
+            i++;
+            if (strcmp(argv[i], "gpio") == 0) tciMode = TciMode::GPIO;
+            else if (strcmp(argv[i], "ethercat") == 0) tciMode = TciMode::ETHERCAT;
+            else if (strcmp(argv[i], "both") == 0) tciMode = TciMode::BOTH;
+            else fprintf(stderr, "Unknown TCI mode: %s (use gpio/ethercat/both)\n", argv[i]);
+        } else if (strcmp(argv[i], "--ecat-if") == 0 && i + 1 < argc) {
+            strncpy(ecatIfname, argv[i + 1], sizeof(ecatIfname) - 1);
+            i++;
         } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
-            printf("Usage: %s [--cycle-us <microseconds>]\n", argv[0]);
+            printf("Usage: %s [options]\n", argv[0]);
+            printf("  --cycle-us <us>     PLC cycle time (default: 1000)\n");
+            printf("  --tci <mode>        I/O mode: gpio, ethercat, both (default: gpio)\n");
+            printf("  --ecat-if <name>    EtherCAT interface (default: eth0)\n");
             return 0;
         }
     }
