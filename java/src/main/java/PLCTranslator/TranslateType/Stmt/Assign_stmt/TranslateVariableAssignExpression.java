@@ -5,6 +5,9 @@ import PLCSymbolAndScope.PLCSymbols.PLCVariable;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
 
+import static PLCSymbolAndScope.PLCSymbols.PLCModifierEnum.Sort.FC_DECL;
+import static PLCSymbolAndScope.PLCSymbols.PLCModifierEnum.Sort.METHOD_DECL;
+
 public class TranslateVariableAssignExpression {
     public String translateNode(PLCSTPARSERParser.VariableAssignExpressionContext ctx, PLCTranslatorNew translatorNew){
         StringBuilder sb = new StringBuilder();
@@ -20,8 +23,14 @@ public class TranslateVariableAssignExpression {
         }
         translatorNew.pendingDecls.clear();
 
-        // 3. 翻译赋值
-        if(varSymbol.getSort() != PLCModifierEnum.Sort.FC) {
+        // 3. 判断是否在 FC/METHOD 内部（通过 localScope 的 declSymbol）
+        boolean inFC = false;
+        if (varSymbol.getLocalScope() != null && varSymbol.getLocalScope().getDeclSymbol() != null) {
+            PLCModifierEnum.Sort scopeSort = varSymbol.getLocalScope().getDeclSymbol().getSort();
+            inFC = (scopeSort == FC_DECL || scopeSort == METHOD_DECL);
+        }
+
+        if (!inFC) {
             // 查 GVL offsetMap 决定输出形式
             String varName = varSymbol.getName();
             if (varName.startsWith("*")) varName = varName.substring(1);
