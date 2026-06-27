@@ -35,7 +35,14 @@ public class TranslateEnum_type_decl {
                 entries.add(var.getName() + " = " + valueExpr);
             }
         }
-        return gvlCtx.emitEnumDecl(enumName, underlyingType, entries);
+        StringBuilder sb = new StringBuilder();
+        sb.append("\nenum class ").append(enumName).append(" : ").append(underlyingType).append(" {");
+        for (int i = 0; i < entries.size(); i++) {
+            String entry = entries.get(i);
+            sb.append(i == 0 ? "\n    " : ",\n    ").append(entry);
+        }
+        sb.append("\n};\n");
+        return sb.toString();
     }
 
     private String stripParens(String s) {

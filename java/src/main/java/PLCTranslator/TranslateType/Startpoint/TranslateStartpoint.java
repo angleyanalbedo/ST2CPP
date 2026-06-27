@@ -28,8 +28,22 @@ public class TranslateStartpoint {
             }
         }
         if (translatorNew.shouldEmitPOURegistration()) {
-            sb.append(PLCTranslatorNew.gvlCtx.emitPOURegistration(
-                PLCTranslatorNew.gvlCtx.getFileId(), PLCTranslatorNew.gvlCtx.getProgramNames()));
+            String fileId = PLCTranslatorNew.gvlCtx.getFileId();
+            java.util.List<String> progNames = PLCTranslatorNew.gvlCtx.getProgramNames();
+            if (progNames != null && !progNames.isEmpty()) {
+                sb.append("\n// ─── Auto-generated POU Registration (").append(fileId).append(") ───\n");
+                sb.append("void registerPOU_").append(fileId).append("(POURegistry& reg) {\n");
+                for (String name : progNames) {
+                    String mangled = fileId.isEmpty() ? name : fileId + "_" + name;
+                    sb.append("    POUCallbacks cbs;\n");
+                    sb.append("    cbs.init = PROGRAM_").append(mangled).append("_init;\n");
+                    sb.append("    cbs.cyclic = PROGRAM_").append(mangled).append("_cyclic;\n");
+                    sb.append("    cbs.pre = PROGRAM_").append(mangled).append("_pre;\n");
+                    sb.append("    cbs.post = PROGRAM_").append(mangled).append("_post;\n");
+                    sb.append("    reg.add(\"").append(name).append("\", cbs);\n");
+                }
+                sb.append("}\n");
+            }
         }
         return sb.toString();
     }

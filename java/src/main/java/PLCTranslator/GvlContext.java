@@ -15,10 +15,6 @@ public class GvlContext {
     public final Map<String, String> arrayElemTypeMap = new LinkedHashMap<>();
     public int currentOffset = 0;
 
-    // symbolId → 变量名 映射
-    public final Map<String, String> symbolIdToNameMap = new LinkedHashMap<>();
-    public final Map<String, String> nameToSymbolIdMap = new LinkedHashMap<>();
-
     // ─── Struct 类型支持 ───
     public final Map<String, StructLayout> structLayoutMap = new HashMap<>();
 
@@ -108,17 +104,6 @@ public class GvlContext {
 
     public void registerEnumType(String enumName, String underlyingNativeType) {
         enumNameToUnderlying.put(enumName, underlyingNativeType);
-    }
-
-    public String emitEnumDecl(String enumName, String underlyingType, List<String> entries) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\nenum class ").append(enumName).append(" : ").append(underlyingType).append(" {");
-        for (int i = 0; i < entries.size(); i++) {
-            String entry = entries.get(i);
-            sb.append(i == 0 ? "\n    " : ",\n    ").append(entry);
-        }
-        sb.append("\n};\n");
-        return sb.toString();
     }
 
     public Integer getStructFieldOffset(String structTypeName, String fieldName) {
@@ -234,17 +219,6 @@ public class GvlContext {
         return aligned;
     }
 
-    public void registerVariable(String varName, String symbolId) {
-        if (varName != null && symbolId != null) {
-            symbolIdToNameMap.put(symbolId, varName);
-            nameToSymbolIdMap.put(varName, symbolId);
-        }
-    }
-
-    public String findVarNameBySymbolId(String symbolId) {
-        return symbolIdToNameMap.get(symbolId);
-    }
-
     // ═══ I/O 映射变量支持 ═══
 
     public IOInfo parseATAddress(String location) {
@@ -342,29 +316,6 @@ public class GvlContext {
         return "io.writeOutput<" + info.typeName + ">(" + info.byteOffset + ", " + valueExpr + ")";
     }
 
-    // ═══ POU 注册表 ═══
-
-    public String emitPOURegistration(String fileId, List<String> progNames) {
-        if (progNames == null || progNames.isEmpty()) {
-            return "";
-        }
-        StringBuilder sb = new StringBuilder();
-        sb.append("\n// ─── Auto-generated POU Registration (").append(fileId).append(") ───\n");
-        sb.append("void registerPOU_").append(fileId).append("(POURegistry& reg) {\n");
-        for (String name : progNames) {
-            String mangled = mangleProgName(name);
-            sb.append("    POUCallbacks cbs;\n");
-            sb.append("    cbs.init = PROGRAM_").append(mangled).append("_init;\n");
-            sb.append("    cbs.cyclic = PROGRAM_").append(mangled).append("_cyclic;\n");
-            sb.append("    cbs.pre = PROGRAM_").append(mangled).append("_pre;\n");
-            sb.append("    cbs.post = PROGRAM_").append(mangled).append("_post;\n");
-            sb.append("    reg.add(\"").append(name).append("\", cbs);\n");
-        }
-        sb.append("}\n");
-        return sb.toString();
-    }
-
-
     // ═══ 数组类型信息 ═══
 
     public static class ArrayInfo {
@@ -384,45 +335,6 @@ public class GvlContext {
             return info;
         }
         return null;
-    }
-
-    // ═══ 辅助方法 ═══
-
-    public String getOffsetDefinitions() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("// GVL Offset Definitions\n");
-        for (Map.Entry<String, Integer> entry : offsetMap.entrySet()) {
-            String type = typeMap.get(entry.getKey());
-            sb.append("// ").append(entry.getKey())
-              .append(" : ").append(type)
-              .append(" @ offset ").append(entry.getValue())
-              .append("\n");
-        }
-        sb.append("// Total GVL usage: ").append(currentOffset).append(" bytes\n");
-        return sb.toString();
-    }
-
-    public String emitFBCall(String fbInstanceName, String fbTypeName,
-                              List<String> paramNames, List<String> paramValues) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < paramNames.size(); i++) {
-            String paramName = paramNames.get(i);
-            String paramValue = paramValues.get(i);
-            Integer offset = offsetMap.get(paramName);
-            String type = typeMap.get(paramName);
-            if (offset != null && type != null) {
-                sb.append("\n\t\tgvl.write<").append(type).append(">(")
-                  .append(offset).append(", ").append(paramValue).append(");");
-            }
-        }
-        Integer fbOffset = offsetMap.get(fbInstanceName);
-        if (fbOffset != null) {
-            sb.append("\n\t\tgvl.ptr<").append(fbTypeName).append(">(")
-              .append(fbOffset).append(")->update();");
-        } else {
-            sb.append("\n\t\t").append(fbInstanceName).append(".update();");
-        }
-        return sb.toString();
     }
 
     public Map<String, Integer> getOffsetMap() {

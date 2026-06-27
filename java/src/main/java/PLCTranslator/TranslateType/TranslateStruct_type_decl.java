@@ -104,10 +104,6 @@ public class TranslateStruct_type_decl {
         GvlContext.StructLayout layout =
             new GvlContext.StructLayout(structName, fields, currentOffset);
         gvlCtx.registerStructType(structName, layout);
-
-        gvlCtx.registerVariable(structName,
-            String.valueOf(structSymbol.getSymbolId()));
-
         return sb.toString();
     }
 }

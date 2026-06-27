@@ -182,7 +182,23 @@ public class Main {
         }
 
         fullCodeBuilder.append("\n");
-        fullCodeBuilder.append(gvlCtx.emitPOURegistration(gvlCtx.getFileId(), gvlCtx.getProgramNames()));
+        // POU 注册
+        fileId = gvlCtx.getFileId();
+        java.util.List<String> progNames = gvlCtx.getProgramNames();
+        if (progNames != null && !progNames.isEmpty()) {
+            fullCodeBuilder.append("// ─── Auto-generated POU Registration (").append(fileId).append(") ───\n");
+            fullCodeBuilder.append("void registerPOU_").append(fileId).append("(POURegistry& reg) {\n");
+            for (String name : progNames) {
+                String mangled = fileId.isEmpty() ? name : fileId + "_" + name;
+                fullCodeBuilder.append("    POUCallbacks cbs;\n");
+                fullCodeBuilder.append("    cbs.init = PROGRAM_").append(mangled).append("_init;\n");
+                fullCodeBuilder.append("    cbs.cyclic = PROGRAM_").append(mangled).append("_cyclic;\n");
+                fullCodeBuilder.append("    cbs.pre = PROGRAM_").append(mangled).append("_pre;\n");
+                fullCodeBuilder.append("    cbs.post = PROGRAM_").append(mangled).append("_post;\n");
+                fullCodeBuilder.append("    reg.add(\"").append(name).append("\", cbs);\n");
+            }
+            fullCodeBuilder.append("}\n");
+        }
 
         String fullCode = fullCodeBuilder.toString();
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
@@ -190,8 +206,6 @@ public class Main {
         }
 
         long elapsed = System.currentTimeMillis() - startTime;
-
-        System.out.println("\n" + gvlCtx.getOffsetDefinitions());
 
         if (verbose) {
             int codeLines = fullCode != null ? fullCode.split("\n").length : 0;

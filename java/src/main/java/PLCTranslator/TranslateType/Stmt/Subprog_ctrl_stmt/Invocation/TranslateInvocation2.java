@@ -2,6 +2,7 @@ package PLCTranslator.TranslateType.Stmt.Subprog_ctrl_stmt.Invocation;
 
 import PLCSymbolAndScope.PLCSymbols.PLCVariable;
 import PLCTranslator.PLCTranslatorNew;
+import PLCTranslator.TranslateType.Stmt.Subprog_ctrl_stmt.TranslateCallFunc;
 import antlr4.PLCSTPARSERParser;
 
 import java.util.ArrayList;
@@ -27,6 +28,6 @@ public class TranslateInvocation2 {
             paramValues.add(paramValue);
         }
 
-        return translatorNew.gvlCtx.emitFBCall(fbInstanceName, fbTypeName, paramNames, paramValues);
+        return TranslateCallFunc.emitFBCall(fbInstanceName, fbTypeName, paramNames, paramValues, translatorNew.gvlCtx);
     }
 }

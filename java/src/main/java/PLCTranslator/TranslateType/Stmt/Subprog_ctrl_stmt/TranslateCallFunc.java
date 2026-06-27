@@ -5,6 +5,7 @@ import PLCSymbolAndScope.PLCSymbols.PLCVariable;
 import PLCSymbolAndScope.PLCSymbols.PLCBaseFUNDeclSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCBaseFUNDeclSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
+import PLCTranslator.GvlContext;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
 
@@ -33,7 +34,7 @@ public class TranslateCallFunc {
                         paramValues.add(param_assignContext.getText());
                     }
                 }
-                sb.append(translatorNew.gvlCtx.emitFBCall(fbInstanceName, fbTypeName, paramNames, paramValues));
+                sb.append(emitFBCall(fbInstanceName, fbTypeName, paramNames, paramValues, translatorNew.gvlCtx));
             }else if(firstSym instanceof PLCVariable funcVar){
                 // 普通函数调用（独立语句）
                 // assignVar 格式: *FUNC_NAME(&PARAM1, )
@@ -73,5 +74,29 @@ public class TranslateCallFunc {
         int parenIdx = cleaned.indexOf('(');
         if (parenIdx > 0) return cleaned.substring(0, parenIdx);
         return cleaned;
+    }
+
+    public static String emitFBCall(String fbInstanceName, String fbTypeName,
+                                     List<String> paramNames, List<String> paramValues,
+                                     GvlContext gvlCtx) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < paramNames.size(); i++) {
+            String paramName = paramNames.get(i);
+            String paramValue = paramValues.get(i);
+            Integer offset = gvlCtx.offsetMap.get(paramName);
+            String type = gvlCtx.typeMap.get(paramName);
+            if (offset != null && type != null) {
+                sb.append("\n\t\tgvl.write<").append(type).append(">(")
+                  .append(offset).append(", ").append(paramValue).append(");");
+            }
+        }
+        Integer fbOffset = gvlCtx.offsetMap.get(fbInstanceName);
+        if (fbOffset != null) {
+            sb.append("\n\t\tgvl.ptr<").append(fbTypeName).append(">(")
+              .append(fbOffset).append(")->update();");
+        } else {
+            sb.append("\n\t\t").append(fbInstanceName).append(".update();");
+        }
+        return sb.toString();
     }
 }
