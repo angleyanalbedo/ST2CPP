@@ -1,16 +1,13 @@
-# target/rpi/Makefile — 树莓派 PLC Runtime（统一编译+部署）
+# target/rpi/Makefile — 树莓派 PLC Runtime
 #
 # 用法：
 #   make                     # 本地编译
-#   make CROSS=aarch64-linux-gnu-  # 交叉编译
-#   make deploy              # 编译 + 上传到 Pi
-#   make run                 # 编译 + 上传 + 运行
+#   make CROSS=aarch64-linux-gnu-  # 交叉编译（生成 ARM 二进制）
+#   make run                 # 本地编译 + 运行
 #   make clean               # 清理
 #   make registry            # 仅生成 POU 注册桥接
 #
 # 配置（环境变量或命令行覆盖）：
-#   RPI_IP=192.168.1.100 make deploy
-#   RPI_USER=root make deploy
 #   CYCLE_US=500 make run
 
 # ═══ 编译器 ═══
@@ -27,6 +24,7 @@ BUILD    = $(ROOT)/output/flat/build
 RT_SRCS  = $(wildcard $(RT_DIR)/src/*.cpp)
 PLAT_SRC = platform_rpi.cpp
 MAIN_SRC = runtime_rpi.cpp
+HAL_SRC  = hal/gpio_hal.cpp hal/gpio_tci.cpp
 POU_SRCS = $(wildcard $(BUILD)/*.cpp)
 
 # ═══ 自动生成 registerAllPOUs 桥接 ═══
@@ -60,30 +58,25 @@ LDFLAGS   = $(OPT) -lpthread
 TARGET   = plc_runtime_rpi
 
 # ═══ 构建 ═══
-.PHONY: all deploy run clean registry
+.PHONY: all run clean registry
 
 all: $(REGISTRY) $(TARGET)
 
-SRCS = $(RT_SRCS) $(PLAT_SRC) $(MAIN_SRC) $(POU_SRCS) $(REGISTRY)
+SRCS = $(RT_SRCS) $(PLAT_SRC) $(MAIN_SRC) $(HAL_SRC) $(POU_SRCS) $(REGISTRY)
 
 $(TARGET): $(SRCS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	@echo "=== Build: $@ ==="
 
-# ═══ 部署 ═══
-RPI_IP   ?= 192.168.5.128
-RPI_USER ?= pi
-RPI_DIR  ?= ~/st2c-runtime
+# ═══ 运行（仅本地编译） ═══
 CYCLE_US ?= 1000
 
-deploy: $(TARGET)
-	@echo "=== Deploy to $(RPI_USER)@$(RPI_IP) ==="
-	ssh $(RPI_USER)@$(RPI_IP) "mkdir -p $(RPI_DIR)"
-	scp $(TARGET) $(RPI_USER)@$(RPI_IP):$(RPI_DIR)/
-	@echo "=== Done. Run: ssh $(RPI_USER)@$(RPI_IP) 'sudo $(RPI_DIR)/$(TARGET)' ==="
-
-run: deploy
-	ssh $(RPI_USER)@$(RPI_IP) "sudo $(RPI_DIR)/$(TARGET) --cycle-us $(CYCLE_US)"
+run: all
+ifeq ($(CROSS),)
+	sudo ./$(TARGET) --cycle-us $(CYCLE_US)
+else
+	@echo "交叉编译模式，请手动将 $(TARGET) 上传到树莓派运行"
+endif
 
 clean:
 	rm -f $(TARGET) $(REGISTRY)

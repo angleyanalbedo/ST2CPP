@@ -64,15 +64,16 @@ jobs:
         run: >
           cmake -B runtime-flat/build -S runtime-flat
           -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+          -DRT_BUILD_TESTS=ON
 
       - name: Build
         run: cmake --build runtime-flat/build --parallel
 
       - name: Run framework tests
-        run: runtime-flat/build/framework_test.exe
+        run: ./runtime-flat/build/framework_test.exe
 
       - name: Run unit tests
-        run: runtime-flat/build/unit_test.exe
+        run: ./runtime-flat/build/unit_test.exe
 
       - name: Upload runtime binaries
         uses: actions/upload-artifact@v4

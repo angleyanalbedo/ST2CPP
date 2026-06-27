@@ -12,6 +12,7 @@
  */
 #include "rt_runtime.h"
 #include "rt_plc.h"
+#include "hal/gpio_tci.h"
 
 #include <csignal>
 #include <unistd.h>
@@ -25,10 +26,10 @@ extern "C" void plc_rpi_destroy_timer();
 extern "C" int  plc_rpi_set_rt_priority(int priority);
 extern "C" uint32_t plc_rpi_get_tick_count();
 extern "C" int64_t  plc_rpi_get_uptime_us();
-extern "C" int  plc_rpi_gpio_init();
 extern "C" void plc_rpi_print_jitter_stats();
 
 static Scheduler sched;
+static RpiGpioTCI gpioTCI;
 static bool initialized = false;
 static int64_t cycleUs = 1000;
 
@@ -38,6 +39,13 @@ static void plc_init() {
 
     sched.setBaseCycle(T_us(cycleUs));
     sched.gvl.errorMgr = &sched.errorMgr;
+
+    // 注册 GPIO I/O 同步
+    if (gpioTCI.init() == 0) {
+        sched.setTCI(&gpioTCI);
+    } else {
+        fprintf(stderr, "[WARN] GPIO TCI init failed, running without hardware I/O\n");
+    }
 
     int mainTask = sched.addCyclicTask("Main", 5, T_us(cycleUs));
     if (mainTask < 0) {
@@ -88,7 +96,6 @@ int main(int argc, char* argv[]) {
     signal(SIGTERM, signal_handler);
 
     plc_rpi_set_rt_priority(90);
-    plc_rpi_gpio_init();
     plc_init();
 
     if (plc_rpi_create_timer(cycleUs) != 0) {
