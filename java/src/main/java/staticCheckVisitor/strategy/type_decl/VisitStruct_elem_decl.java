@@ -44,6 +44,7 @@ public class VisitStruct_elem_decl implements Strategy{
         structElement.setAssignVar(elemSpecInit.getAssignVar());
         structElement.setRuntimeTypeName(elemSpecInit.getRuntimeTypeName());
         structElement.setDeclSymbol(elemSpecInit.getDeclSymbol());
+        structElement.setArrayBounds(elemSpecInit.getArrayBounds());
 
 
         return visitor.packSymbols(structElement);

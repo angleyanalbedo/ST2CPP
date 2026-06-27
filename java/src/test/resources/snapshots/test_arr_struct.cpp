@@ -302,19 +302,34 @@ struct MY_POINT {
 };
 
 void PROGRAM_test_arr_struct_MAIN_init(GVL& gvl, ProcessImage& io) {
-		gvl.write<INT>(20, (0));
-		gvl.write<INT>(22, (0));
+		gvl.write<INT>(20, 0);
+		gvl.write<INT>(22, 0);
 }
 void PROGRAM_test_arr_struct_MAIN_pre(GVL& gvl, ProcessImage& io) {
 }
 void PROGRAM_test_arr_struct_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
-		INT I = (0);
-		for( ; I <= (4);I = I + (1)){
-		(gvl.safeArrayAt<MY_POINT>(0, I, 5).X) = (I) *((10)) ;
-		(gvl.safeArrayAt<MY_POINT>(0, I, 5).Y) = (I) *((20)) ;
+	MY_POINT P_ARR[5];
+	P_ARR[0] = gvl.read<MY_POINT>(0);
+	P_ARR[1] = gvl.read<MY_POINT>(4);
+	P_ARR[2] = gvl.read<MY_POINT>(8);
+	P_ARR[3] = gvl.read<MY_POINT>(12);
+	P_ARR[4] = gvl.read<MY_POINT>(16);
+	INT I = gvl.read<INT>(20);
+	INT SUM_X = gvl.read<INT>(22);
+		INT I = 0;
+		for( ; I <= 4;I = I + 1){
+		(P_ARR[I].X) = I * 10;
+		(P_ARR[I].Y) = I * 20;
 		}
 		gvl.write<INT>(20, I);
-		gvl.write<INT>(22, ((gvl.safeArrayAt<MY_POINT>(0, 0, 5).X)) +((gvl.safeArrayAt<MY_POINT>(0, 1, 5).X)) );
+		SUM_X = P_ARR[0].X + P_ARR[1].X;
+	gvl.write<MY_POINT>(0, P_ARR[0]);
+	gvl.write<MY_POINT>(4, P_ARR[1]);
+	gvl.write<MY_POINT>(8, P_ARR[2]);
+	gvl.write<MY_POINT>(12, P_ARR[3]);
+	gvl.write<MY_POINT>(16, P_ARR[4]);
+	gvl.write<INT>(20, I);
+	gvl.write<INT>(22, SUM_X);
 }
 void PROGRAM_test_arr_struct_MAIN_post(GVL& gvl, ProcessImage& io) {
 }

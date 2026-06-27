@@ -311,37 +311,37 @@ struct ADVANCED_CTRL {
 
     void update() {
 
-		BUSY = (*(new BOOL(TRUE)));
-		DONE = (*(new BOOL(FALSE)));
-		ERROR = (*(new BOOL(FALSE)));
+		BUSY = TRUE;
+		DONE = FALSE;
+		ERROR = FALSE;
 		if(RESET){
-		STATE = (0);
-		ACCUM = (0);
-		CYCLE_CNT = (0);
-		RESULT = (0);
-		STATUS = (0);
-		}else if((STATE) ==((0)) ){
-		if((CMD) >((0)) ){
-		STATE = (10);
-		ACCUM = (0);
+		STATE = 0;
+		ACCUM = 0;
+		CYCLE_CNT = 0;
+		RESULT = 0;
+		STATUS = 0;
+		}else if(STATE == 0){
+		if(CMD > 0){
+		STATE = 10;
+		ACCUM = 0;
 		}
-		STATUS = (0);
-		}else if((STATE) ==((10)) ){
-		ACCUM = (ACCUM) +(VALUE) ;
-		CYCLE_CNT = (CYCLE_CNT) +((1)) ;
-		if((CYCLE_CNT) >=((5)) ){
-		STATE = (20);
+		STATUS = 0;
+		}else if(STATE == 10){
+		ACCUM = ACCUM + VALUE;
+		CYCLE_CNT = CYCLE_CNT + 1;
+		if(CYCLE_CNT >= 5){
+		STATE = 20;
 		RESULT = ACCUM;
 		}
-		STATUS = (1);
-		}else if((STATE) ==((20)) ){
-		DONE = (*(new BOOL(TRUE)));
-		BUSY = (*(new BOOL(FALSE)));
-		STATUS = (2);
+		STATUS = 1;
+		}else if(STATE == 20){
+		DONE = TRUE;
+		BUSY = FALSE;
+		STATUS = 2;
 		}else{
-		STATE = (0);
-		STATUS = (99);
-		ERROR = (*(new BOOL(TRUE)));
+		STATE = 0;
+		STATUS = 99;
+		ERROR = TRUE;
 		}
     }
 };

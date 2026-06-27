@@ -300,20 +300,20 @@ struct MY_TIMER {
     INT PT; // = 0
     BOOL Q; // = false
     INT ET; // = 0
-    BOOL RUNNING; // = (*(new BOOL(FALSE)))
+    BOOL RUNNING; // = FALSE
     INT ELAPSED; // = (0)
     BOOL START; // = false
 
     void update() {
 
-		if((START) & (( ! RUNNING)) ){
-		RUNNING = (*(new BOOL(TRUE)));
-		ELAPSED = (0);
+		if(START && ! RUNNING){
+		RUNNING = TRUE;
+		ELAPSED = 0;
 		}
 		if(RUNNING){
-		ELAPSED = (ELAPSED) +((1)) ;
-		if((ELAPSED) >=(PT) ){
-		Q = (*(new BOOL(TRUE)));
+		ELAPSED = ELAPSED + 1;
+		if(ELAPSED >= PT){
+		Q = TRUE;
 		}
 		}
 		ET = ELAPSED;
@@ -325,10 +325,10 @@ void PROGRAM_test_fb_instantiate_MAIN_init(GVL& gvl, ProcessImage& io) {
 void PROGRAM_test_fb_instantiate_MAIN_pre(GVL& gvl, ProcessImage& io) {
 }
 void PROGRAM_test_fb_instantiate_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
-		gvl.write<BOOL>(10, (*(new BOOL(TRUE))));
-		gvl.write<INT>(0, (5));
+	MY_TIMER timer1 = gvl.read<MY_TIMER>(0);
 		gvl.ptr<MY_TIMER>(0)->update();
 		gvl.ptr<MY_TIMER>(0)->update();
+	gvl.write<MY_TIMER>(0, timer1);
 }
 void PROGRAM_test_fb_instantiate_MAIN_post(GVL& gvl, ProcessImage& io) {
 }

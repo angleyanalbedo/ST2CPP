@@ -1,7 +1,8 @@
 package PLCTranslator.TranslateType.Fb_decl;
 
-import PLCSymbolAndScope.PLCSymbols.*;
+import PLCSymbolAndScope.PLCSymbolTables.PLCTotalSymbolTable;
 import PLCSymbolAndScope.PLCSymbolTables.PLCSymbolTable;
+import PLCSymbolAndScope.PLCSymbols.*;
 import PLCTranslator.GvlContext;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
@@ -18,13 +19,12 @@ public class TranslateFb_decl {
         StringBuilder sb = new StringBuilder();
 
         // 收集所有成员变量
-        List<FBField> fields = collectFields(ctx);
+        List<FBField> fields = collectFields(ctx, translatorNew.gvlCtx);
 
         // 生成 C++ struct 定义
         sb.append("\nstruct ").append(fbName).append(" {\n");
         for (FBField f : fields) {
-            String nativeType = translatorNew.gvlCtx.toNativeType(f.typeName);
-            sb.append("    ").append(nativeType).append(" ").append(f.name).append(";");
+            sb.append("    ").append(f.typeName).append(" ").append(f.name).append(";");
             if (f.initValue != null && !f.initValue.isEmpty()) {
                 sb.append(" // = ").append(f.initValue);
             }
@@ -53,7 +53,7 @@ public class TranslateFb_decl {
         }
         GvlContext.StructLayout layout = new GvlContext.StructLayout(
             fbName, structFields, currentOffset);
-        translatorNew.gvlCtx.registerStructType(fbName, fbName, layout);
+        translatorNew.gvlCtx.registerStructType(fbName, layout);
 
         return sb.toString();
     }
@@ -65,7 +65,7 @@ public class TranslateFb_decl {
         FBField(String n, String t, String i) { name = n; typeName = t; initValue = i; }
     }
 
-    private List<FBField> collectFields(PLCSTPARSERParser.Fb_declContext ctx) {
+    private List<FBField> collectFields(PLCSTPARSERParser.Fb_declContext ctx, GvlContext gvlCtx) {
         List<FBField> fields = new ArrayList<>();
         PLCFBDeclSymbol fbSymbol = (PLCFBDeclSymbol) PLCTranslatorNew.properties.get(ctx).get(0);
         PLCSymbolTable importTable = fbSymbol.getImportSymbolTable();
@@ -74,9 +74,27 @@ public class TranslateFb_decl {
         for (PLCSymbol s : importTable.getSymbolIDHashMap().values()) {
             if (s instanceof PLCVariable v) {
                 if (v.getSymbolId() == fbSymbol.getSymbolId()) continue;
-                fields.add(new FBField(v.getName(), v.getRuntimeTypeName(), v.getAssignVar()));
+                String typeName = resolveFieldTypeName(v, gvlCtx);
+                fields.add(new FBField(v.getName(), typeName, v.getAssignVar()));
             }
         }
         return fields;
+    }
+
+    private static String resolveFieldTypeName(PLCVariable v, GvlContext gvlCtx) {
+        int typeId = v.getTypeId();
+        if (typeId == 0) return gvlCtx.toNativeType(v.getRuntimeTypeName());
+        PLCTypeDeclSymbol typeDecl = PLCTotalSymbolTable.getTypeByTypeID(typeId);
+        if (typeDecl == null) return gvlCtx.toNativeType(v.getRuntimeTypeName());
+        if (typeDecl instanceof PLCEnumDeclSymbol) return typeDecl.getName();
+        if (typeDecl instanceof PLCStructDeclSymbol) return typeDecl.getName();
+        if (typeDecl instanceof PLCArrayDeclSymbol) {
+            PLCArrayDeclSymbol arrayDecl = (PLCArrayDeclSymbol) typeDecl;
+            PLCTypeDeclSymbol elemType = PLCTotalSymbolTable.getTypeByTypeID(
+                arrayDecl.getElementTypeId());
+            if (elemType != null) return gvlCtx.toNativeType(elemType.getName());
+            return "INT";
+        }
+        return gvlCtx.toNativeType(typeDecl.getName());
     }
 }

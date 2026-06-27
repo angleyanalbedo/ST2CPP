@@ -297,63 +297,69 @@ REAL MIN(REAL IN0, REAL IN1);
 
 
 void PROGRAM_test_assert_P_init(GVL& gvl, ProcessImage& io) {
-		gvl.write<INT>(0, (42));
-		gvl.write<INT>(2, (0));
-		gvl.write<INT>(4, (0));
+		gvl.write<INT>(0, 42);
+		gvl.write<INT>(2, 0);
+		gvl.write<INT>(4, 0);
 }
 void PROGRAM_test_assert_P_pre(GVL& gvl, ProcessImage& io) {
 }
 void PROGRAM_test_assert_P_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
+	INT A = gvl.read<INT>(0);
+	INT B = gvl.read<INT>(2);
+	INT C = gvl.read<INT>(4);
 		printf("=== ASSERT Test ===");
 		printf("\n");
-		{ bool _st_assert = ((gvl.read<INT>(0)) ==((42)) );
+		{ bool _st_assert = (A == 42);
 		  if(_st_assert)
 		    printf("  [PASS] assert (line 10)\n");
 		  else
 		    printf("  [FAIL] assert (line 10): A=42\n"); }
-		{ bool _st_assert = ((gvl.read<INT>(0)) !=((0)) );
+		{ bool _st_assert = (A != 0);
 		  if(_st_assert)
 		    printf("  [PASS] assert (line 11)\n");
 		  else
 		    printf("  [FAIL] assert (line 11): A<>0\n"); }
-		{ bool _st_assert = ((gvl.read<INT>(2)) ==((0)) );
+		{ bool _st_assert = (B == 0);
 		  if(_st_assert)
 		    printf("  [PASS] assert (line 12)\n");
 		  else
 		    printf("  [FAIL] assert (line 12): B=0\n"); }
-		{ bool _st_assert = (((gvl.read<INT>(0)) +(gvl.read<INT>(2)) ) ==(gvl.read<INT>(0)) );
+		{ bool _st_assert = (A + B == A);
 		  if(_st_assert)
 		    printf("  [PASS] assert (line 13)\n");
 		  else
 		    printf("  [FAIL] assert (line 13): A+B=A\n"); }
-		{ bool _st_assert = ((gvl.read<INT>(0)) ==((42)) );
+		{ bool _st_assert = (A == 42);
 		  if(_st_assert)
 		    printf("  [PASS] assert (line 14)\n");
 		  else
 		    printf("  [FAIL] assert (line 14): A=42\n"); }
-		{ bool _st_assert = ((gvl.read<INT>(0)) >(gvl.read<INT>(2)) );
+		{ bool _st_assert = (A > B);
 		  if(_st_assert)
 		    printf("  [PASS] assert (line 15)\n");
 		  else
 		    printf("  [FAIL] assert (line 15): A>B\n"); }
-		{ bool _st_assert = (((10)) >((5)) );
+		{ bool _st_assert = (10 > 5);
 		  if(_st_assert)
 		    printf("  [PASS] assert (line 16)\n");
 		  else
 		    printf("  [FAIL] assert (line 16): 10>5\n"); }
-		{ bool _st_assert = ((gvl.read<INT>(2)) ==((0)) );
+		{ bool _st_assert = (B == 0);
 		  if(_st_assert)
 		    printf("  [PASS] assert (line 17)\n");
 		  else
 		    printf("  [FAIL] assert (line 17): B=0\n"); }
-		gvl.write<INT>(4, (gvl.read<INT>(0)) +((10)) );
-		{ bool _st_assert = ((gvl.read<INT>(4)) ==((52)) );
+		C = A + 10;
+		{ bool _st_assert = (C == 52);
 		  if(_st_assert)
 		    printf("  [PASS] assert (line 20)\n");
 		  else
 		    printf("  [FAIL] assert (line 20): C=52\n"); }
 		printf("Done");
 		printf("\n");
+	gvl.write<INT>(0, A);
+	gvl.write<INT>(2, B);
+	gvl.write<INT>(4, C);
 }
 void PROGRAM_test_assert_P_post(GVL& gvl, ProcessImage& io) {
 }

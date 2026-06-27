@@ -297,20 +297,23 @@ REAL MIN(REAL IN0, REAL IN1);
 
 
 INT ADD_TEN(INT X) {
-		return (X) +((10)) ;
+		return X + 10;
 }
 void PROGRAM_test_P_init(GVL& gvl, ProcessImage& io) {
-		gvl.write<INT>(0, (0));
+		gvl.write<INT>(0, 0);
 }
 void PROGRAM_test_P_pre(GVL& gvl, ProcessImage& io) {
 }
 void PROGRAM_test_P_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
-		INT A = (1);
-		for( ; A <= (5);A = A + (1)){
-		INT _X0=A;
-		gvl.write<INT>(2, ADD_TEN(_X0));
+	INT A = gvl.read<INT>(0);
+	INT B = gvl.read<INT>(2);
+		INT A = 1;
+		for( ; A <= 5;A = A + 1){
+		B = ADD_TEN(A);
 		}
 		gvl.write<INT>(0, A);
+	gvl.write<INT>(0, A);
+	gvl.write<INT>(2, B);
 }
 void PROGRAM_test_P_post(GVL& gvl, ProcessImage& io) {
 }

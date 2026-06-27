@@ -622,23 +622,7 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
      * @return 生成的代码字符串
      */
     @Override public String visitEnum_type_decl(PLCSTPARSERParser.Enum_type_declContext ctx) {
-        PLCEnumDeclSymbol enumSymbol = (PLCEnumDeclSymbol) properties.get(ctx).get(0);
-        String enumName = enumSymbol.getName();
-        int protoTypeId = enumSymbol.getEnumConstTypeId();
-        PLCTypeDeclSymbol protoType = PLCTotalSymbolTable.getTypeByTypeID(protoTypeId);
-        String underlyingType = protoType != null ? gvlCtx.toNativeType(protoType.getRuntimeName()) : "INT";
-        String runtimeTypeName = "PLC_Enum_Value<" + enumSymbol.getTypeId() + ">";
-        gvlCtx.registerEnumType(enumName, runtimeTypeName, underlyingType);
-        List<String> entries = new ArrayList<>();
-        for (PLCVariable var : enumSymbol.getEnumValues()) {
-            String valueExpr = stripParens(var.getAssignVar());
-            if (valueExpr.equals("0")) {
-                entries.add(var.getName());
-            } else {
-                entries.add(var.getName() + " = " + valueExpr);
-            }
-        }
-        return gvlCtx.emitEnumDecl(enumName, underlyingType, entries);
+        return new PLCTranslator.TranslateType.TranslateEnum_type_decl().translate(ctx, gvlCtx);
     }
 
     /**
@@ -697,46 +681,7 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
      * @return 生成的代码字符串
      */
     @Override public String visitStruct_type_decl(PLCSTPARSERParser.Struct_type_declContext ctx) {
-        PLCStructDeclSymbol structSymbol = (PLCStructDeclSymbol) properties.get(ctx).get(0);
-        String structName = structSymbol.getName();
-        String runtimeType = "PLC_Struct_Value<" + structSymbol.getTypeId() + ">";
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("\nstruct ").append(structName).append(" {");
-
-        List<GvlContext.StructField> fields = new ArrayList<>();
-        int currentOffset = 0;
-
-        for (PLCVariable fieldVar : structSymbol.getVariables()) {
-            String fieldName = fieldVar.getName();
-            String fieldType = gvlCtx.toNativeType(fieldVar.getRuntimeTypeName());
-            GvlContext.ArrayInfo arrayInfo = gvlCtx.parseArrayType(fieldVar.getRuntimeTypeName());
-            int fieldSize;
-            if (arrayInfo != null) {
-                fieldSize = arrayInfo.count * gvlCtx.getTypeSize(arrayInfo.elemType);
-                int aligned = fieldSize <= 1 ? currentOffset : (currentOffset + fieldSize - 1) / fieldSize * fieldSize;
-                fields.add(new GvlContext.StructField(fieldName, fieldType, aligned));
-                sb.append("\n    ").append(arrayInfo.elemType).append(" ")
-                  .append(fieldName).append("[").append(arrayInfo.count).append("];");
-                currentOffset = aligned + fieldSize;
-            } else {
-                fieldSize = gvlCtx.getTypeSize(fieldType);
-                int aligned = fieldSize <= 1 ? currentOffset : (currentOffset + fieldSize - 1) / fieldSize * fieldSize;
-                fields.add(new GvlContext.StructField(fieldName, fieldType, aligned));
-                sb.append("\n    ").append(fieldType).append(" ").append(fieldName).append(";");
-                currentOffset = aligned + fieldSize;
-            }
-        }
-
-        sb.append("\n};\n");
-
-        GvlContext.StructLayout layout = new GvlContext.StructLayout(
-                structName, fields, currentOffset);
-        gvlCtx.registerStructType(structName, runtimeType, layout);
-
-        gvlCtx.registerVariable(structName, String.valueOf(structSymbol.getSymbolId()));
-
-        return sb.toString();
+        return new PLCTranslator.TranslateType.TranslateStruct_type_decl().translate(ctx, gvlCtx);
     }
 
     /**

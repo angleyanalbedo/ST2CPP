@@ -301,13 +301,28 @@ void PROGRAM_test_array_P_init(GVL& gvl, ProcessImage& io) {
 void PROGRAM_test_array_P_pre(GVL& gvl, ProcessImage& io) {
 }
 void PROGRAM_test_array_P_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
-		gvl.write<INT>(12, (0));
-		INT I = (0);
-		for( ; I <= (4);I++){
-		(gvl.safeArrayAt<INT>(0, I, 5)) = (I) *((10)) ;
-		gvl.write<INT>(12, (gvl.read<INT>(12)) +((gvl.safeArrayAt<INT>(0, I, 5))) );
+	INT ARR[5];
+	ARR[0] = gvl.read<INT>(0);
+	ARR[1] = gvl.read<INT>(2);
+	ARR[2] = gvl.read<INT>(4);
+	ARR[3] = gvl.read<INT>(6);
+	ARR[4] = gvl.read<INT>(8);
+	INT I = gvl.read<INT>(10);
+	INT SUM = gvl.read<INT>(12);
+		SUM = 0;
+		INT I = 0;
+		for( ; I <= 4;I++){
+		(ARR[I]) = I * 10;
+		SUM = SUM + ARR[I];
 		}
 		gvl.write<INT>(10, I);
+	gvl.write<INT>(0, ARR[0]);
+	gvl.write<INT>(2, ARR[1]);
+	gvl.write<INT>(4, ARR[2]);
+	gvl.write<INT>(6, ARR[3]);
+	gvl.write<INT>(8, ARR[4]);
+	gvl.write<INT>(10, I);
+	gvl.write<INT>(12, SUM);
 }
 void PROGRAM_test_array_P_post(GVL& gvl, ProcessImage& io) {
 }

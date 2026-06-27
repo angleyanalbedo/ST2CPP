@@ -309,102 +309,102 @@ struct MATRIX_ROW {
 };
 
 DINT DOUBLE_IT(INT X) {
-		return (X) *((2)) ;
+		return X * 2;
 }
 DINT CLAMP(DINT VAL, DINT MINV, DINT MAXV) {
-		if((VAL) <(MINV) ){
+		if(VAL < MINV){
 		return MINV;
-		}else if((VAL) >(MAXV) ){
+		}else if(VAL > MAXV){
 		return MAXV;
 		}else{
 		return VAL;
 		}
 }
 INT WRAP_ANGLE(INT ANGLE) {
-		while((ANGLE) <((0)) ){
-		ANGLE = (ANGLE) +((360)) ;
+		while(ANGLE < 0){
+		return ANGLE + 360;
 		}
-		while((ANGLE) >=((360)) ){
-		ANGLE = (ANGLE) -((360)) ;
+		while(ANGLE >= 360){
+		return ANGLE - 360;
 		}
 		return ANGLE;
 }
 REAL AVERAGE(REAL A, REAL B) {
-		return (((A) +(B) )) /((2.0)) ;
+		return (A + B) / 2.0;
 }
 struct STATE_MACHINE {
     INT CMD; // = 0
     DINT POSITION; // = 0
-    INT DIR;
+    DIRECTION DIR;
     INT SPEED; // = 0
     BOOL FAULT; // = false
     INT MODE; // = (0)
     DINT ACCUM; // = (0)
-    BOOL RUNNING; // = (*(new BOOL(FALSE)))
+    BOOL RUNNING; // = FALSE
     INT RETRY; // = (0)
 
     void update() {
 
-		FAULT = (*(new BOOL(FALSE)));
-		RUNNING = (*(new BOOL(TRUE)));
-if((CMD==(0))){
-		MODE = (0);
-		ACCUM = (0);
-		SPEED = (0);
-		DIR = 0;
-		RUNNING = (*(new BOOL(FALSE)));}
-else if((CMD==(1))
+		FAULT = FALSE;
+		RUNNING = TRUE;
+if((CMD==0)){
+		MODE = 0;
+		ACCUM = 0;
+		SPEED = 0;
+		DIR = DIRECTION::NORTH;
+		RUNNING = FALSE;}
+else if((CMD==1)
 ){
-		MODE = (10);
-		ACCUM = (0);
-		DIR = 0;
+		MODE = 10;
+		ACCUM = 0;
+		DIR = DIRECTION::EAST;
 }
-else if((CMD==(2))
+else if((CMD==2)
 ){
-		MODE = (20);
-		ACCUM = (0);
-		DIR = 0;
+		MODE = 20;
+		ACCUM = 0;
+		DIR = DIRECTION::WEST;
 }
-else if((CMD==(3))
+else if((CMD==3)
 ){
-		MODE = (30);
-		DIR = 0;
+		MODE = 30;
+		DIR = DIRECTION::SOUTH;
 }
-else if((CMD==(10))
+else if((CMD==10)
 ){
-		MODE = (0);
-		FAULT = (*(new BOOL(TRUE)));
+		MODE = 0;
+		FAULT = TRUE;
 		}else{
-		MODE = (99);
-		FAULT = (*(new BOOL(TRUE)));
+		MODE = 99;
+		FAULT = TRUE;
 }
 		if(RUNNING){
-if((MODE==(10))){
-		ACCUM = (ACCUM) +(POSITION) ;
-		if((ACCUM) >=((1000)) ){
-		MODE = (11);
+if((MODE==10)){
+		ACCUM = ACCUM + POSITION;
+		if(ACCUM >= 1000){
+		MODE = 11;
 		}}
-else if((MODE==(20))
+else if((MODE==20)
 ){
-		ACCUM = (ACCUM) -(POSITION) ;
-		if((ACCUM) <=((-1000)) ){
-		MODE = (21);
+		ACCUM = ACCUM - POSITION;
+		if(ACCUM <= -1000){
+		MODE = 21;
 		}
 }
-else if((MODE==(30))
+else if((MODE==30)
 ){
-		SPEED = (0);
-		RETRY = (RETRY) +((1)) ;
-		if((RETRY) >=((3)) ){
-		MODE = (31);
+		SPEED = 0;
+		RETRY = RETRY + 1;
+		if(RETRY >= 3){
+		MODE = 31;
 		}
 }
-else if((MODE==(11))
+else if((MODE==11)
 ||(MODE==21)
 ||(MODE==31)
 ){
-		SPEED = (0);
-		RUNNING = (*(new BOOL(FALSE)));
+		SPEED = 0;
+		RUNNING = FALSE;
 }
 else{}
 		}
@@ -412,32 +412,57 @@ else{}
 };
 
 void PROGRAM_test_tricky_TRICKY_MAIN_init(GVL& gvl, ProcessImage& io) {
-		gvl.write<INT>(30, (0));
-		gvl.write<INT>(32, (0));
-		gvl.write<DINT>(36, (0));
-		gvl.write<DINT>(40, (0));
-		gvl.write<INT>(44, (-450));
-		gvl.write<INT>(46, (0));
-		gvl.write<REAL>(48, (0.0));
-		gvl.write<DINT>(52, (0));
-		gvl.write<DINT>(56, (0));
-		gvl.write<INT>(96, (0));
-		gvl.write<BOOL>(98, (*(new BOOL(FALSE))));
-		gvl.write<INT>(124, (0));
-		gvl.write<DINT>(128, (0));
+		gvl.write<INT>(30, 0);
+		gvl.write<INT>(32, 0);
+		gvl.write<DINT>(36, 0);
+		gvl.write<DINT>(40, 0);
+		gvl.write<INT>(44, -450);
+		gvl.write<INT>(46, 0);
+		gvl.write<REAL>(48, 0.0);
+		gvl.write<DINT>(52, 0);
+		gvl.write<DINT>(56, 0);
+		gvl.write<INT>(96, 0);
+		gvl.write<BOOL>(98, FALSE);
+		gvl.write<INT>(124, 0);
+		gvl.write<DINT>(128, 0);
 }
 void PROGRAM_test_tricky_TRICKY_MAIN_pre(GVL& gvl, ProcessImage& io) {
 }
 void PROGRAM_test_tricky_TRICKY_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
+	MATRIX_ROW MATRIX[3];
+	MATRIX[0] = gvl.read<MATRIX_ROW>(0);
+	MATRIX[1] = gvl.read<MATRIX_ROW>(10);
+	MATRIX[2] = gvl.read<MATRIX_ROW>(20);
+	INT I = gvl.read<INT>(30);
+	INT J = gvl.read<INT>(32);
+	DINT TOTAL = gvl.read<DINT>(36);
+	DINT COUNT = gvl.read<DINT>(40);
+	INT VAL = gvl.read<INT>(44);
+	INT WRAPPED = gvl.read<INT>(46);
+	REAL AVG = gvl.read<REAL>(48);
+	DINT CLAMPED = gvl.read<DINT>(52);
+	DINT CLAMPED2 = gvl.read<DINT>(56);
+	STATE_MACHINE SM = gvl.read<STATE_MACHINE>(72);
+	INT PHASE = gvl.read<INT>(96);
+	BOOL FLAG = gvl.read<BOOL>(98);
+	DINT RESULT_ARR[6];
+	RESULT_ARR[0] = gvl.read<DINT>(100);
+	RESULT_ARR[1] = gvl.read<DINT>(104);
+	RESULT_ARR[2] = gvl.read<DINT>(108);
+	RESULT_ARR[3] = gvl.read<DINT>(112);
+	RESULT_ARR[4] = gvl.read<DINT>(116);
+	RESULT_ARR[5] = gvl.read<DINT>(120);
+	INT K = gvl.read<INT>(124);
+	DINT ARR_VAL = gvl.read<DINT>(128);
 		printf("=== TRICKY TEST START ===");
 		printf("\n");
-		INT I = (0);
-		for( ; I <= (2);I = I + (1)){
-		(gvl.safeArrayAt<MATRIX_ROW>(0, I, 3).TAG) = (I) *((100)) ;
-		INT J = (0);
-		for( ; J <= (3);J = J + (1)){
-		(gvl.safeArrayAt<MATRIX_ROW>(0, I, 3).VALUES[J]) = (((I) *((10)) )) +(J) ;
-		gvl.write<DINT>(36, (gvl.read<DINT>(36)) +((gvl.safeArrayAt<MATRIX_ROW>(0, I, 3).VALUES[J])) );
+		INT I = 0;
+		for( ; I <= 2;I = I + 1){
+		(MATRIX[I].TAG) = I * 100;
+		INT J = 0;
+		for( ; J <= 3;J = J + 1){
+		(MATRIX[I].VALUES[J]) = (I * 10) + J;
+		TOTAL = TOTAL + MATRIX[I].VALUES[J];
 		}
 		gvl.write<INT>(32, J);
 		}
@@ -445,110 +470,118 @@ void PROGRAM_test_tricky_TRICKY_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt)
 		printf("TOTAL = ");
 		printf("%d", (int)(gvl.read<DINT>(36)));
 		printf("\n");
-		INT _ANGLE0=gvl.read<INT>(44);
-		gvl.write<INT>(46, WRAP_ANGLE(_ANGLE0));
+		WRAPPED = WRAP_ANGLE(VAL);
 		printf("WRAPPED = ");
 		printf("%d", (int)(gvl.read<INT>(46)));
 		printf("\n");
-		REAL _A1=(10.5);
-		REAL _B2=(20.5);
-		gvl.write<REAL>(48, AVERAGE(_A1, _B2));
+		AVG = AVERAGE(10.5, 20.5);
 		printf("AVG = ");
 		printf("%d", (int)(gvl.read<REAL>(48)));
 		printf("\n");
-		INT _VAL3=(-100);
-		INT _MINV4=(0);
-		INT _MAXV5=(50);
-		gvl.write<DINT>(52, CLAMP(_VAL3, _MINV4, _MAXV5));
+		CLAMPED = CLAMP(-100, 0, 50);
 		printf("CLAMPED = ");
 		printf("%d", (int)(gvl.read<DINT>(52)));
 		printf("\n");
-		INT _VAL6=(999);
-		INT _MINV7=(0);
-		INT _MAXV8=(100);
-		gvl.write<DINT>(56, CLAMP(_VAL6, _MINV7, _MAXV8));
+		CLAMPED2 = CLAMP(999, 0, 100);
 		printf("CLAMPED2 = ");
 		printf("%d", (int)(gvl.read<DINT>(56)));
 		printf("\n");
-		gvl.write<INT>(96, (1));
-		gvl.write<INT>(72, gvl.read<INT>(96));
-		gvl.write<DINT>(76, (500));
+		PHASE = 1;
 		gvl.ptr<STATE_MACHINE>(72)->update();
-		gvl.write<INT>(96, (2));
-		gvl.write<INT>(72, gvl.read<INT>(96));
-		gvl.write<DINT>(76, (1200));
+		PHASE = 2;
 		gvl.ptr<STATE_MACHINE>(72)->update();
-		gvl.write<INT>(96, (3));
-		gvl.write<INT>(72, gvl.read<INT>(96));
-		gvl.write<DINT>(76, (-800));
+		PHASE = 3;
 		gvl.ptr<STATE_MACHINE>(72)->update();
-		gvl.write<INT>(124, (0));
+		K = 0;
 		do{
-		INT _X15=(gvl.read<INT>(124)) *((10)) ;
-		(gvl.safeArrayAt<DINT>(100, gvl.read<INT>(124), 6)) = DOUBLE_IT(_X15);
-		gvl.write<INT>(124, (gvl.read<INT>(124)) +((1)) );
-		}while(!((gvl.read<INT>(124)) >=((6)) ));
-		gvl.write<DINT>(128, (42));
+		INT _X15=K * 10;
+		(RESULT_ARR[K]) = DOUBLE_IT(_X15);
+		K = K + 1;
+		}while(!(K >= 6));
+		ARR_VAL = 42;
 		printf("RESULT_ARR[3] = ");
 		printf("%d", (int)(gvl.read<DINT>(128)));
 		printf("\n");
-		gvl.write<BOOL>(98, ((((gvl.read<INT>(30)) >=((2)) )) & (((gvl.read<DINT>(36)) >((0)) )) ) || (((gvl.read<INT>(46)) !=((270)) )));
-		if((gvl.read<BOOL>(98)) & (( ! ((gvl.read<DINT>(52)) <((0)) ))) ){
+		FLAG = (I >= 2) && (TOTAL > 0) || (WRAPPED != 270);
+		if(FLAG && ! (CLAMPED < 0)){
 		printf("FLAG IS TRUE");
 		printf("\n");
 		}
-		gvl.write<DINT>(40, (0));
-		while((gvl.read<DINT>(40)) <((10)) ){
-		gvl.write<DINT>(40, (gvl.read<DINT>(40)) +((1)) );
-		if((gvl.read<DINT>(40)) ==((5)) ){
-		gvl.write<DINT>(40, (10));
+		COUNT = 0;
+		while(COUNT < 10){
+		COUNT = COUNT + 1;
+		if(COUNT == 5){
+		COUNT = 10;
 		}
 		}
 		printf("COUNT = ");
 		printf("%d", (int)(gvl.read<DINT>(40)));
 		printf("\n");
-		{ bool _st_assert = ((gvl.read<DINT>(36)) ==((66)) );
+		{ bool _st_assert = (TOTAL == 66);
 		  if(_st_assert)
 		    printf("  [PASS] assert (line 224)\n");
 		  else
 		    printf("  [FAIL] assert (line 224): TOTAL=66\n"); }
-		{ bool _st_assert = ((gvl.read<INT>(46)) ==((270)) );
+		{ bool _st_assert = (WRAPPED == 270);
 		  if(_st_assert)
 		    printf("  [PASS] assert (line 225)\n");
 		  else
 		    printf("  [FAIL] assert (line 225): WRAPPED=270\n"); }
-		{ bool _st_assert = ((gvl.read<DINT>(52)) ==((50)) );
+		{ bool _st_assert = (CLAMPED == 50);
 		  if(_st_assert)
 		    printf("  [PASS] assert (line 226)\n");
 		  else
 		    printf("  [FAIL] assert (line 226): CLAMPED=50\n"); }
-		{ bool _st_assert = ((gvl.read<REAL>(48)) >((15.0)) );
+		{ bool _st_assert = (AVG > 15.0);
 		  if(_st_assert)
 		    printf("  [PASS] assert (line 227)\n");
 		  else
 		    printf("  [FAIL] assert (line 227): AVG>15.0\n"); }
-		{ bool _st_assert = (((gvl.safeArrayAt<MATRIX_ROW>(0, 0, 3).TAG)) ==((0)) );
+		{ bool _st_assert = (MATRIX[0].TAG == 0);
 		  if(_st_assert)
 		    printf("  [PASS] assert (line 228)\n");
 		  else
 		    printf("  [FAIL] assert (line 228): MATRIX[0].TAG=0\n"); }
-		{ bool _st_assert = (((gvl.safeArrayAt<MATRIX_ROW>(0, 2, 3).VALUES[3])) ==((23)) );
+		{ bool _st_assert = (MATRIX[2].VALUES[3] == 23);
 		  if(_st_assert)
 		    printf("  [PASS] assert (line 229)\n");
 		  else
 		    printf("  [FAIL] assert (line 229): MATRIX[2].VALUES[3]=23\n"); }
-		{ bool _st_assert = ((gvl.read<INT>(124)) >=((6)) );
+		{ bool _st_assert = (K >= 6);
 		  if(_st_assert)
 		    printf("  [PASS] assert (line 230)\n");
 		  else
 		    printf("  [FAIL] assert (line 230): K>=6\n"); }
-		{ bool _st_assert = (( ! gvl.read<BOOL>(98)));
+		{ bool _st_assert = (! FLAG);
 		  if(_st_assert)
 		    printf("  [PASS] assert (line 231)\n");
 		  else
 		    printf("  [FAIL] assert (line 231): NOTFLAG\n"); }
 		printf("=== TRICKY TEST PASS ===");
 		printf("\n");
+	gvl.write<MATRIX_ROW>(0, MATRIX[0]);
+	gvl.write<MATRIX_ROW>(10, MATRIX[1]);
+	gvl.write<MATRIX_ROW>(20, MATRIX[2]);
+	gvl.write<INT>(30, I);
+	gvl.write<INT>(32, J);
+	gvl.write<DINT>(36, TOTAL);
+	gvl.write<DINT>(40, COUNT);
+	gvl.write<INT>(44, VAL);
+	gvl.write<INT>(46, WRAPPED);
+	gvl.write<REAL>(48, AVG);
+	gvl.write<DINT>(52, CLAMPED);
+	gvl.write<DINT>(56, CLAMPED2);
+	gvl.write<STATE_MACHINE>(72, SM);
+	gvl.write<INT>(96, PHASE);
+	gvl.write<BOOL>(98, FLAG);
+	gvl.write<DINT>(100, RESULT_ARR[0]);
+	gvl.write<DINT>(104, RESULT_ARR[1]);
+	gvl.write<DINT>(108, RESULT_ARR[2]);
+	gvl.write<DINT>(112, RESULT_ARR[3]);
+	gvl.write<DINT>(116, RESULT_ARR[4]);
+	gvl.write<DINT>(120, RESULT_ARR[5]);
+	gvl.write<INT>(124, K);
+	gvl.write<DINT>(128, ARR_VAL);
 }
 void PROGRAM_test_tricky_TRICKY_MAIN_post(GVL& gvl, ProcessImage& io) {
 }

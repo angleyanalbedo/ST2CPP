@@ -300,20 +300,20 @@ struct MY_TIMER {
     INT PT; // = 0
     BOOL Q; // = false
     INT ET; // = 0
-    BOOL RUNNING; // = (*(new BOOL(FALSE)))
+    BOOL RUNNING; // = FALSE
     INT ELAPSED; // = (0)
     BOOL START; // = false
 
     void update() {
 
-		if((START) & (( ! RUNNING)) ){
-		RUNNING = (*(new BOOL(TRUE)));
-		ELAPSED = (0);
+		if(START && ! RUNNING){
+		RUNNING = TRUE;
+		ELAPSED = 0;
 		}
 		if(RUNNING){
-		ELAPSED = (ELAPSED) +((1)) ;
-		if((ELAPSED) >=(PT) ){
-		Q = (*(new BOOL(TRUE)));
+		ELAPSED = ELAPSED + 1;
+		if(ELAPSED >= PT){
+		Q = TRUE;
 		}
 		}
 		ET = ELAPSED;

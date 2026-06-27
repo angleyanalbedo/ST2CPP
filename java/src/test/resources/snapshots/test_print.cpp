@@ -299,13 +299,16 @@ REAL MIN(REAL IN0, REAL IN1);
 INT PRINTF(STRING FMT);
 
 void PROGRAM_test_print_MAIN_init(GVL& gvl, ProcessImage& io) {
-		gvl.write<INT>(0, (42));
-		gvl.write<INT>(2, (10));
+		gvl.write<INT>(0, 42);
+		gvl.write<INT>(2, 10);
 }
 void PROGRAM_test_print_MAIN_pre(GVL& gvl, ProcessImage& io) {
 }
 void PROGRAM_test_print_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
-		gvl.write<INT>(4, (gvl.read<INT>(0)) +(gvl.read<INT>(2)) );
+	INT A = gvl.read<INT>(0);
+	INT B = gvl.read<INT>(2);
+	INT C = gvl.read<INT>(4);
+		C = A + B;
 		printf("C = ");
 		printf("%d", (int)(gvl.read<INT>(4)));
 		printf("\n");
@@ -316,10 +319,13 @@ void PROGRAM_test_print_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 		printf("\n");
 		printf("%d", (int)(gvl.read<INT>(4)));
 		printf("\n");
-		if((gvl.read<INT>(4)) ==((52)) ){
+		if(C == 52){
 		printf("%d", (int)(gvl.read<INT>(0)));
 		printf("\n");
 		}
+	gvl.write<INT>(0, A);
+	gvl.write<INT>(2, B);
+	gvl.write<INT>(4, C);
 }
 void PROGRAM_test_print_MAIN_post(GVL& gvl, ProcessImage& io) {
 }

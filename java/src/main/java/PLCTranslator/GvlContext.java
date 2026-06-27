@@ -21,10 +21,8 @@ public class GvlContext {
 
     // ─── Struct 类型支持 ───
     public final Map<String, StructLayout> structLayoutMap = new HashMap<>();
-    public final Map<String, String> structTypeToName = new HashMap<>();
 
     // ─── Enum 类型支持 ───
-    public final Map<String, String> enumRuntimeToUnderlying = new HashMap<>();
     public final Map<String, String> enumNameToUnderlying = new HashMap<>();
 
     // ─── I/O 映射变量支持 ───
@@ -103,14 +101,12 @@ public class GvlContext {
         }
     }
 
-    public void registerStructType(String typeName, String runtimeType, StructLayout layout) {
+    public void registerStructType(String typeName, StructLayout layout) {
         structLayoutMap.put(typeName, layout);
-        structTypeToName.put(runtimeType, typeName);
         SIZE_MAP.put(typeName, layout.totalSize);
     }
 
-    public void registerEnumType(String enumName, String runtimeTypeName, String underlyingNativeType) {
-        enumRuntimeToUnderlying.put(runtimeTypeName, underlyingNativeType);
+    public void registerEnumType(String enumName, String underlyingNativeType) {
         enumNameToUnderlying.put(enumName, underlyingNativeType);
     }
 
@@ -210,9 +206,7 @@ public class GvlContext {
     public String toNativeType(String typeName) {
         if (typeName == null) return typeName;
         // 枚举类型保持原样，不降级为底层类型
-        String mapped = structTypeToName.get(typeName);
-        if (mapped != null) return mapped;
-        mapped = TYPE_MAP.get(typeName);
+        String mapped = TYPE_MAP.get(typeName);
         return mapped != null ? mapped : typeName;
     }
 
@@ -370,31 +364,6 @@ public class GvlContext {
         return sb.toString();
     }
 
-    // ═══ FB 调用 ═══
-
-    public String emitFBCall(String fbInstanceName, String fbTypeName,
-                              List<String> paramNames, List<String> paramValues) {
-        StringBuilder sb = new StringBuilder();
-        Integer fbOffset = offsetMap.get(fbInstanceName);
-        if (fbOffset == null) {
-            sb.append("\n\t\t// FB instance ").append(fbInstanceName).append(" not in GVL, direct call");
-            sb.append("\n\t\t").append(fbInstanceName).append(".update();");
-            return sb.toString();
-        }
-        for (int i = 0; i < paramNames.size(); i++) {
-            String fieldName = paramNames.get(i);
-            String value = paramValues.get(i);
-            Integer fieldOffset = getStructFieldOffset(fbTypeName, fieldName);
-            if (fieldOffset != null) {
-                String fieldType = getStructFieldType(fbTypeName, fieldName);
-                sb.append("\n\t\tgvl.write<").append(fieldType).append(">(")
-                  .append(fbOffset + fieldOffset).append(", ").append(value).append(");");
-            }
-        }
-        sb.append("\n\t\tgvl.ptr<").append(fbTypeName).append(">(")
-          .append(fbOffset).append(")->update();");
-        return sb.toString();
-    }
 
     // ═══ 数组类型信息 ═══
 
@@ -404,24 +373,14 @@ public class GvlContext {
     }
 
     public ArrayInfo parseArrayType(String typeName) {
-        if (typeName == null) return null;
-        ArrayInfo info = new ArrayInfo();
-        Pattern rangePattern = Pattern.compile(
-            "ARRAY\\[(\\d+)\\.\\.(\\d+)\\]\\s+OF\\s+(\\w+)");
-        Matcher matcher = rangePattern.matcher(typeName);
-        if (matcher.find()) {
-            int low = Integer.parseInt(matcher.group(1));
-            int high = Integer.parseInt(matcher.group(2));
-            info.count = high - low + 1;
-            info.elemType = toNativeType(matcher.group(3));
-            return info;
-        }
-        Pattern simplePattern = Pattern.compile(
+        if (typeName == null || !typeName.startsWith("ARRAY[")) return null;
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
             "ARRAY\\[(\\d+)\\]\\s+OF\\s+(\\w+)");
-        matcher = simplePattern.matcher(typeName);
+        java.util.regex.Matcher matcher = pattern.matcher(typeName);
         if (matcher.find()) {
+            ArrayInfo info = new ArrayInfo();
             info.count = Integer.parseInt(matcher.group(1));
-            info.elemType = toNativeType(matcher.group(2));
+            info.elemType = matcher.group(2);
             return info;
         }
         return null;
@@ -440,6 +399,29 @@ public class GvlContext {
               .append("\n");
         }
         sb.append("// Total GVL usage: ").append(currentOffset).append(" bytes\n");
+        return sb.toString();
+    }
+
+    public String emitFBCall(String fbInstanceName, String fbTypeName,
+                              List<String> paramNames, List<String> paramValues) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < paramNames.size(); i++) {
+            String paramName = paramNames.get(i);
+            String paramValue = paramValues.get(i);
+            Integer offset = offsetMap.get(paramName);
+            String type = typeMap.get(paramName);
+            if (offset != null && type != null) {
+                sb.append("\n\t\tgvl.write<").append(type).append(">(")
+                  .append(offset).append(", ").append(paramValue).append(");");
+            }
+        }
+        Integer fbOffset = offsetMap.get(fbInstanceName);
+        if (fbOffset != null) {
+            sb.append("\n\t\tgvl.ptr<").append(fbTypeName).append(">(")
+              .append(fbOffset).append(")->update();");
+        } else {
+            sb.append("\n\t\t").append(fbInstanceName).append(".update();");
+        }
         return sb.toString();
     }
 

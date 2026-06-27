@@ -300,22 +300,22 @@ struct MY_COUNTER {
     BOOL RESET; // = false
     BOOL Q; // = false
     INT CV; // = 0
-    BOOL PREV_CLK; // = (*(new BOOL(FALSE)))
+    BOOL PREV_CLK; // = FALSE
     INT COUNT; // = (0)
     BOOL CLK; // = false
 
     void update() {
 
-		Q = (*(new BOOL(FALSE)));
+		Q = FALSE;
 		if(RESET){
-		COUNT = (0);
-		}else if((CLK) & (( ! PREV_CLK)) ){
-		COUNT = (COUNT) +((1)) ;
+		COUNT = 0;
+		}else if(CLK && ! PREV_CLK){
+		COUNT = COUNT + 1;
 		}
 		PREV_CLK = CLK;
 		CV = COUNT;
-		if((COUNT) >=((5)) ){
-		Q = (*(new BOOL(TRUE)));
+		if(COUNT >= 5){
+		Q = TRUE;
 		}
     }
 };
