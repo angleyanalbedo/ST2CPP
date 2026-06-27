@@ -329,7 +329,6 @@ void PROGRAM_test_print_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 }
 void PROGRAM_test_print_MAIN_post(GVL& gvl, ProcessImage& io) {
 }
-
 // ─── Auto-generated POU Registration (test_print) ───
 void registerPOU_test_print(POURegistry& reg) {
     POUCallbacks cbs;

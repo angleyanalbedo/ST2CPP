@@ -363,7 +363,6 @@ void PROGRAM_test_assert_P_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 }
 void PROGRAM_test_assert_P_post(GVL& gvl, ProcessImage& io) {
 }
-
 // ─── Auto-generated POU Registration (test_assert) ───
 void registerPOU_test_assert(POURegistry& reg) {
     POUCallbacks cbs;

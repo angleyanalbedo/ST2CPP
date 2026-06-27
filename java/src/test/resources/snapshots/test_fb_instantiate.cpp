@@ -332,7 +332,6 @@ void PROGRAM_test_fb_instantiate_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt
 }
 void PROGRAM_test_fb_instantiate_MAIN_post(GVL& gvl, ProcessImage& io) {
 }
-
 // ─── Auto-generated POU Registration (test_fb_instantiate) ───
 void registerPOU_test_fb_instantiate(POURegistry& reg) {
     POUCallbacks cbs;

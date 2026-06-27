@@ -1,7 +1,7 @@
 package PLCTranslator.TranslateType.Pou_decl;
 
-import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
-import PLCSymbolAndScope.PLCSymbols.PLCVariable;
+import PLCSymbolAndScope.PLCSymbolTables.PLCTotalSymbolTable;
+import PLCSymbolAndScope.PLCSymbols.*;
 import PLCTranslator.GvlContext;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
@@ -16,8 +16,7 @@ public class TranslateGlobal_var_decls {
             ArrayList<PLCSymbol> globalVarDecl = PLCTranslatorNew.properties.get(global_var_decl);
             for (PLCSymbol symbol : globalVarDecl) {
                 PLCVariable varSymbol = (PLCVariable) symbol;
-                emitGlobalVarDeclInline(sb, varSymbol.getName(),
-                    varSymbol.getRuntimeTypeName(), varSymbol.getAssignVar(), translatorNew.gvlCtx);
+                emitGlobalVarDeclInline(sb, varSymbol, translatorNew.gvlCtx);
             }
         }
 
@@ -34,30 +33,36 @@ public class TranslateGlobal_var_decls {
         return sb.toString();
     }
 
-    private void emitGlobalVarDeclInline(StringBuilder sb, String name, String typeName, String assignVar, GvlContext gvlCtx) {
-        if (typeName != null && typeName.startsWith("ARRAY")) {
-            int count = 0;
-            String elemType = "INT";
-            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
-                "ARRAY\\[(\\d+)\\.\\.(\\d+)\\]\\s+OF\\s+(\\w+)");
-            java.util.regex.Matcher matcher = pattern.matcher(typeName);
-            if (matcher.find()) {
-                int low = Integer.parseInt(matcher.group(1));
-                int high = Integer.parseInt(matcher.group(2));
-                count = high - low + 1;
-                elemType = gvlCtx.toNativeType(matcher.group(3));
+    private void emitGlobalVarDeclInline(StringBuilder sb, PLCVariable varSymbol, GvlContext gvlCtx) {
+        int[][] arrayBounds = varSymbol.getArrayBounds();
+
+        if (arrayBounds != null) {
+            int typeId = varSymbol.getTypeId();
+            String elemTypeNative = "INT";
+            if (typeId != 0) {
+                PLCTypeDeclSymbol typeDecl = PLCTotalSymbolTable.getTypeByTypeID(typeId);
+                if (typeDecl instanceof PLCArrayDeclSymbol) {
+                    PLCArrayDeclSymbol arrayDecl = (PLCArrayDeclSymbol) typeDecl;
+                    PLCTypeDeclSymbol elemType = PLCTotalSymbolTable.getTypeByTypeID(
+                        arrayDecl.getElementTypeId());
+                    if (elemType != null) {
+                        elemTypeNative = gvlCtx.toNativeType(elemType.getName());
+                    }
+                }
             }
-            if (count > 0) {
-                int elemSize = gvlCtx.getTypeSize(elemType);
-                int totalSize = elemSize * count;
-                int aligned = (gvlCtx.currentOffset + elemSize - 1) / elemSize * elemSize;
-                gvlCtx.offsetMap.put(name, aligned);
-                gvlCtx.typeMap.put(name, "ARRAY[" + count + "] OF " + elemType);
-                gvlCtx.currentOffset = aligned + totalSize;
-                return;
-            }
+            int totalCount = varSymbol.getArrayTotalCount();
+            int elemSize = gvlCtx.getTypeSize(elemTypeNative);
+            int totalSize = elemSize * totalCount;
+            int aligned = (gvlCtx.currentOffset + elemSize - 1) / elemSize * elemSize;
+            gvlCtx.offsetMap.put(varSymbol.getName(), aligned);
+            gvlCtx.typeMap.put(varSymbol.getName(), "ARRAY[" + totalCount + "] OF " + elemTypeNative);
+            gvlCtx.arrayBoundsMap.put(varSymbol.getName(), arrayBounds);
+            gvlCtx.arrayElemTypeMap.put(varSymbol.getName(), elemTypeNative);
+            gvlCtx.currentOffset = aligned + totalSize;
+            return;
         }
-        String nativeType = gvlCtx.toNativeType(typeName);
-        gvlCtx.allocateOffset(name, nativeType);
+
+        String nativeType = gvlCtx.toNativeType(varSymbol.getRuntimeTypeName());
+        gvlCtx.allocateOffset(varSymbol.getName(), nativeType);
     }
 }

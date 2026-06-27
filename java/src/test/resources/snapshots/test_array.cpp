@@ -326,7 +326,6 @@ void PROGRAM_test_array_P_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 }
 void PROGRAM_test_array_P_post(GVL& gvl, ProcessImage& io) {
 }
-
 // ─── Auto-generated POU Registration (test_array) ───
 void registerPOU_test_array(POURegistry& reg) {
     POUCallbacks cbs;

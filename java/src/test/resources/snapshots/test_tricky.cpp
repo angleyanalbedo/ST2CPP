@@ -585,7 +585,6 @@ void PROGRAM_test_tricky_TRICKY_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt)
 }
 void PROGRAM_test_tricky_TRICKY_MAIN_post(GVL& gvl, ProcessImage& io) {
 }
-
 // ─── Auto-generated POU Registration (test_tricky) ───
 void registerPOU_test_tricky(POURegistry& reg) {
     POUCallbacks cbs;
