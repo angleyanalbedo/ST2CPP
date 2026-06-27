@@ -24,7 +24,7 @@ public class TranslateEnum_type_decl {
         String underlyingType = protoType != null
             ? gvlCtx.toNativeType(protoType.getRuntimeName()) : "INT";
 
-        gvlCtx.registerEnumType(enumName, underlyingType);
+        gvlCtx.registerEnumType(enumName, enumSymbol.getRuntimeTypeName(), underlyingType);
 
         List<String> entries = new ArrayList<>();
         for (PLCVariable var : enumSymbol.getEnumValues()) {

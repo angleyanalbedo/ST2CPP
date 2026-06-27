@@ -17,9 +17,14 @@ public class GvlContext {
 
     // ─── Struct 类型支持 ───
     public final Map<String, StructLayout> structLayoutMap = new HashMap<>();
+    // 运行时结构体类型名 → struct 名（如 "PLC_Struct_Value<2939>" → "MY_STRUCT"）
+    public final Map<String, String> structTypeToName = new HashMap<>();
 
     // ─── Enum 类型支持 ───
+    // 枚举名 → 底层 C++ 类型（如 "DIRECTION" → "INT"）
     public final Map<String, String> enumNameToUnderlying = new HashMap<>();
+    // 运行时枚举类型名 → 底层 C++ 类型（如 "PLC_Enum_Value<2938>" → "INT"）
+    public final Map<String, String> enumRuntimeToUnderlying = new HashMap<>();
 
     // ─── I/O 映射变量支持 ───
     public enum IODirection { INPUT, OUTPUT, MEMORY }
@@ -97,13 +102,15 @@ public class GvlContext {
         }
     }
 
-    public void registerStructType(String typeName, StructLayout layout) {
+    public void registerStructType(String typeName, String runtimeTypeName, StructLayout layout) {
         structLayoutMap.put(typeName, layout);
+        structTypeToName.put(runtimeTypeName, typeName);
         SIZE_MAP.put(typeName, layout.totalSize);
     }
 
-    public void registerEnumType(String enumName, String underlyingNativeType) {
+    public void registerEnumType(String enumName, String runtimeTypeName, String underlyingNativeType) {
         enumNameToUnderlying.put(enumName, underlyingNativeType);
+        enumRuntimeToUnderlying.put(runtimeTypeName, underlyingNativeType);
     }
 
     public Integer getStructFieldOffset(String structTypeName, String fieldName) {
@@ -190,18 +197,36 @@ public class GvlContext {
 
     public String toNativeType(String typeName) {
         if (typeName == null) return typeName;
-        // 枚举类型保持原样，不降级为底层类型
+        // 1) ST 基础类型映射
         String mapped = TYPE_MAP.get(typeName);
-        return mapped != null ? mapped : typeName;
+        if (mapped != null) return mapped;
+        // 2) 运行时结构体类型名 → struct 名
+        mapped = structTypeToName.get(typeName);
+        if (mapped != null) return mapped;
+        // 3) 运行时枚举类型名 → 保持原样（getTypeSize 会查 enumRuntimeToUnderlying）
+        return typeName;
     }
 
-    public int getTypeSize(String nativeType) {
-        if (nativeType == null) return 4;
+    /**
+     * 查询类型在 GVL 中占用的字节数。
+     *
+     * @param typeName 类型名——可以是 ST 原始类型（如 "TIME"），
+     *                 也可以是 C++ 原生类型（如 "UINT", "MY_STRUCT"）。
+     *                 方法内部会先尝试映射为 C++ 原生类型，再查大小。
+     * @return 该类型占用的字节数，未知时默认返回 4
+     */
+    public int getTypeSize(String typeName) {
+        if (typeName == null) return 4;
+        // 先统一转换为 C++ 原生类型名（例如 "TIME" → "UINT"）
+        String nativeType = toNativeType(typeName);
         Integer size = SIZE_MAP.get(nativeType);
         if (size != null) return size;
         StructLayout layout = structLayoutMap.get(nativeType);
         if (layout != null) return layout.totalSize;
         String underlying = enumNameToUnderlying.get(nativeType);
+        if (underlying != null) return getTypeSize(underlying);
+        // 运行时枚举类型名（如 "PLC_Enum_Value<2938>"）→ 底层类型
+        underlying = enumRuntimeToUnderlying.get(nativeType);
         if (underlying != null) return getTypeSize(underlying);
         ArrayInfo arrayInfo = parseArrayType(nativeType);
         if (arrayInfo != null) {
@@ -216,6 +241,23 @@ public class GvlContext {
         offsetMap.put(varName, aligned);
         typeMap.put(varName, nativeType);
         currentOffset = aligned + size;
+        return aligned;
+    }
+
+    /**
+     * 分配数组变量的 GVL 偏移量，同时注册 bounds 和 elemType 信息。
+     * 封装了 offset/type/arrayBounds/arrayElemType 四个 map 的写入。
+     */
+    public int allocateArrayOffset(String varName, int totalCount,
+                                   String elemTypeNative, int[][] arrayBounds) {
+        int elemSize = getTypeSize(elemTypeNative);
+        int totalSize = elemSize * totalCount;
+        int aligned = (currentOffset + elemSize - 1) / elemSize * elemSize;
+        offsetMap.put(varName, aligned);
+        typeMap.put(varName, "ARRAY[" + totalCount + "] OF " + elemTypeNative);
+        arrayBoundsMap.put(varName, arrayBounds);
+        arrayElemTypeMap.put(varName, elemTypeNative);
+        currentOffset = aligned + totalSize;
         return aligned;
     }
 

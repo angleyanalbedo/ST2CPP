@@ -205,12 +205,7 @@ public class TranslateProg_decl {
             int totalCount = varSymbol.getArrayTotalCount();
             int elemSize = gvlCtx.getTypeSize(elemTypeNative);
             int totalSize = elemSize * totalCount;
-            int aligned = (gvlCtx.currentOffset + elemSize - 1) / elemSize * elemSize;
-            gvlCtx.offsetMap.put(name, aligned);
-            gvlCtx.typeMap.put(name, "ARRAY[" + totalCount + "] OF " + elemTypeNative);
-            gvlCtx.arrayBoundsMap.put(name, arrayBounds);
-            gvlCtx.arrayElemTypeMap.put(name, elemTypeNative);
-            gvlCtx.currentOffset = aligned + totalSize;
+            gvlCtx.allocateArrayOffset(name, totalCount, elemTypeNative, arrayBounds);
             return;
         }
 

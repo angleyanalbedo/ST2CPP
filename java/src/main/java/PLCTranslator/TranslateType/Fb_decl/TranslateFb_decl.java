@@ -53,7 +53,7 @@ public class TranslateFb_decl {
         }
         GvlContext.StructLayout layout = new GvlContext.StructLayout(
             fbName, structFields, currentOffset);
-        translatorNew.gvlCtx.registerStructType(fbName, layout);
+        translatorNew.gvlCtx.registerStructType(fbName, fbSymbol.getRuntimeTypeName(), layout);
 
         return sb.toString();
     }

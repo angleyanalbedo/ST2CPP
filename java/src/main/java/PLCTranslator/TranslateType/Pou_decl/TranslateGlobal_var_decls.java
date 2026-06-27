@@ -50,15 +50,7 @@ public class TranslateGlobal_var_decls {
                     }
                 }
             }
-            int totalCount = varSymbol.getArrayTotalCount();
-            int elemSize = gvlCtx.getTypeSize(elemTypeNative);
-            int totalSize = elemSize * totalCount;
-            int aligned = (gvlCtx.currentOffset + elemSize - 1) / elemSize * elemSize;
-            gvlCtx.offsetMap.put(varSymbol.getName(), aligned);
-            gvlCtx.typeMap.put(varSymbol.getName(), "ARRAY[" + totalCount + "] OF " + elemTypeNative);
-            gvlCtx.arrayBoundsMap.put(varSymbol.getName(), arrayBounds);
-            gvlCtx.arrayElemTypeMap.put(varSymbol.getName(), elemTypeNative);
-            gvlCtx.currentOffset = aligned + totalSize;
+            gvlCtx.allocateArrayOffset(varSymbol.getName(), varSymbol.getArrayTotalCount(), elemTypeNative, arrayBounds);
             return;
         }
 
