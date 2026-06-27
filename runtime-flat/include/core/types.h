@@ -468,6 +468,134 @@ inline DINT   TIME_TO_DINT(TIME v)    { return (DINT)v; }
 inline INT    TIME_TO_INT(TIME v)     { return (INT)v; }
 inline DWORD  TIME_TO_DWORD(TIME v)   { return (DWORD)v; }
 inline REAL   TIME_TO_REAL(TIME v)    { return (REAL)v; }
+inline STRING TIME_TO_TOD(TIME v) {
+    int64_t us = v % 86400000000LL;
+    if (us < 0) us += 86400000000LL;
+    int h = (int)(us / 3600000000LL);
+    int m = (int)((us % 3600000000LL) / 60000000LL);
+    int s = (int)((us % 60000000LL) / 1000000LL);
+    int ms = (int)((us % 1000000LL) / 1000LL);
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%02d:%02d:%02d.%03d", h, m, s, ms);
+    return STRING(buf);
+}
+
+inline TIME   TOD_TO_TIME(STRING s) {
+    int h = 0, m = 0, sec = 0, ms = 0;
+    sscanf(s.data, "%d:%d:%d.%d", &h, &m, &sec, &ms);
+    return (TIME)h * 3600000000LL + (TIME)m * 60000000LL
+         + (TIME)sec * 1000000LL + (TIME)ms * 1000LL;
+}
+inline REAL   TOD_TO_REAL2(STRING s) { return (REAL)TOD_TO_TIME(s); }
+
+inline UDINT  DATE_TO_UDINT(DATE v)   { return (UDINT)v; }
+inline DATE   DATE_TO_DT(DATE v)      { return v; }
+inline STRING DATE_TO_STRING2(DATE v) {
+    int64_t jdn = (int64_t)v + 2440588;
+    int a = (int)((14 - (jdn + 32044)) / 46061);
+    int y = (int)(jdn + 32044 - a * 46061);
+    int m = (int)((153 * ((y + 256) / 1095) + 2) / 5);
+    int d = (int)(y - m * 365 / 10);
+    int month = m - 3 + 1;
+    if (month <= 0) { month += 12; y--; }
+    m += 3;
+    y = (int)(jdn + 32044 + (m - 3) * 10);
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%d-%02d-%02d", y, month, d);
+    return STRING(buf);
+}
+inline REAL   DATE_TO_REAL2(DATE v)   { return (REAL)v; }
+inline DWORD  DATE_TO_DWORD2(DATE v)  { return (DWORD)(uint32_t)v; }
+
+inline DATE   DT_TO_DATE(DATE_AND_TIME v)  { return DT_to_date(v); }
+inline DATE   DT_TO_DATE2(DATE_AND_TIME v) { return DT_to_date(v); }
+inline STRING DT_TO_TOD2(DATE_AND_TIME v)  { return TIME_TO_TOD((TIME)DT_to_tod(v)); }
+inline DATE   DT_TO_SDT(DATE_AND_TIME v)   { return DT_to_date(v); }
+inline STRING DT_TO_STRF(DATE_AND_TIME v) {
+    DATE d = DT_to_date(v);
+    return DATE_TO_STRING2(d);
+}
+
+inline DATE   SDT_TO_DATE(DATE v)   { return v; }
+inline DATE   SDT_TO_DT(DATE v)     { return v; }
+inline STRING SDT_TO_TOD(DATE v)    { return TIME_TO_TOD((TIME)v); }
+
+
+// ─── 格式化字符串转换 ───
+
+inline STRING REAL_TO_STRF(REAL v) {
+    STRING s;
+    snprintf(s.data, STRING_MAX_LEN + 1, "%f", (double)v);
+    return s;
+}
+
+inline STRING DWORD_TO_STRB(DWORD v) {
+    char buf[33];
+    for (int i = 0; i < 32; i++) buf[i] = (v & (1u << (31 - i))) ? '1' : '0';
+    buf[32] = '\0';
+    return STRING(buf);
+}
+
+inline STRING DWORD_TO_STRH(DWORD v) {
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%X", v);
+    return STRING(buf);
+}
+
+inline STRING DWORD_TO_STRF(DWORD v) {
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%u", v);
+    return STRING(buf);
+}
+
+inline STRING BYTE_TO_STRB(BYTE v) {
+    char buf[9];
+    for (int i = 0; i < 8; i++) buf[i] = (v & (1 << (7 - i))) ? '1' : '0';
+    buf[8] = '\0';
+    return STRING(buf);
+}
+
+inline STRING BYTE_TO_STRH(BYTE v) {
+    char buf[8];
+    snprintf(buf, sizeof(buf), "%X", (unsigned)v);
+    return STRING(buf);
+}
+
+inline STRING BYTE_TO_BITS(BYTE v) { return BYTE_TO_STRB(v); }
+
+inline BYTE BYTE_TO_TIME2(BYTE v) { return v; }
+
+inline BYTE BYTE_TO_GRAY(BYTE v) { return v ^ (v >> 1); }
+inline BYTE GRAY_TO_BYTE(BYTE v) {
+    BYTE mask = v >> 1;
+    while (mask) { v ^= mask; mask >>= 1; }
+    return v;
+}
+
+inline INT  BCD_TO_INT(BYTE v) { return (INT)(((v >> 4) & 0xF) * 10 + (v & 0xF)); }
+inline BYTE INT_TO_BCD(INT v) {
+    return (BYTE)((((v / 10) % 10) << 4) | (v % 10));
+}
+
+inline STRING UINT_TO_STRING(UINT v) {
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%u", (unsigned)v);
+    return STRING(buf);
+}
+
+inline STRING STRING_TO_URL(STRING s) { return s; }
+inline STRING STRING_TO_BUFFER(STRING s) { return s; }
+
+
+// ─── MOVE / TRUNC / FLOOR / EXP ───
+
+template<typename T> inline T MOVE(T v) { return v; }
+
+inline INT TRUNC(REAL v) { return (INT)v; }
+
+inline INT FLOOR(REAL v) { return (INT)std::floor((double)v); }
+
+inline REAL EXP(REAL x) { return (REAL)std::exp((double)x); }
 
 
 // ═══════════════════════════════════════════════════════
