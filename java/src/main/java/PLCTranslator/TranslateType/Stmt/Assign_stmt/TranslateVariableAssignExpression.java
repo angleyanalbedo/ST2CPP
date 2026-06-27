@@ -11,81 +11,34 @@ public class TranslateVariableAssignExpression {
 
         PLCVariable varSymbol = PLCTranslatorNew.getVariable(ctx, "assign target");
 
-        if(varSymbol.getSort() != PLCModifierEnum.Sort.FC) {
-            String assignVar = varSymbol.getAssignVar();
-            if (assignVar != null && assignVar.contains("(")) {
-                // 遍历参数符号，为每个参数生成临时变量声明
-                java.util.List<PLCVariable> paramSymbols = getParamSymbols(ctx);
-                for (PLCVariable paramVar : paramSymbols) {
-                    String paramAssignVar = paramVar.getAssignVar();
-                    if (paramAssignVar != null && !paramAssignVar.isEmpty()) {
-                        String typeName = paramVar.getRuntimeTypeName();
-                        if (typeName == null || typeName.isEmpty()) {
-                            typeName = "INT";
-                        }
-                        typeName = translatorNew.gvlCtx.toNativeType(typeName);
-                        String translatedAssignVar = PLCTranslatorNew.gvlCtx.translateExpr(paramAssignVar);
-                        sb.append("\n\t\t").append(typeName).append(" ")
-                          .append(paramVar.getRuntimeName()).append("=")
-                          .append(translatedAssignVar).append(";");
-                    }
-                }
-            }
+        // 1. 通过 visitor 翻译右侧表达式（函数调用会产生 pendingDecls）
+        String rhs = translatorNew.visit(ctx.expression());
 
-            String translated = PLCTranslatorNew.gvlCtx.translateExpr(assignVar);
-            sb.append("\n\t\t").append(PLCTranslatorNew.gvlCtx.writeExpr(varSymbol.getName(), translated)).append(";");
+        // 2. flush pendingDecls（临时变量声明）
+        for (String decl : translatorNew.pendingDecls) {
+            sb.append(decl);
+        }
+        translatorNew.pendingDecls.clear();
+
+        // 3. 翻译赋值
+        if(varSymbol.getSort() != PLCModifierEnum.Sort.FC) {
+            // 查 GVL offsetMap 决定输出形式
+            String varName = varSymbol.getName();
+            if (varName.startsWith("*")) varName = varName.substring(1);
+            Integer offset = translatorNew.gvlCtx.offsetMap.get(varName);
+            String type = translatorNew.gvlCtx.typeMap.get(varName);
+
+            if (offset != null && type != null) {
+                // GVL 变量 → gvl.write
+                sb.append("\n\t\tgvl.write<").append(type).append(">(")
+                  .append(offset).append(", ").append(rhs).append(");");
+            } else {
+                // 非 GVL 变量（FC 局部变量等）→ 直接赋值
+                sb.append("\n\t\t").append(varName).append(" = ").append(rhs).append(";");
+            }
         }else{
-            String translated = PLCTranslatorNew.gvlCtx.translateExpr(varSymbol.getAssignVar());
-            sb.append("\n\t\treturn ").append(translated).append(";");
+            sb.append("\n\t\treturn ").append(rhs).append(";");
         }
         return sb.toString();
-    }
-
-    /**
-     * 从赋值表达式右侧提取参数符号列表
-     */
-    private java.util.List<PLCVariable> getParamSymbols(PLCSTPARSERParser.VariableAssignExpressionContext ctx) {
-        java.util.List<PLCVariable> result = new java.util.ArrayList<>();
-        collectParams(ctx.expression(), result);
-        return result;
-    }
-
-    private void collectParams(PLCSTPARSERParser.ExpressionContext expr, java.util.List<PLCVariable> result) {
-        if (expr == null) return;
-        // expression -> xor_expr -> and_expr -> compare_expr -> equ_expr -> add_expr -> term -> power_expr -> unary_expr -> primary_expr
-        PLCSTPARSERParser.Primary_exprContext primary = findPrimaryExpr(expr);
-        if (primary != null && primary.func_call() != null) {
-            PLCSTPARSERParser.Func_callContext fc = primary.func_call();
-            for (PLCSTPARSERParser.Param_assignContext p : fc.param_assign()) {
-                try {
-                    PLCVariable pv = PLCTranslatorNew.getVariable(p, "function parameter");
-                    if (pv != null) result.add(pv);
-                } catch (Exception ignored) {}
-            }
-        }
-    }
-
-    /**
-     * 从 ExpressionContext 逐层向下找到 Primary_exprContext
-     */
-    private PLCSTPARSERParser.Primary_exprContext findPrimaryExpr(PLCSTPARSERParser.ExpressionContext expr) {
-        if (expr == null) return null;
-        PLCSTPARSERParser.Xor_exprContext x = expr.xor_expr(0);
-        if (x == null) return null;
-        PLCSTPARSERParser.And_exprContext a = x.and_expr(0);
-        if (a == null) return null;
-        PLCSTPARSERParser.Compare_exprContext c = a.compare_expr(0);
-        if (c == null) return null;
-        PLCSTPARSERParser.Equ_exprContext e = c.equ_expr(0);
-        if (e == null) return null;
-        PLCSTPARSERParser.Add_exprContext ad = e.add_expr(0);
-        if (ad == null) return null;
-        PLCSTPARSERParser.TermContext t = ad.term(0);
-        if (t == null) return null;
-        PLCSTPARSERParser.Power_exprContext p = t.power_expr(0);
-        if (p == null) return null;
-        PLCSTPARSERParser.Unary_exprContext u = p.unary_expr(0);
-        if (u == null) return null;
-        return u.primary_expr();
     }
 }

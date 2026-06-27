@@ -143,34 +143,6 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
         return sb.toString();
     }
 
-    public static String translateChild(org.antlr.v4.runtime.tree.ParseTree node, PLCTranslatorNew t) {
-        if (node instanceof PLCSTPARSERParser.ExpressionContext c) return new PLCTranslator.TranslateType.Expr.TranslateExpression().translateNode(c, t);
-        if (node instanceof PLCSTPARSERParser.Xor_exprContext c) return new PLCTranslator.TranslateType.Expr.TranslateXor_expr().translateNode(c, t);
-        if (node instanceof PLCSTPARSERParser.And_exprContext c) return new PLCTranslator.TranslateType.Expr.TranslateAnd_expr().translateNode(c, t);
-        if (node instanceof PLCSTPARSERParser.Compare_exprContext c) return new PLCTranslator.TranslateType.Expr.TranslateCompare_expr().translateNode(c, t);
-        if (node instanceof PLCSTPARSERParser.Equ_exprContext c) return new PLCTranslator.TranslateType.Expr.TranslateEqu_expr().translateNode(c, t);
-        if (node instanceof PLCSTPARSERParser.Add_exprContext c) return new PLCTranslator.TranslateType.Expr.TranslateAdd_expr().translateNode(c, t);
-        if (node instanceof PLCSTPARSERParser.TermContext c) return new PLCTranslator.TranslateType.Expr.TranslateTerm().translateNode(c, t);
-        if (node instanceof PLCSTPARSERParser.Power_exprContext c) return new PLCTranslator.TranslateType.Expr.TranslatePower_expr().translateNode(c, t);
-        if (node instanceof PLCSTPARSERParser.Unary_exprContext c) return new PLCTranslator.TranslateType.Expr.TranslateUnary_expr().translateNode(c, t);
-        if (node instanceof PLCSTPARSERParser.Primary_exprContext c) return translatePrimaryExpr(c, t);
-        if (node instanceof PLCSTPARSERParser.Variable_accessContext c) return new PLCTranslator.TranslateType.Expr.TranslateVariable_access().translateNode(c, t);
-        return node.getText();
-    }
-
-    public static String translatePrimaryExpr(PLCSTPARSERParser.Primary_exprContext ctx, PLCTranslatorNew t) {
-        if (ctx.expression() != null) {
-            return "(" + translateExpression(ctx.expression(), t) + ")";
-        }
-        if (ctx.variable_access() != null) {
-            return new PLCTranslator.TranslateType.Expr.TranslateVariable_access().translateNode(ctx.variable_access(), t);
-        }
-        if (ctx.func_call() != null) {
-            return t.visit(ctx.func_call());
-        }
-        return ctx.getChild(0).getText();
-    }
-
     public static String mapOperator(String op) {
         return switch (op) {
             case "OR" -> "||";
@@ -182,10 +154,6 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
             case "NOT" -> "!";
             default -> op;
         };
-    }
-
-    public static String translateExpression(PLCSTPARSERParser.ExpressionContext ctx, PLCTranslatorNew t) {
-        return new PLCTranslator.TranslateType.Expr.TranslateExpression().translateNode(ctx, t);
     }
 
     // ─── Expression visit overrides ───

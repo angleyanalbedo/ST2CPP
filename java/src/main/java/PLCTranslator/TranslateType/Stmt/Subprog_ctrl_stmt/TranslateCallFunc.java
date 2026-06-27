@@ -1,11 +1,10 @@
 package PLCTranslator.TranslateType.Stmt.Subprog_ctrl_stmt;
 
 import PLCSymbolAndScope.PLCSymbols.PLCFBCallSymbol;
-import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCVariable;
-
-
-import PLCTranslator.GvlContext;
+import PLCSymbolAndScope.PLCSymbols.PLCBaseFUNDeclSymbol;
+import PLCSymbolAndScope.PLCSymbols.PLCBaseFUNDeclSymbol;
+import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
 
@@ -18,6 +17,7 @@ public class TranslateCallFunc {
         if(ctx.getChild(0) instanceof PLCSTPARSERParser.Func_callContext childCtx){
             PLCSymbol firstSym = PLCTranslatorNew.getSymbol(childCtx, "call function");
             if(firstSym instanceof PLCFBCallSymbol fbCallSym){
+                // FB 调用 — 保持不变
                 String fbInstanceName = fbCallSym.getFbInstanceName();
                 String fbTypeName = translatorNew.gvlCtx.getVarType(fbInstanceName);
                 if(fbTypeName == null) fbTypeName = fbInstanceName;
@@ -26,22 +26,33 @@ public class TranslateCallFunc {
                 for(PLCSTPARSERParser.Param_assignContext param_assignContext : childCtx.param_assign()){
                     PLCVariable plcVariable = PLCTranslatorNew.getVariable(param_assignContext, "call parameter");
                     paramNames.add(plcVariable.getName());
-                    paramValues.add(translatorNew.gvlCtx.translateExpr(plcVariable.getAssignVar()));
+                    // 通过 visitor 翻译参数值（替代 translateExpr）
+                    if (param_assignContext instanceof PLCSTPARSERParser.InputParamContext ip) {
+                        paramValues.add(translatorNew.visit(ip.expression()));
+                    } else {
+                        paramValues.add(param_assignContext.getText());
+                    }
                 }
                 sb.append(translatorNew.gvlCtx.emitFBCall(fbInstanceName, fbTypeName, paramNames, paramValues));
-            }else{
-                PLCVariable funcSymbol = (PLCVariable) firstSym;
+            }else if(firstSym instanceof PLCVariable funcVar){
+                // 普通函数调用（独立语句）
+                // assignVar 格式: *FUNC_NAME(&PARAM1, )
+                String funcName = extractFuncName(funcVar.getAssignVar());
                 for (PLCSTPARSERParser.Param_assignContext param_assignContext : childCtx.param_assign()) {
                     PLCVariable plcVariable = PLCTranslatorNew.getVariable(param_assignContext, "call parameter");
-                    String typeName = plcVariable.getRuntimeTypeName();
-                    if (typeName == null || typeName.isEmpty()) {
-                        typeName = "INT";
+                    if (param_assignContext instanceof PLCSTPARSERParser.InputParamContext ip) {
+                        String typeName = plcVariable.getRuntimeTypeName();
+                        if (typeName == null || typeName.isEmpty()) {
+                            typeName = "INT";
+                        }
+                        typeName = translatorNew.gvlCtx.toNativeType(typeName);
+                        // visitor 翻译参数表达式
+                        String exprResult = translatorNew.visit(ip.expression());
+                        sb.append("\n\t\t").append(typeName).append(" ")
+                          .append(plcVariable.getRuntimeName()).append("=").append(exprResult).append(";");
                     }
-                    typeName = translatorNew.gvlCtx.toNativeType(typeName);
-                    sb.append("\n\t\t" + typeName + " " + plcVariable.getRuntimeName() + "=" + translatorNew.gvlCtx.translateExpr(plcVariable.getAssignVar()) + ";");
                 }
-                String var = translatorNew.gvlCtx.translateExpr(funcSymbol.getAssignVar()).substring(1);
-                sb.append("\n\t\t" + var + ";");
+                sb.append("\n\t\t").append(funcName).append(";");
             }
         }else{
             String result = translatorNew.visit(ctx.getChild(0));
@@ -53,8 +64,14 @@ public class TranslateCallFunc {
                 sb.append(result);
             }
         }
-
-
         return sb.toString();
+    }
+
+    private String extractFuncName(String assignVar) {
+        String cleaned = assignVar;
+        if (cleaned.startsWith("*")) cleaned = cleaned.substring(1);
+        int parenIdx = cleaned.indexOf('(');
+        if (parenIdx > 0) return cleaned.substring(0, parenIdx);
+        return cleaned;
     }
 }

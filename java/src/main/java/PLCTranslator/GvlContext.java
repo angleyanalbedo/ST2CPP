@@ -499,6 +499,11 @@ public class GvlContext {
 
     // ═══ 表达式转换 ═══
 
+    /**
+     * @deprecated 请改用 visitor 路径 (t.visit(ctx)) 翻译表达式。
+     *             此方法仅用于常量等简单字符串的正则替换，新代码不应再调用。
+     */
+    @Deprecated
     public String translateExpr(String expr) {
         if (expr == null || expr.isEmpty()) {
             return expr;

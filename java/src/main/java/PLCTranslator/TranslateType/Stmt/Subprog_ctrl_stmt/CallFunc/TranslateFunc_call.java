@@ -25,25 +25,33 @@ public class TranslateFunc_call {
             sb.append("\n\t\t").append(fbInstanceName).append("(").append(paramStr).append(").update();");
         }else if(firstSym instanceof PLCVariable funcVar){
             // 语义检查阶段 CheckFuncCall 返回的 PLCVariable
-            // 遍历每个参数，生成临时变量声明，最后输出函数调用
+            // assignVar 格式: *FUNC_NAME(&PARAM1, &PARAM2, )
+            // 提取函数名
+            String assignVarStr = funcVar.getAssignVar();
+            String funcName = extractFuncName(assignVarStr);
+
+            // 遍历 AST param_assign，通过 visitor 翻译每个参数
+            StringBuilder args = new StringBuilder();
             for (PLCSTPARSERParser.Param_assignContext param_assignContext : ctx.param_assign()) {
                 PLCVariable plcVariable = PLCTranslatorNew.getVariable(param_assignContext, "function parameter");
-                String typeName = plcVariable.getRuntimeTypeName();
-                if (typeName == null || typeName.isEmpty()) {
-                    typeName = "INT";
+                if(param_assignContext instanceof PLCSTPARSERParser.InputParamContext ip){
+                    String exprResult = translatorNew.visit(ip.expression());
+                    String paramExpr;
+                    if (isSimpleExpression(ip.expression())) {
+                        paramExpr = exprResult;
+                    } else {
+                        String typeName = resolveTypeName(plcVariable, translatorNew);
+                        translatorNew.pendingDecls.add("\n\t\t" + typeName + " " + plcVariable.getRuntimeName() + "=" + exprResult + ";");
+                        paramExpr = plcVariable.getRuntimeName();
+                    }
+                    if (args.length() > 0) args.append(", ");
+                    args.append(paramExpr);
+                }else{
+                    if (args.length() > 0) args.append(", ");
+                    args.append(param_assignContext.getText());
                 }
-                typeName = translatorNew.gvlCtx.toNativeType(typeName);
-                String translatedAssignVar = PLCTranslatorNew.gvlCtx.translateExpr(plcVariable.getAssignVar());
-                sb.append("\n\t\t").append(typeName).append(" ").append(plcVariable.getRuntimeName())
-                  .append("=").append(translatedAssignVar).append(";");
             }
-            // 输出函数调用本身（去掉前导星号）
-            String translatedFuncCall = PLCTranslatorNew.gvlCtx.translateExpr(funcVar.getAssignVar());
-            String cleanCall = translatedFuncCall;
-            if (cleanCall.startsWith("*")) {
-                cleanCall = cleanCall.substring(1);
-            }
-            sb.append("\n\t\t").append(cleanCall).append(";");
+            sb.append(funcName).append("(").append(args).append(")");
         }else if(firstSym instanceof PLCBaseFUNDeclSymbol funDecl){
             String funcName = funDecl.getStdFunction();
             StringBuilder args = new StringBuilder();
@@ -71,6 +79,18 @@ public class TranslateFunc_call {
         return sb.toString();
     }
 
+    private String extractFuncName(String assignVar) {
+        // assignVar 格式: *FUNC_NAME(&PARAM1, &PARAM2, )
+        // 或: *FUNC_NAME(&PARAM1, )
+        String cleaned = assignVar;
+        if (cleaned.startsWith("*")) cleaned = cleaned.substring(1);
+        int parenIdx = cleaned.indexOf('(');
+        if (parenIdx > 0) {
+            return cleaned.substring(0, parenIdx);
+        }
+        return cleaned;
+    }
+
     private String resolveTypeName(PLCVariable plcVariable, PLCTranslatorNew translatorNew) {
         String typeName = plcVariable.getRuntimeTypeName();
         if(typeName == null || typeName.isEmpty() || "INT".equals(typeName)){
@@ -92,9 +112,7 @@ public class TranslateFunc_call {
     private boolean isSimpleExpression(PLCSTPARSERParser.ExpressionContext expr) {
         if (expr == null) return false;
         String text = expr.getText().trim();
-        // 纯数字常数
         if (text.matches("^-?\\d+\\.?\\d*$")) return true;
-        // 简单变量名（不含运算符、函数调用）
         if (text.matches("^[A-Za-z_][A-Za-z0-9_]*$")) return true;
         return false;
     }
