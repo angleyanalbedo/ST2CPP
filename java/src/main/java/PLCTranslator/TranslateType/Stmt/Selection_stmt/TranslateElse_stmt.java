@@ -9,8 +9,7 @@ import antlr4.PLCSTPARSERParser;
 public class TranslateElse_stmt {
     public String translateNode(PLCSTPARSERParser.Else_stmtContext ctx, PLCTranslatorNew translatorNew){
         StringBuilder sb = new StringBuilder();
-        // 使用 CodeGenerator 生成 else（不关闭，由 TranslateIf_stmt 最终关闭）
-        sb.append(PLCTranslatorNew.codeGen.emitElse());
+        sb.append("\n\t\t}else{");
         String stmtListResult = translatorNew.visit(ctx.stmt_list());
         if (stmtListResult != null) {
             sb.append(stmtListResult);

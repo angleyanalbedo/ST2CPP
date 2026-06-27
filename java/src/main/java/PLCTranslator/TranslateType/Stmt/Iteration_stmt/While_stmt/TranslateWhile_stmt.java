@@ -14,13 +14,12 @@ public class TranslateWhile_stmt {
         //翻译while循环语句
         PLCVariable varExpression = PLCTranslatorNew.getVariable(ctx.expression(), "while expression");
 
-        // 使用 CodeGenerator 生成 while
-        sb.append(PLCTranslatorNew.codeGen.emitWhileBegin(varExpression.getAssignVar()));
+        sb.append("\n\t\twhile(").append(PLCTranslatorNew.gvlCtx.translateExpr(varExpression.getAssignVar())).append("){");
         String bodyResult = translatorNew.visit(ctx.stmt_list());
         if (bodyResult != null) {
             sb.append(bodyResult);
         }
-        sb.append(PLCTranslatorNew.codeGen.emitWhileEnd());
+        sb.append("\n\t\t}");
         return sb.toString();
     }
 }

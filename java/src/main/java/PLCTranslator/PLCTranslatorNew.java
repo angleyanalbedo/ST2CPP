@@ -60,15 +60,14 @@ import org.antlr.v4.runtime.tree.ParseTreeProperty;
 public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     //树节点信息
     static public ParseTreeProperty<java.util.ArrayList<PLCSymbol>> properties = new ParseTreeProperty<>();
-    //代码生成器（仅 Flat 后端）
-    static public CodeGenerator codeGen;
+    static public GvlContext gvlCtx;
 
     private boolean emitHeader = true;
     private boolean emitPOURegistration = true;
 
     public PLCTranslatorNew(ParseTreeProperty<java.util.ArrayList<PLCSymbol>> properties) {
         PLCTranslatorNew.properties = properties;
-        PLCTranslatorNew.codeGen = new FlatCodeGenerator(); // 默认 Flat
+        PLCTranslatorNew.gvlCtx = new GvlContext();
     }
 
     /**
@@ -83,9 +82,9 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
         return aggregate + nextResult;
     }
 
-    public PLCTranslatorNew(ParseTreeProperty<java.util.ArrayList<PLCSymbol>> properties, CodeGenerator codeGenerator) {
+    public PLCTranslatorNew(ParseTreeProperty<java.util.ArrayList<PLCSymbol>> properties, GvlContext gvlCtx) {
         PLCTranslatorNew.properties = properties;
-        PLCTranslatorNew.codeGen = codeGenerator;
+        PLCTranslatorNew.gvlCtx = gvlCtx;
     }
 
     public void setEmitHeader(boolean emitHeader) {
@@ -549,7 +548,7 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
      * @return 生成的代码字符串
      */
     @Override public String visitEnum_type_decl(PLCSTPARSERParser.Enum_type_declContext ctx) {
-        return translateEnumTypeDeclFlat(ctx, codeGen);
+        return translateEnumTypeDeclFlat(ctx, gvlCtx);
     }
 
     /**
@@ -608,10 +607,10 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
      * @return 生成的代码字符串
      */
     @Override public String visitStruct_type_decl(PLCSTPARSERParser.Struct_type_declContext ctx) {
-        return translateStructTypeDeclFlat(ctx, codeGen);
+        return translateStructTypeDeclFlat(ctx, gvlCtx);
     }
 
-    private String translateStructTypeDeclFlat(PLCSTPARSERParser.Struct_type_declContext ctx, CodeGenerator codeGen) {
+    private String translateStructTypeDeclFlat(PLCSTPARSERParser.Struct_type_declContext ctx, GvlContext gvlCtx) {
         PLCStructDeclSymbol structSymbol = (PLCStructDeclSymbol) properties.get(ctx).get(0);
         String structName = structSymbol.getName();
         String runtimeType = "PLC_Struct_Value<" + structSymbol.getTypeId() + ">";
@@ -619,47 +618,45 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
         StringBuilder sb = new StringBuilder();
         sb.append("\nstruct ").append(structName).append(" {");
 
-        List<CodeGenerator.StructField> fields = new ArrayList<>();
+        List<GvlContext.StructField> fields = new ArrayList<>();
         int currentOffset = 0;
 
         for (PLCVariable fieldVar : structSymbol.getVariables()) {
             String fieldName = fieldVar.getName();
-            String fieldType = codeGen.toNativeType(fieldVar.getRuntimeTypeName());
-            int fieldSize = codeGen.getTypeSize(fieldType);
+            String fieldType = gvlCtx.toNativeType(fieldVar.getRuntimeTypeName());
+            int fieldSize = gvlCtx.getTypeSize(fieldType);
             int aligned = fieldSize <= 1 ? currentOffset : (currentOffset + fieldSize - 1) / fieldSize * fieldSize;
-            fields.add(new CodeGenerator.StructField(fieldName, fieldType, aligned));
+            fields.add(new GvlContext.StructField(fieldName, fieldType, aligned));
             sb.append("\n    ").append(fieldType).append(" ").append(fieldName).append(";");
             currentOffset = aligned + fieldSize;
         }
 
         sb.append("\n};\n");
 
-        CodeGenerator.StructLayout layout = new CodeGenerator.StructLayout(
+        GvlContext.StructLayout layout = new GvlContext.StructLayout(
                 structName, fields, currentOffset);
-        codeGen.registerStructType(structName, runtimeType, layout);
+        gvlCtx.registerStructType(structName, runtimeType, layout);
 
-        codeGen.registerVariable(structName, String.valueOf(structSymbol.getSymbolId()));
+        gvlCtx.registerVariable(structName, String.valueOf(structSymbol.getSymbolId()));
 
         return sb.toString();
     }
 
-    private String translateEnumTypeDeclFlat(PLCSTPARSERParser.Enum_type_declContext ctx, CodeGenerator codeGen) {
+    private String translateEnumTypeDeclFlat(PLCSTPARSERParser.Enum_type_declContext ctx, GvlContext gvlCtx) {
         PLCEnumDeclSymbol enumSymbol = (PLCEnumDeclSymbol) properties.get(ctx).get(0);
         String enumName = enumSymbol.getName();
 
         // 获取 underlying type 的原生 C++ 类型名
         int protoTypeId = enumSymbol.getEnumConstTypeId();
         PLCTypeDeclSymbol protoType = PLCTotalSymbolTable.getTypeByTypeID(protoTypeId);
-        String underlyingType = protoType != null ? codeGen.toNativeType(protoType.getRuntimeName()) : "INT";
+        String underlyingType = protoType != null ? gvlCtx.toNativeType(protoType.getRuntimeName()) : "INT";
 
-        // 注册 enum 类型（使 toNativeType / getTypeSize 能正确解析）
         String runtimeTypeName = "PLC_Enum_Value<" + enumSymbol.getTypeId() + ">";
-        codeGen.registerEnumType(enumName, runtimeTypeName, underlyingType);
+        gvlCtx.registerEnumType(enumName, runtimeTypeName, underlyingType);
 
-        // 构建枚举值条目
         List<String> entries = new ArrayList<>();
         for (PLCVariable var : enumSymbol.getEnumValues()) {
-            String valueExpr = codeGen.translateExpr(var.getAssignVar()).trim();
+            String valueExpr = gvlCtx.translateExpr(var.getAssignVar()).trim();
             // 去除外层括号以判断默认值
             String stripped = valueExpr.startsWith("(") && valueExpr.endsWith(")")
                 ? valueExpr.substring(1, valueExpr.length() - 1).trim()
@@ -672,7 +669,7 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
             }
         }
 
-        return codeGen.emitEnumDecl(enumName, underlyingType, entries);
+        return gvlCtx.emitEnumDecl(enumName, underlyingType, entries);
     }
 
     /**

@@ -18,9 +18,12 @@ public class TranslatePrint_stmt {
             String assignVar = elem.getAssignVar();
             if (assignVar == null || assignVar.isEmpty()) continue;
             boolean isString = (elem.getSort() == PLCModifierEnum.Sort.STRING);
-            // 字符串字面量直接使用（已是 C++ 字符串），无需 translateExpr 处理
-            String translated = isString ? assignVar : translatorNew.codeGen.translateExpr(assignVar);
-            sb.append(translatorNew.codeGen.emitPrintElement(translated, isString));
+            String translated = isString ? assignVar : translatorNew.gvlCtx.translateExpr(assignVar);
+            if (isString) {
+                sb.append("\n\t\tprintf(").append(translated).append(");");
+            } else {
+                sb.append("\n\t\tprintf(\"%d\", (int)(").append(translated).append("));");
+            }
         }
         // 新行
         sb.append("\n\t\tprintf(\"\\n\");");

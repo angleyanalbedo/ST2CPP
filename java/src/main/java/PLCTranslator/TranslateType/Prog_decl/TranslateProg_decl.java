@@ -1,6 +1,7 @@
 package PLCTranslator.TranslateType.Prog_decl;
 
 import PLCSymbolAndScope.PLCSymbols.*;
+import PLCTranslator.GvlContext;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
 
@@ -12,32 +13,25 @@ public class TranslateProg_decl {
         StringBuilder sb = new StringBuilder();
 
         String progName = ctx.prog_type_name().identifier().getText();
-        translatorNew.codeGen.addProgramName(progName);
+        translatorNew.gvlCtx.addProgramName(progName);
 
-        // ─── Init 回调：变量初始化 + RETAIN 区域 ───
-        sb.append(translatorNew.codeGen.emitProgInitBegin(progName));
+        String mangled = translatorNew.gvlCtx.mangleProgName(progName);
 
-        // 翻译变量段（写入初始值）
+        sb.append("\nvoid PROGRAM_").append(mangled).append("_init(GVL& gvl, ProcessImage& io) {");
         sb.append(emitVarInit(ctx, translatorNew));
-
-        // 收集 RETAIN 变量并生成区域标记
         sb.append(emitRetainRegion(ctx, translatorNew));
+        sb.append("\n}");
 
-        sb.append(translatorNew.codeGen.emitProgFuncEnd());
+        sb.append("\nvoid PROGRAM_").append(mangled).append("_pre(GVL& gvl, ProcessImage& io) {");
+        sb.append("\n}");
 
-        // ─── Pre 回调（空） ───
-        sb.append(translatorNew.codeGen.emitProgPreBegin(progName));
-        sb.append(translatorNew.codeGen.emitProgFuncEnd());
-
-        // ─── Cyclic 回调：循环体 ───
-        sb.append(translatorNew.codeGen.emitProgCyclicBegin(progName));
+        sb.append("\nvoid PROGRAM_").append(mangled).append("_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {");
         String result = translatorNew.visit(ctx.fb_body());
         sb.append(result);
-        sb.append(translatorNew.codeGen.emitProgFuncEnd());
+        sb.append("\n}");
 
-        // ─── Post 回调（空） ───
-        sb.append(translatorNew.codeGen.emitProgPostBegin(progName));
-        sb.append(translatorNew.codeGen.emitProgFuncEnd());
+        sb.append("\nvoid PROGRAM_").append(mangled).append("_post(GVL& gvl, ProcessImage& io) {");
+        sb.append("\n}");
 
         return sb.toString();
     }
@@ -132,19 +126,13 @@ public class TranslateProg_decl {
     private void emitOneVarInit(StringBuilder sb, PLCVariable varSymbol, PLCTranslatorNew translatorNew) {
         String location = varSymbol.getLocation();
         if (location != null && !location.isEmpty()) {
-            // AT 地址变量：注册为 I/O 映射变量
-            translatorNew.codeGen.registerIOVariable(
+            translatorNew.gvlCtx.registerIOVariable(
                 varSymbol.getName(),
                 varSymbol.getRuntimeTypeName(),
                 location
             );
         } else {
-            // 普通变量：分配 GVL 偏移量
-            sb.append(translatorNew.codeGen.emitVarDecl(
-                varSymbol.getName(),
-                varSymbol.getRuntimeTypeName(),
-                varSymbol.getAssignVar()
-            ));
+            emitVarDeclInline(sb, varSymbol.getName(), varSymbol.getRuntimeTypeName(), varSymbol.getAssignVar(), translatorNew.gvlCtx);
         }
     }
 
@@ -167,19 +155,18 @@ public class TranslateProg_decl {
         }
 
         if (!retainVars.isEmpty()) {
-            java.util.Map<String, Integer> offsets = translatorNew.codeGen.getOffsetMap();
-            java.util.Map<String, String> types = translatorNew.codeGen.getTypeMap();
+            java.util.Map<String, Integer> offsets = translatorNew.gvlCtx.getOffsetMap();
+            java.util.Map<String, String> types = translatorNew.gvlCtx.getTypeMap();
 
             int retainStart = Integer.MAX_VALUE;
             int retainEnd = 0;
             for (PLCVariable rv : retainVars) {
-                // 跳过 I/O 映射变量（无 GVL 偏移量）
-                if (translatorNew.codeGen.isIOVariable(rv.getName())) continue;
+                if (translatorNew.gvlCtx.isIOVariable(rv.getName())) continue;
                 Integer off = offsets.get(rv.getName());
                 if (off != null) {
                     retainStart = Math.min(retainStart, off);
                     String type = types.getOrDefault(rv.getName(), "INT");
-                    int size = translatorNew.codeGen.getTypeSize(type);
+                    int size = translatorNew.gvlCtx.getTypeSize(type);
                     retainEnd = Math.max(retainEnd, off + size);
                 }
             }
@@ -189,5 +176,36 @@ public class TranslateProg_decl {
         }
 
         return sb.toString();
+    }
+
+    private void emitVarDeclInline(StringBuilder sb, String name, String typeName, String assignVar, GvlContext gvlCtx) {
+        if (typeName != null && typeName.startsWith("ARRAY")) {
+            int count = 0;
+            String elemType = "INT";
+            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
+                "ARRAY\\[(\\d+)\\.\\.(\\d+)\\]\\s+OF\\s+(\\w+)");
+            java.util.regex.Matcher matcher = pattern.matcher(typeName);
+            if (matcher.find()) {
+                int low = Integer.parseInt(matcher.group(1));
+                int high = Integer.parseInt(matcher.group(2));
+                count = high - low + 1;
+                elemType = gvlCtx.toNativeType(matcher.group(3));
+            }
+            if (count > 0) {
+                int elemSize = gvlCtx.getTypeSize(elemType);
+                int totalSize = elemSize * count;
+                int aligned = (gvlCtx.currentOffset + elemSize - 1) / elemSize * elemSize;
+                gvlCtx.offsetMap.put(name, aligned);
+                gvlCtx.typeMap.put(name, "ARRAY[" + count + "] OF " + elemType);
+                gvlCtx.currentOffset = aligned + totalSize;
+                return;
+            }
+        }
+        String nativeType = gvlCtx.toNativeType(typeName);
+        gvlCtx.allocateOffset(name, nativeType);
+        if (assignVar != null && !assignVar.isEmpty() && !"0".equals(assignVar) && !"\"\"".equals(assignVar)) {
+            String translated = gvlCtx.translateExpr(assignVar);
+            sb.append("\n\t\t").append(gvlCtx.writeExpr(name, translated)).append(";");
+        }
     }
 }

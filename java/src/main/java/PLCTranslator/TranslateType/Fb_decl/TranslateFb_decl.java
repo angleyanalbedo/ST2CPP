@@ -2,7 +2,7 @@ package PLCTranslator.TranslateType.Fb_decl;
 
 import PLCSymbolAndScope.PLCSymbols.*;
 import PLCSymbolAndScope.PLCSymbolTables.PLCSymbolTable;
-import PLCTranslator.CodeGenerator;
+import PLCTranslator.GvlContext;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
 
@@ -23,7 +23,7 @@ public class TranslateFb_decl {
         // 生成 C++ struct 定义
         sb.append("\nstruct ").append(fbName).append(" {\n");
         for (FBField f : fields) {
-            String nativeType = translatorNew.codeGen.toNativeType(f.typeName);
+            String nativeType = translatorNew.gvlCtx.toNativeType(f.typeName);
             sb.append("    ").append(nativeType).append(" ").append(f.name).append(";");
             if (f.initValue != null && !f.initValue.isEmpty()) {
                 sb.append(" // = ").append(f.initValue);
@@ -42,18 +42,18 @@ public class TranslateFb_decl {
         sb.append("};\n");
 
         // 注册 struct 布局（用于字段偏移计算）
-        List<CodeGenerator.StructField> structFields = new ArrayList<>();
+        List<GvlContext.StructField> structFields = new ArrayList<>();
         int currentOffset = 0;
         for (FBField f : fields) {
-            String nativeType = translatorNew.codeGen.toNativeType(f.typeName);
-            int fieldSize = translatorNew.codeGen.getTypeSize(nativeType);
+            String nativeType = translatorNew.gvlCtx.toNativeType(f.typeName);
+            int fieldSize = translatorNew.gvlCtx.getTypeSize(nativeType);
             int aligned = (currentOffset + fieldSize - 1) / fieldSize * fieldSize;
-            structFields.add(new CodeGenerator.StructField(f.name, nativeType, aligned));
+            structFields.add(new GvlContext.StructField(f.name, nativeType, aligned));
             currentOffset = aligned + fieldSize;
         }
-        CodeGenerator.StructLayout layout = new CodeGenerator.StructLayout(
+        GvlContext.StructLayout layout = new GvlContext.StructLayout(
             fbName, structFields, currentOffset);
-        translatorNew.codeGen.registerStructType(fbName, fbName, layout);
+        translatorNew.gvlCtx.registerStructType(fbName, fbName, layout);
 
         return sb.toString();
     }

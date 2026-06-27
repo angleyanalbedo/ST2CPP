@@ -66,19 +66,17 @@ public class TranslateFunc_decl {
         }
 
         if (hasBody) {
-            sb.append(translatorNew.codeGen.emitFuncDeclBegin(funcName, returnValueType, params.toString()));
-            // 局部变量声明（func_var, temp_var）
+            String nativeReturn = translatorNew.gvlCtx.toNativeType(returnValueType);
+            sb.append("\n").append(nativeReturn).append(" ").append(funcName).append("(").append(params.toString()).append(") {");
             for (String initSentence : this.funcCallInitSentences) {
                 sb.append(initSentence);
             }
-            // 函数体
             String result = translatorNew.visit(ctx.func_body());
             sb.append(result);
-            // 输出返回
             for (String funcCallOutputSentence : this.funcCallOutputSentences) {
                 sb.append(funcCallOutputSentence);
             }
-            sb.append(translatorNew.codeGen.emitFuncDeclEnd());
+            sb.append("\n}");
         } else {
             // 外部函数声明（无 body）→ 仅生成原型
             String nativeReturn = mapToNativeType(returnValueType, translatorNew);
@@ -120,7 +118,7 @@ public class TranslateFunc_decl {
             for (PLCSymbol symbol : ioVarList) {
                 PLCVariable tempSymbol = (PLCVariable) symbol;
                 String nativeType = mapToNativeType(tempSymbol.getRuntimeTypeName(), translatorNew);
-                this.funcCallInitSentences.add("\n\t" + nativeType + " " + tempSymbol.getName() + " = " + PLCTranslatorNew.codeGen.translateExpr(tempSymbol.getAssignVar()) + ";");
+                this.funcCallInitSentences.add("\n\t" + nativeType + " " + tempSymbol.getName() + " = " + PLCTranslatorNew.gvlCtx.translateExpr(tempSymbol.getAssignVar()) + ";");
             }
         }
     }
@@ -131,7 +129,7 @@ public class TranslateFunc_decl {
             for (PLCSymbol symbol : ioVarList) {
                 PLCVariable tempSymbol = (PLCVariable) symbol;
                 String nativeType = mapToNativeType(tempSymbol.getRuntimeTypeName(), translatorNew);
-                this.funcCallInitSentences.add("\n\t" + nativeType + " " + tempSymbol.getName() + " = " + PLCTranslatorNew.codeGen.translateExpr(tempSymbol.getAssignVar()) + ";");
+                this.funcCallInitSentences.add("\n\t" + nativeType + " " + tempSymbol.getName() + " = " + PLCTranslatorNew.gvlCtx.translateExpr(tempSymbol.getAssignVar()) + ";");
             }
         }
     }
@@ -144,7 +142,7 @@ public class TranslateFunc_decl {
     static String mapToNativeType(String runtimeTypeName, PLCTranslatorNew translatorNew) {
         if (runtimeTypeName == null) return "int";
         // 优先使用 codeGen 的类型映射（struct、enum 等）
-        String codeGenMapped = translatorNew.codeGen.toNativeType(runtimeTypeName);
+        String codeGenMapped = translatorNew.gvlCtx.toNativeType(runtimeTypeName);
         if (codeGenMapped != null && !codeGenMapped.equals(runtimeTypeName)) {
             return codeGenMapped;
         }

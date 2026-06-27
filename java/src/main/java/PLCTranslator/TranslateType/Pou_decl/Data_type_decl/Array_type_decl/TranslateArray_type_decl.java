@@ -20,7 +20,7 @@ public class TranslateArray_type_decl {
             var arraySpec = ctx.array_spec_init().array_spec();
             if (arraySpec.data_type_access() != null) {
                 elemType = arraySpec.data_type_access().getText();
-                elemType = translatorNew.codeGen.toNativeType(elemType);
+                elemType = translatorNew.gvlCtx.toNativeType(elemType);
             }
             if (!arraySpec.subrange().isEmpty()) {
                 var subrange = arraySpec.subrange(0);

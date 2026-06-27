@@ -5,6 +5,297 @@
 using namespace rt_plc;
 
 
+SINT DINT_TO_TIME(DINT IN);
+
+DINT UDINT_TO_DINT(UDINT IN);
+
+SINT INT_TO_UDINT(INT IN);
+
+SINT UDINT_TO_TIME(UDINT IN);
+
+SINT DINT_TO_UDINT(DINT IN);
+
+SINT TIME_TO_UDINT(TIME IN);
+
+DINT REAL_TO_DINT(REAL IN);
+
+SINT REAL_TO_UDINT(REAL IN);
+
+SINT REAL_TO_DWORD(REAL IN);
+
+INT REAL_TO_INT(REAL IN);
+
+SINT REAL_TO_WORD(REAL IN);
+
+SINT REAL_TO_BYTE(REAL IN);
+
+SINT REAL_TO_TIME(REAL IN);
+
+STRING REAL_TO_STRF(REAL IN);
+
+STRING REAL_TO_STRING(REAL IN);
+
+DINT INT_TO_DINT(INT IN);
+
+REAL INT_TO_REAL(INT IN);
+
+SINT INT_TO_DWORD(INT IN);
+
+SINT INT_TO_BYTE(INT IN);
+
+SINT INT_TO_WORD(INT IN);
+
+STRING INT_TO_STRING(INT IN);
+
+SINT INT_TO_TIME(INT IN);
+
+SINT INT_TO_UINT(INT IN);
+
+INT DINT_TO_INT(DINT IN);
+
+REAL DINT_TO_REAL(DINT IN);
+
+SINT DINT_TO_DWORD(DINT IN);
+
+SINT DINT_TO_WORD(DINT IN);
+
+STRING DINT_TO_STRING(DINT IN);
+
+DINT DWORD_TO_DINT(DWORD IN);
+
+INT DWORD_TO_INT(DWORD IN);
+
+SINT DWORD_TO_WORD(DWORD IN);
+
+SINT DWORD_TO_BYTE(DWORD IN);
+
+SINT DWORD_TO_TIME(DWORD IN);
+
+SINT DWORD_TO_UDINT(DWORD IN);
+
+STRING DWORD_TO_STRING(DWORD IN);
+
+STRING DWORD_TO_STRB(DWORD IN);
+
+STRING DWORD_TO_STRH(DWORD IN);
+
+STRING DWORD_TO_STRF(DWORD IN);
+
+REAL DW_TO_REAL(DWORD IN);
+
+REAL UDINT_TO_REAL(UDINT IN);
+
+INT UDINT_TO_INT(UDINT IN);
+
+SINT UDINT_TO_DWORD(UDINT IN);
+
+SINT UDINT_TO_WORD(UDINT IN);
+
+SINT UDINT_TO_BYTE(UDINT IN);
+
+STRING UDINT_TO_STRING(UDINT IN);
+
+SINT UDINT_TO_UINT(UDINT IN);
+
+DINT WORD_TO_DINT(WORD IN);
+
+INT WORD_TO_INT(WORD IN);
+
+SINT WORD_TO_DWORD(WORD IN);
+
+SINT WORD_TO_BYTE(WORD IN);
+
+SINT WORD_TO_UDINT(WORD IN);
+
+SINT WORD_TO_UINT(WORD IN);
+
+STRING WORD_TO_STRING(WORD IN);
+
+DINT BYTE_TO_DINT(BYTE IN);
+
+INT BYTE_TO_INT(BYTE IN);
+
+SINT BYTE_TO_DWORD(BYTE IN);
+
+SINT BYTE_TO_WORD(BYTE IN);
+
+SINT BYTE_TO_UDINT(BYTE IN);
+
+SINT BYTE_TO_UINT(BYTE IN);
+
+SINT BYTE_TO_USINT(BYTE IN);
+
+STRING BYTE_TO_STRING(BYTE IN);
+
+STRING BYTE_TO_STRB(BYTE IN);
+
+STRING BYTE_TO_STRH(BYTE IN);
+
+STRING BYTE_TO_BITS(BYTE IN);
+
+SINT BYTE_TO_GRAY(BYTE IN);
+
+SINT BYTE_TO_TIME2(BYTE IN);
+
+DINT UINT_TO_DINT(UINT IN);
+
+INT UINT_TO_INT(UINT IN);
+
+SINT UINT_TO_DWORD(UINT IN);
+
+SINT UINT_TO_BYTE(UINT IN);
+
+SINT UINT_TO_WORD(UINT IN);
+
+SINT UINT_TO_UDINT(UINT IN);
+
+REAL UINT_TO_REAL(UINT IN);
+
+INT USINT_TO_INT(USINT IN);
+
+SINT USINT_TO_BYTE(USINT IN);
+
+REAL USINT_TO_REAL(USINT IN);
+
+DINT USINT_TO_DINT(USINT IN);
+
+INT SINT_TO_INT(SINT IN);
+
+DINT SINT_TO_DINT(SINT IN);
+
+SINT STRING_TO_TIME(STRING IN);
+
+INT STRING_TO_INT(STRING IN);
+
+REAL STRING_TO_REAL(STRING IN);
+
+SINT STRING_TO_DWORD(STRING IN);
+
+SINT STRING_TO_WORD(STRING IN);
+
+SINT STRING_TO_UDINT(STRING IN);
+
+STRING STRING_TO_URL(STRING IN);
+
+STRING STRING_TO_BUFFER(STRING IN);
+
+SINT BOOL_TO_BYTE(BOOL IN);
+
+INT BOOL_TO_INT(BOOL IN);
+
+SINT BOOL_TO_DWORD(BOOL IN);
+
+SINT BOOL_TO_UDINT(BOOL IN);
+
+STRING BOOL_TO_STRING(BOOL IN);
+
+DINT TIME_TO_DINT(TIME IN);
+
+INT TIME_TO_INT(TIME IN);
+
+SINT TIME_TO_DWORD(TIME IN);
+
+REAL TIME_TO_REAL(TIME IN);
+
+STRING TIME_TO_TOD(TIME IN);
+
+SINT TOD_TO_TIME(STRING IN);
+
+REAL TOD_TO_REAL2(STRING IN);
+
+SINT DATE_TO_UDINT(INT IN);
+
+INT DATE_TO_DT(INT IN);
+
+STRING DATE_TO_STRING2(INT IN);
+
+REAL DATE_TO_REAL2(INT IN);
+
+SINT DATE_TO_DWORD2(INT IN);
+
+INT DT_TO_DATE(INT IN);
+
+INT DT_TO_DATE2(INT IN);
+
+STRING DT_TO_TOD2(INT IN);
+
+INT DT_TO_SDT(INT IN);
+
+STRING DT_TO_STRF(INT IN);
+
+INT SDT_TO_DATE(INT IN);
+
+INT SDT_TO_DT(INT IN);
+
+STRING SDT_TO_TOD(INT IN);
+
+STRING CONCAT(STRING A, STRING B);
+
+DINT LEN(STRING S);
+
+STRING LEFT(STRING S, DINT L);
+
+STRING RIGHT(STRING S, DINT L);
+
+STRING MID(STRING S, DINT L, DINT P);
+
+STRING INSERT(STRING S, STRING INS, DINT P);
+
+STRING DELETE(STRING S, DINT L, DINT P);
+
+STRING REPLACE(STRING S, DINT L, DINT P, STRING R);
+
+DINT FIND(STRING S, STRING SUBSTR);
+
+BOOL STR_EQ(STRING A, STRING B);
+
+BOOL STR_NE(STRING A, STRING B);
+
+BOOL STR_LT(STRING A, STRING B);
+
+BOOL STR_LE(STRING A, STRING B);
+
+BOOL STR_GT(STRING A, STRING B);
+
+BOOL STR_GE(STRING A, STRING B);
+
+REAL ABS(REAL X);
+
+REAL SQRT(REAL X);
+
+REAL LN(REAL X);
+
+REAL LOG(REAL X);
+
+REAL EXP(REAL X);
+
+REAL EXPT(REAL X, REAL Y);
+
+REAL SIN(REAL X);
+
+REAL COS(REAL X);
+
+REAL TAN(REAL X);
+
+REAL ASIN(REAL X);
+
+REAL ACOS(REAL X);
+
+REAL ATAN(REAL X);
+
+REAL ATAN2(REAL Y, REAL X);
+
+REAL SEL(BOOL G, REAL IN0, REAL IN1);
+
+REAL MUX(INT K, REAL IN0, REAL IN1, REAL IN2, REAL IN3);
+
+REAL LIMIT(REAL MN, REAL IN, REAL MX);
+
+REAL MAX(REAL IN0, REAL IN1);
+
+REAL MIN(REAL IN0, REAL IN1);
+
+
 void PROGRAM_test_assert_P_init(GVL& gvl, ProcessImage& io) {
 		gvl.write<INT>(0, (42));
 		gvl.write<INT>(2, (0));
@@ -16,48 +307,48 @@ void PROGRAM_test_assert_P_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 		printf("=== ASSERT Test ===");
 		printf("\n");
 		{ bool _st_assert = ((gvl.read<INT>(0)) ==((42)) );
-		  if (_st_assert)
+		  if(_st_assert)
 		    printf("  [PASS] assert (line 10)\n");
 		  else
 		    printf("  [FAIL] assert (line 10): A=42\n"); }
 		{ bool _st_assert = ((gvl.read<INT>(0)) !=((0)) );
-		  if (_st_assert)
+		  if(_st_assert)
 		    printf("  [PASS] assert (line 11)\n");
 		  else
 		    printf("  [FAIL] assert (line 11): A<>0\n"); }
 		{ bool _st_assert = ((gvl.read<INT>(2)) ==((0)) );
-		  if (_st_assert)
+		  if(_st_assert)
 		    printf("  [PASS] assert (line 12)\n");
 		  else
 		    printf("  [FAIL] assert (line 12): B=0\n"); }
 		{ bool _st_assert = (((gvl.read<INT>(0)) +(gvl.read<INT>(2)) ) ==(gvl.read<INT>(0)) );
-		  if (_st_assert)
+		  if(_st_assert)
 		    printf("  [PASS] assert (line 13)\n");
 		  else
 		    printf("  [FAIL] assert (line 13): A+B=A\n"); }
 		{ bool _st_assert = ((gvl.read<INT>(0)) ==((42)) );
-		  if (_st_assert)
+		  if(_st_assert)
 		    printf("  [PASS] assert (line 14)\n");
 		  else
 		    printf("  [FAIL] assert (line 14): A=42\n"); }
 		{ bool _st_assert = ((gvl.read<INT>(0)) >(gvl.read<INT>(2)) );
-		  if (_st_assert)
+		  if(_st_assert)
 		    printf("  [PASS] assert (line 15)\n");
 		  else
 		    printf("  [FAIL] assert (line 15): A>B\n"); }
 		{ bool _st_assert = (((10)) >((5)) );
-		  if (_st_assert)
+		  if(_st_assert)
 		    printf("  [PASS] assert (line 16)\n");
 		  else
 		    printf("  [FAIL] assert (line 16): 10>5\n"); }
 		{ bool _st_assert = ((gvl.read<INT>(2)) ==((0)) );
-		  if (_st_assert)
+		  if(_st_assert)
 		    printf("  [PASS] assert (line 17)\n");
 		  else
 		    printf("  [FAIL] assert (line 17): B=0\n"); }
 		gvl.write<INT>(4, (gvl.read<INT>(0)) +((10)) );
 		{ bool _st_assert = ((gvl.read<INT>(4)) ==((52)) );
-		  if (_st_assert)
+		  if(_st_assert)
 		    printf("  [PASS] assert (line 20)\n");
 		  else
 		    printf("  [FAIL] assert (line 20): C=52\n"); }

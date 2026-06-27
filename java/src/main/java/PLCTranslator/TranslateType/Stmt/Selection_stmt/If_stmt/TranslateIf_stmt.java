@@ -13,8 +13,7 @@ public class TranslateIf_stmt {
 
         PLCVariable varExpression = PLCTranslatorNew.getVariable(ctx.expression(), "if expression");
 
-        // 使用 CodeGenerator 生成 if
-        sb.append(PLCTranslatorNew.codeGen.emitIfBegin(varExpression.getAssignVar()));
+        sb.append("\n\t\tif(").append(PLCTranslatorNew.gvlCtx.translateExpr(varExpression.getAssignVar())).append("){");
         String stmtListResult = translatorNew.visit(ctx.stmt_list());
         if (stmtListResult != null) {
             sb.append(stmtListResult);
@@ -34,8 +33,7 @@ public class TranslateIf_stmt {
                 sb.append(elseResult);
             }
         }
-        // 在所有 elsif/else 之后关闭整个 if 链
-        sb.append(PLCTranslatorNew.codeGen.emitIfEnd());
+        sb.append("\n\t\t}");
         return sb.toString();
     }
 }

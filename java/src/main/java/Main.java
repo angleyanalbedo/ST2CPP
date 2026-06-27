@@ -1,5 +1,5 @@
 import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
-import PLCTranslator.FlatCodeGenerator;
+import PLCTranslator.GvlContext;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERLexer;
 import antlr4.PLCSTPARSERParser;
@@ -133,9 +133,8 @@ public class Main {
 
         long startTime = System.currentTimeMillis();
 
-        // 选择代码生成器（仅 Flat 后端）
-        FlatCodeGenerator codeGen = new FlatCodeGenerator();
-        codeGen.setFileId(fileId);
+        GvlContext gvlCtx = new GvlContext();
+        gvlCtx.setFileId(fileId);
 
         if (verbose) {
             System.out.println("[Input]  " + String.join(", ", inputFiles));
@@ -148,7 +147,7 @@ public class Main {
         // 共享符号表和属性（跨所有输入文件）
         ParseTreeProperty<ArrayList<PLCSymbol>> property = new ParseTreeProperty<>();
         PLCVisitor plcVisitor = new PLCVisitor(property);
-        PLCTranslatorNew translatorNew = new PLCTranslatorNew(property, codeGen);
+        PLCTranslatorNew translatorNew = new PLCTranslatorNew(property, gvlCtx);
 
         StringBuilder fullCodeBuilder = new StringBuilder();
         int fileIndex = 0;
@@ -182,11 +181,8 @@ public class Main {
             fullCodeBuilder.append(processStream(charStream, plcVisitor, translatorNew, fileIndex++));
         }
 
-        // 统一一次性写入文件
-        if (codeGen instanceof FlatCodeGenerator) {
-            fullCodeBuilder.append("\n");
-            fullCodeBuilder.append(codeGen.emitPOURegistration(codeGen.getFileId(), codeGen.getProgramNames()));
-        }
+        fullCodeBuilder.append("\n");
+        fullCodeBuilder.append(gvlCtx.emitPOURegistration(gvlCtx.getFileId(), gvlCtx.getProgramNames()));
 
         String fullCode = fullCodeBuilder.toString();
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
@@ -195,8 +191,7 @@ public class Main {
 
         long elapsed = System.currentTimeMillis() - startTime;
 
-        // 输出 Flat 后端的 GVL 偏移量信息
-        System.out.println("\n" + codeGen.getOffsetDefinitions());
+        System.out.println("\n" + gvlCtx.getOffsetDefinitions());
 
         if (verbose) {
             int codeLines = fullCode != null ? fullCode.split("\n").length : 0;

@@ -37,7 +37,7 @@ public class TranslateEnum_type_decl {
         String typeStr = typeByTypeID.getRuntimeName();
         for (PLCVariable variable : enumInitList) {
             sb.append("\n"+pFactory.packageEnumElementAddSentences(enumName,typeStr
-                    , variable.getName(), translatorNew.codeGen.translateExpr(variable.getAssignVar())));
+                    , variable.getName(), translatorNew.gvlCtx.translateExpr(variable.getAssignVar())));
         }
 
         sb.append("\n"+pFactory.packageTypedefSentences("PLC_Enum_Value<"+String.valueOf(enumSymbol.getTypeId())+">"

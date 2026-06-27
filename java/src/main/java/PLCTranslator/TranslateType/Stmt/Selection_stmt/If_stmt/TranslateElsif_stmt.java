@@ -11,8 +11,7 @@ public class TranslateElsif_stmt {
     public String translateNode(PLCSTPARSERParser.Elsif_stmtContext ctx, PLCTranslatorNew translatorNew){
         StringBuilder sb = new StringBuilder();
         PLCVariable varExpression = PLCTranslatorNew.getVariable(ctx.expression(), "elsif expression");
-        // 使用 CodeGenerator 生成 else if（不关闭，由 TranslateIf_stmt 最终关闭）
-        sb.append(PLCTranslatorNew.codeGen.emitElseIf(varExpression.getAssignVar()));
+        sb.append("\n\t\t}else if(").append(PLCTranslatorNew.gvlCtx.translateExpr(varExpression.getAssignVar())).append("){");
         String stmtListResult = translatorNew.visit(ctx.stmt_list());
         if (stmtListResult != null) {
             sb.append(stmtListResult);

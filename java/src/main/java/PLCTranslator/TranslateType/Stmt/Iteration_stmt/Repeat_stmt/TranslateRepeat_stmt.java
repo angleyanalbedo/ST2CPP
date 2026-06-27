@@ -10,16 +10,14 @@ import antlr4.PLCSTPARSERParser;
 public class TranslateRepeat_stmt {
     public String translateNode(PLCSTPARSERParser.Repeat_stmtContext ctx, PLCTranslatorNew translatorNew){
         StringBuilder sb = new StringBuilder();
-       //翻译do while语句
-       sb.append(PLCTranslatorNew.codeGen.emitRepeatBegin());
+       sb.append("\n\t\tdo{");
        String bodyResult = translatorNew.visit(ctx.stmt_list());
        if (bodyResult != null) {
            sb.append(bodyResult);
        }
 
        PLCVariable varExpression = PLCTranslatorNew.getVariable(ctx.expression(), "repeat expression");
-       //while条件语句
-       sb.append(PLCTranslatorNew.codeGen.emitRepeatEnd(varExpression.getAssignVar()));
+       sb.append("\n\t\t}while(!(").append(PLCTranslatorNew.gvlCtx.translateExpr(varExpression.getAssignVar())).append("));");
        return sb.toString();
     }
 }

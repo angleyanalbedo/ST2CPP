@@ -4,6 +4,7 @@ import PLCSymbolAndScope.PLCSymbols.PLCBaseFUNDeclSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCFBCallSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCVariable;
+import PLCTranslator.GvlContext;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
 
@@ -25,16 +26,16 @@ public class TranslateFunc_call {
         PLCSymbol firstSym = PLCTranslatorNew.getSymbol(ctx, "function call");
         if(firstSym instanceof PLCFBCallSymbol fbCallSym){
             String fbInstanceName = fbCallSym.getFbInstanceName();
-            String fbTypeName = translatorNew.codeGen.getVarType(fbInstanceName);
+            String fbTypeName = translatorNew.gvlCtx.getVarType(fbInstanceName);
             if(fbTypeName == null) fbTypeName = fbInstanceName;
             List<String> paramNames = new ArrayList<>();
             List<String> paramValues = new ArrayList<>();
             for(PLCSTPARSERParser.Param_assignContext param_assignContext : ctx.param_assign()){
                 PLCVariable plcVariable = PLCTranslatorNew.getVariable(param_assignContext, "function parameter");
                 paramNames.add(plcVariable.getName());
-                paramValues.add(translatorNew.codeGen.translateExpr(plcVariable.getAssignVar()));
+                paramValues.add(translatorNew.gvlCtx.translateExpr(plcVariable.getAssignVar()));
             }
-            sb.append(translatorNew.codeGen.emitFBCall(fbInstanceName, fbTypeName, paramNames, paramValues));
+            sb.append(translatorNew.gvlCtx.emitFBCall(fbInstanceName, fbTypeName, paramNames, paramValues));
         }else{
             for(PLCSTPARSERParser.Param_assignContext param_assignContext : ctx.param_assign()){
                 PLCVariable plcVariable = PLCTranslatorNew.getVariable(param_assignContext, "function parameter");
@@ -53,8 +54,8 @@ public class TranslateFunc_call {
                 if(typeName == null || typeName.isEmpty()){
                     typeName = "INT";
                 }
-                typeName = translatorNew.codeGen.toNativeType(typeName);
-                sb.append("\n\t\t" + typeName + " " + plcVariable.getRuntimeName() + "=" + translatorNew.codeGen.translateExpr(plcVariable.getAssignVar()) + ";");
+                typeName = translatorNew.gvlCtx.toNativeType(typeName);
+                sb.append("\n\t\t" + typeName + " " + plcVariable.getRuntimeName() + "=" + translatorNew.gvlCtx.translateExpr(plcVariable.getAssignVar()) + ";");
             }
         }
         // 将嵌套临时变量声明插入到本函数调用所有代码之前

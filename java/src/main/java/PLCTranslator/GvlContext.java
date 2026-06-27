@@ -1,0 +1,782 @@
+package PLCTranslator;
+
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+public class GvlContext {
+
+    // GVL 偏移量分配
+    public final Map<String, Integer> offsetMap = new LinkedHashMap<>();
+    public final Map<String, String> typeMap = new LinkedHashMap<>();
+    public int currentOffset = 0;
+
+    // symbolId → 变量名 映射
+    public final Map<String, String> symbolIdToNameMap = new LinkedHashMap<>();
+    public final Map<String, String> nameToSymbolIdMap = new LinkedHashMap<>();
+
+    // ─── Struct 类型支持 ───
+    public final Map<String, StructLayout> structLayoutMap = new HashMap<>();
+    public final Map<String, String> structTypeToName = new HashMap<>();
+
+    // ─── Enum 类型支持 ───
+    public final Map<String, String> enumRuntimeToUnderlying = new HashMap<>();
+    public final Map<String, String> enumNameToUnderlying = new HashMap<>();
+
+    // ─── I/O 映射变量支持 ───
+    public enum IODirection { INPUT, OUTPUT, MEMORY }
+
+    public static class IOInfo {
+        public IODirection dir;
+        public int byteOffset;
+        public int bitOffset = -1;
+        public String typeName;
+        public IOInfo() {}
+        public IOInfo(IODirection dir, int byteOffset, int bitOffset, String typeName) {
+            this.dir = dir; this.byteOffset = byteOffset;
+            this.bitOffset = bitOffset; this.typeName = typeName;
+        }
+    }
+
+    public final Map<String, IOInfo> ioVarMap = new LinkedHashMap<>();
+
+    // ─── POU 注册表 ───
+    public final List<String> programNames = new ArrayList<>();
+    public final Set<String> programNameSet = new HashSet<>();
+    public String fileId = "";
+
+    public void addProgramName(String name) {
+        if (programNameSet.contains(name)) {
+            throw new RuntimeException("Duplicate PROGRAM definition: " + name);
+        }
+        programNames.add(name);
+        programNameSet.add(name);
+    }
+
+    public String mangleProgName(String progName) {
+        return fileId.isEmpty() ? progName : fileId + "_" + progName;
+    }
+
+    public void setFileId(String id) {
+        this.fileId = id;
+    }
+
+    public String getFileId() {
+        return fileId.isEmpty() ? "unnamed" : fileId;
+    }
+
+    public List<String> getProgramNames() {
+        return Collections.unmodifiableList(programNames);
+    }
+
+    // ─── FOR 循环 GVL 局部变量遮盖 ───
+    public final Set<String> shadowedGvlVars = new HashSet<>();
+    public final Set<String> locallyDeclaredGvlVars = new HashSet<>();
+    public static class ShadowEntry {
+        public String varName; public String type; public int offset;
+        public ShadowEntry(String v, String t, int o) { varName = v; type = t; offset = o; }
+    }
+    public final ArrayDeque<ShadowEntry> shadowStack = new ArrayDeque<>();
+
+    // ─── Struct/Field 类型（原 CodeGenerator 内） ───
+    public static class StructField {
+        public String name;
+        public String type;
+        public int offset;
+        public StructField(String name, String type, int offset) {
+            this.name = name; this.type = type; this.offset = offset;
+        }
+    }
+
+    public static class StructLayout {
+        public String structName;
+        public List<StructField> fields;
+        public int totalSize;
+        public StructLayout(String structName, List<StructField> fields, int totalSize) {
+            this.structName = structName;
+            this.fields = fields;
+            this.totalSize = totalSize;
+        }
+    }
+
+    public void registerStructType(String typeName, String runtimeType, StructLayout layout) {
+        structLayoutMap.put(typeName, layout);
+        structTypeToName.put(runtimeType, typeName);
+        SIZE_MAP.put(typeName, layout.totalSize);
+    }
+
+    public void registerEnumType(String enumName, String runtimeTypeName, String underlyingNativeType) {
+        enumRuntimeToUnderlying.put(runtimeTypeName, underlyingNativeType);
+        enumNameToUnderlying.put(enumName, underlyingNativeType);
+    }
+
+    public String emitEnumDecl(String enumName, String underlyingType, List<String> entries) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("\nenum class ").append(enumName).append(" : ").append(underlyingType).append(" {");
+        for (int i = 0; i < entries.size(); i++) {
+            String entry = entries.get(i);
+            sb.append(i == 0 ? "\n    " : ",\n    ").append(entry);
+        }
+        sb.append("\n};\n");
+        return sb.toString();
+    }
+
+    public Integer getStructFieldOffset(String structTypeName, String fieldName) {
+        StructLayout layout = structLayoutMap.get(structTypeName);
+        if (layout == null) return null;
+        for (StructField f : layout.fields) {
+            if (f.name.equals(fieldName)) return f.offset;
+        }
+        return null;
+    }
+
+    public String getStructFieldType(String structTypeName, String fieldName) {
+        StructLayout layout = structLayoutMap.get(structTypeName);
+        if (layout == null) return null;
+        for (StructField f : layout.fields) {
+            if (f.name.equals(fieldName)) return f.type;
+        }
+        return null;
+    }
+
+    public Integer getVarOffset(String varName) {
+        return offsetMap.get(varName);
+    }
+
+    public String getVarType(String varName) {
+        return typeMap.get(varName);
+    }
+
+    // ST 类型名 → 原生 C++ 类型名
+    public static final Map<String, String> TYPE_MAP = new HashMap<>();
+    static {
+        TYPE_MAP.put("SINT", "SINT");
+        TYPE_MAP.put("INT", "INT");
+        TYPE_MAP.put("DINT", "DINT");
+        TYPE_MAP.put("LINT", "LINT");
+        TYPE_MAP.put("USINT", "USINT");
+        TYPE_MAP.put("UINT", "UINT");
+        TYPE_MAP.put("UDINT", "UDINT");
+        TYPE_MAP.put("ULINT", "ULINT");
+        TYPE_MAP.put("REAL", "REAL");
+        TYPE_MAP.put("LREAL", "LREAL");
+        TYPE_MAP.put("BOOL", "BOOL");
+        TYPE_MAP.put("STRING", "STRING");
+        TYPE_MAP.put("TIME", "TIME");
+        TYPE_MAP.put("DATE", "DATE");
+        TYPE_MAP.put("TIME_OF_DAY", "TIME_OF_DAY");
+        TYPE_MAP.put("DATE_AND_TIME", "DATE_AND_TIME");
+        TYPE_MAP.put("PLC_SINT_Value", "SINT");
+        TYPE_MAP.put("PLC_INT_Value", "INT");
+        TYPE_MAP.put("PLC_DINT_Value", "DINT");
+        TYPE_MAP.put("PLC_LINT_Value", "LINT");
+        TYPE_MAP.put("PLC_Real_Value", "REAL");
+        TYPE_MAP.put("PLC_LReal_Value", "LREAL");
+        TYPE_MAP.put("PLC_Bool_Value", "BOOL");
+        TYPE_MAP.put("PLC_String_Value", "STRING");
+    }
+
+    // 类型 → 字节大小
+    public static final Map<String, Integer> SIZE_MAP = new HashMap<>();
+    private static void initSizeMap() {
+        SIZE_MAP.put("SINT", 1);
+        SIZE_MAP.put("INT", 2);
+        SIZE_MAP.put("DINT", 4);
+        SIZE_MAP.put("LINT", 8);
+        SIZE_MAP.put("USINT", 1);
+        SIZE_MAP.put("UINT", 2);
+        SIZE_MAP.put("UDINT", 4);
+        SIZE_MAP.put("ULINT", 8);
+        SIZE_MAP.put("REAL", 4);
+        SIZE_MAP.put("LREAL", 8);
+        SIZE_MAP.put("BOOL", 1);
+        SIZE_MAP.put("STRING", 256);
+        SIZE_MAP.put("TIME", 8);
+        SIZE_MAP.put("DATE", 4);
+        SIZE_MAP.put("TIME_OF_DAY", 8);
+        SIZE_MAP.put("DATE_AND_TIME", 8);
+    }
+    static { initSizeMap(); }
+
+    public static void resetStatic() {
+        SIZE_MAP.clear();
+        initSizeMap();
+    }
+
+    public String toNativeType(String typeName) {
+        if (typeName == null) return typeName;
+        String mapped = enumRuntimeToUnderlying.get(typeName);
+        if (mapped != null) return mapped;
+        mapped = structTypeToName.get(typeName);
+        if (mapped != null) return mapped;
+        mapped = enumNameToUnderlying.get(typeName);
+        if (mapped != null) return mapped;
+        mapped = TYPE_MAP.get(typeName);
+        return mapped != null ? mapped : typeName;
+    }
+
+    public int getTypeSize(String nativeType) {
+        if (nativeType == null) return 4;
+        Integer size = SIZE_MAP.get(nativeType);
+        if (size != null) return size;
+        StructLayout layout = structLayoutMap.get(nativeType);
+        if (layout != null) return layout.totalSize;
+        String underlying = enumNameToUnderlying.get(nativeType);
+        if (underlying != null) return getTypeSize(underlying);
+        return 4;
+    }
+
+    public int allocateOffset(String varName, String nativeType) {
+        int size = getTypeSize(nativeType);
+        int aligned = (currentOffset + size - 1) / size * size;
+        offsetMap.put(varName, aligned);
+        typeMap.put(varName, nativeType);
+        currentOffset = aligned + size;
+        return aligned;
+    }
+
+    public void registerVariable(String varName, String symbolId) {
+        if (varName != null && symbolId != null) {
+            symbolIdToNameMap.put(symbolId, varName);
+            nameToSymbolIdMap.put(varName, symbolId);
+        }
+    }
+
+    public String findVarNameBySymbolId(String symbolId) {
+        return symbolIdToNameMap.get(symbolId);
+    }
+
+    // ═══ I/O 映射变量支持 ═══
+
+    public IOInfo parseATAddress(String location) {
+        if (location == null || !location.startsWith("%")) return null;
+        IOInfo info = new IOInfo();
+        int pos = 1;
+        info.dir = IODirection.INPUT;
+        if (pos < location.length()) {
+            char c = location.charAt(pos);
+            if (c == 'I' || c == 'Q' || c == 'M') {
+                info.dir = (c == 'I') ? IODirection.INPUT
+                        : (c == 'Q') ? IODirection.OUTPUT : IODirection.MEMORY;
+                pos++;
+            }
+        }
+        int sizeInBytes = 1;
+        boolean isBit = false;
+        if (pos < location.length()) {
+            char c = location.charAt(pos);
+            if (c == 'X') { isBit = true; sizeInBytes = 0; pos++; }
+            else if (c == 'B') { pos++; }
+            else if (c == 'W') { sizeInBytes = 2; pos++; }
+            else if (c == 'D') { sizeInBytes = 4; pos++; }
+            else if (c == 'L') { sizeInBytes = 8; pos++; }
+        }
+        StringBuilder numStr = new StringBuilder();
+        while (pos < location.length() && Character.isDigit(location.charAt(pos))) {
+            numStr.append(location.charAt(pos));
+            pos++;
+        }
+        if (numStr.length() == 0) return null;
+        int value = Integer.parseInt(numStr.toString());
+        int bitOffset = -1;
+        if (pos < location.length() && location.charAt(pos) == '.') {
+            pos++;
+            StringBuilder bitStr = new StringBuilder();
+            while (pos < location.length() && Character.isDigit(location.charAt(pos))) {
+                bitStr.append(location.charAt(pos));
+                pos++;
+            }
+            if (bitStr.length() > 0) bitOffset = Integer.parseInt(bitStr.toString());
+        }
+        if (isBit) {
+            info.byteOffset = value;
+            info.bitOffset = (bitOffset >= 0) ? bitOffset : 0;
+        } else {
+            info.byteOffset = value * sizeInBytes;
+            info.bitOffset = -1;
+        }
+        return info;
+    }
+
+    public void registerIOVariable(String varName, String typeName, String location) {
+        if (varName == null || location == null) return;
+        String cleanName = varName.startsWith("*") ? varName.substring(1) : varName;
+        IOInfo info = parseATAddress(location);
+        if (info == null) {
+            throw new RuntimeException("Invalid AT address: " + location + " for variable " + varName);
+        }
+        if (info.dir == IODirection.MEMORY) {
+            return;
+        }
+        info.typeName = toNativeType(typeName);
+        ioVarMap.put(cleanName, info);
+    }
+
+    public boolean isIOVariable(String varName) {
+        if (varName == null) return false;
+        String cleanName = varName.startsWith("*") ? varName.substring(1) : varName;
+        return ioVarMap.containsKey(cleanName);
+    }
+
+    public String emitIORead(String varName) {
+        if (varName == null) return null;
+        String cleanName = varName.startsWith("*") ? varName.substring(1) : varName;
+        IOInfo info = ioVarMap.get(cleanName);
+        if (info == null) return null;
+        if (info.dir == IODirection.MEMORY) return null;
+        String prefix = (info.dir == IODirection.INPUT) ? "io.readInput" : "io.readOutput";
+        if (info.bitOffset >= 0) {
+            return prefix + "Bit(" + info.byteOffset + ", " + info.bitOffset + ")";
+        }
+        return prefix + "<" + info.typeName + ">(" + info.byteOffset + ")";
+    }
+
+    public String emitIOWrite(String varName, String valueExpr) {
+        if (varName == null) return null;
+        String cleanName = varName.startsWith("*") ? varName.substring(1) : varName;
+        IOInfo info = ioVarMap.get(cleanName);
+        if (info == null) return null;
+        if (info.dir == IODirection.MEMORY) return null;
+        if (info.bitOffset >= 0) {
+            return "io.writeOutputBit(" + info.byteOffset + ", " + info.bitOffset + ", " + valueExpr + ")";
+        }
+        return "io.writeOutput<" + info.typeName + ">(" + info.byteOffset + ", " + valueExpr + ")";
+    }
+
+    public String readExpr(String varName) {
+        String cleanName = varName.startsWith("*") ? varName.substring(1) : varName;
+        if (ioVarMap.containsKey(cleanName)) {
+            String ioRead = emitIORead(cleanName);
+            if (ioRead != null) return ioRead;
+        }
+        String arrayElemPattern = "^\\(?([A-Z][A-Z0-9$_]*)\\[(.+)\\]\\)?$";
+        Matcher arrayMatcher = Pattern.compile(arrayElemPattern).matcher(cleanName.trim());
+        if (arrayMatcher.matches()) {
+            String arrName = arrayMatcher.group(1);
+            String indexExpr = arrayMatcher.group(2);
+            String arrType = typeMap.get(arrName);
+            Integer arrOffset = offsetMap.get(arrName);
+            if (arrType != null && arrType.startsWith("ARRAY[") && arrOffset != null) {
+                Pattern typePattern = Pattern.compile("ARRAY\\[(\\d+)\\] OF (\\w+)");
+                Matcher typeMatcher = typePattern.matcher(arrType);
+                if (typeMatcher.find()) {
+                    String elemType = typeMatcher.group(2);
+                    int count = Integer.parseInt(typeMatcher.group(1));
+                    String translatedIndex = translateExpr(indexExpr);
+                    return "gvl.safeArrayAt<" + elemType + ">(" + arrOffset + ", " + translatedIndex + ", " + count + ")";
+                }
+            }
+        }
+        String type = typeMap.get(cleanName);
+        Integer offset = offsetMap.get(cleanName);
+        if (type == null || offset == null) {
+            return varName;
+        }
+        return "gvl.read<" + type + ">(" + offset + ")";
+    }
+
+    public String writeExpr(String varName, String valueExpr) {
+        String cleanName = varName.startsWith("*") ? varName.substring(1) : varName;
+        if (ioVarMap.containsKey(cleanName)) {
+            String ioWrite = emitIOWrite(cleanName, valueExpr);
+            if (ioWrite != null) return ioWrite;
+        }
+        String rfmClean = cleanName.trim();
+        if (rfmClean.startsWith("(") && rfmClean.endsWith(")")) {
+            rfmClean = rfmClean.substring(1, rfmClean.length() - 1).trim();
+        }
+        Matcher rfmWriteMatcher = RFM_VAR_SIMPLE_PATTERN.matcher(rfmClean);
+        if (rfmWriteMatcher.matches()) {
+            String type = rfmWriteMatcher.group(1);
+            String symbolId = rfmWriteMatcher.group(2);
+            String nativeType = toNativeType(type);
+            String foundVarName = findVarNameBySymbolId(symbolId);
+            if (foundVarName != null) {
+                Integer offset = offsetMap.get(foundVarName);
+                String nType = typeMap.getOrDefault(foundVarName, nativeType);
+                if (offset != null) {
+                    return "gvl.write<" + nType + ">(" + offset + ", " + valueExpr + ")";
+                }
+            }
+            return "gvl.write<" + nativeType + ">(" + symbolId + ", " + valueExpr + ")";
+        }
+        if (cleanName.trim().equals("this->returnValue")) {
+            return "return " + valueExpr;
+        }
+        String arrayElemPattern = "^\\(?([A-Z][A-Z0-9$_]*)\\[(.+)\\]\\)?$";
+        Matcher arrayMatcher = Pattern.compile(arrayElemPattern).matcher(cleanName.trim());
+        if (arrayMatcher.matches()) {
+            String arrName = arrayMatcher.group(1);
+            String indexExpr = arrayMatcher.group(2);
+            String arrType = typeMap.get(arrName);
+            Integer arrOffset = offsetMap.get(arrName);
+            if (arrType != null && arrType.startsWith("ARRAY[") && arrOffset != null) {
+                Pattern typePattern = Pattern.compile("ARRAY\\[(\\d+)\\] OF (\\w+)");
+                Matcher typeMatcher = typePattern.matcher(arrType);
+                if (typeMatcher.find()) {
+                    String elemType = typeMatcher.group(2);
+                    int count = Integer.parseInt(typeMatcher.group(1));
+                    String translatedIndex = translateExpr(indexExpr);
+                    return "gvl.safeArrayAt<" + elemType + ">(" + arrOffset + ", " + translatedIndex + ", " + count + ") = " + valueExpr;
+                }
+            }
+        }
+        String trimmed = cleanName.trim();
+        String stripped = trimmed;
+        if (stripped.startsWith("(") && stripped.endsWith(")")) {
+            stripped = stripped.substring(1, stripped.length() - 1).trim();
+        }
+        int dotIdx = stripped.indexOf('.');
+        if (dotIdx > 0) {
+            String baseVar = stripped.substring(0, dotIdx);
+            String fieldPart = stripped.substring(dotIdx + 1);
+            IOInfo ioInfo = ioVarMap.get(baseVar);
+            if (ioInfo != null) {
+                String structTypeName = ioInfo.typeName;
+                StructLayout sLayout = structLayoutMap.get(structTypeName);
+                if (sLayout != null) {
+                    for (StructField f : sLayout.fields) {
+                        if (f.name.equals(fieldPart)) {
+                            return "io.writeOutput<" + f.type + ">("
+                                + (ioInfo.byteOffset + f.offset) + ", " + valueExpr + ")";
+                        }
+                    }
+                }
+            }
+            Integer baseOffset = offsetMap.get(baseVar);
+            String baseTypeName = typeMap.get(baseVar);
+            if (baseOffset != null && baseTypeName != null) {
+                StructLayout layout = structLayoutMap.get(baseTypeName);
+                if (layout != null) {
+                    for (StructField f : layout.fields) {
+                        if (f.name.equals(fieldPart)) {
+                            return "gvl.write<" + f.type + ">(" + (baseOffset + f.offset) + ", " + valueExpr + ")";
+                        }
+                    }
+                }
+            }
+            Matcher arrBaseMatcher =
+                Pattern.compile("^([A-Z][A-Z0-9$_]*)\\[(.+)\\]$").matcher(baseVar);
+            if (arrBaseMatcher.matches()) {
+                String arrName = arrBaseMatcher.group(1);
+                String indexExpr = arrBaseMatcher.group(2);
+                Integer arrOffset = offsetMap.get(arrName);
+                String arrType = typeMap.get(arrName);
+                if (arrType != null && arrType.startsWith("ARRAY[") && arrOffset != null) {
+                    Matcher typeMatcher =
+                        Pattern.compile("ARRAY\\[(\\d+)\\] OF (\\w+)").matcher(arrType);
+                    if (typeMatcher.find()) {
+                        String elemType = typeMatcher.group(2);
+                        int count = Integer.parseInt(typeMatcher.group(1));
+                        StructLayout elemLayout = structLayoutMap.get(elemType);
+                        if (elemLayout != null) {
+                            for (StructField f : elemLayout.fields) {
+                                if (f.name.equals(fieldPart)) {
+                                    String translatedIndex = translateExpr(indexExpr);
+                                    return "gvl.safeArrayAt<" + elemType + ">(" + arrOffset + ", "
+                                        + translatedIndex + ", " + count + ")." + fieldPart + " = " + valueExpr;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        String type = typeMap.get(trimmed);
+        Integer offset = offsetMap.get(trimmed);
+        if (type == null || offset == null) {
+            return trimmed + " = " + valueExpr;
+        }
+        return "gvl.write<" + type + ">(" + offset + ", " + valueExpr + ")";
+    }
+
+    // ═══ 表达式转换 ═══
+
+    private static final Pattern LITERAL_PATTERN =
+            Pattern.compile("\\(\\*\\(\\s*new\\s+(\\w+)\\s*\\(([^)]*)\\)\\s*\\)\\s*\\)");
+
+    private static final Pattern RFM_VAR_PATTERN =
+            Pattern.compile("\\(\\*::PLC::RFM->getSymbolByID<(\\w+)\\*>\\s*\\(\\s*(\\d+)\\s*\\)\\s*\\)");
+
+    private static final Pattern RFM_CALL_PATTERN =
+            Pattern.compile("\\*::PLC::RFM->getSymbolByID<(\\w+)\\*>\\s*\\(\\s*(\\d+)\\s*\\)->callFunc\\s*\\(([^)]*)\\)");
+
+    public static final Pattern RFM_VAR_SIMPLE_PATTERN =
+            Pattern.compile("\\*?::PLC::RFM->getSymbolByID<(\\w+)\\*>\\s*\\(\\s*(\\d+)\\s*\\)");
+
+    public String translateExpr(String expr) {
+        if (expr == null || expr.isEmpty()) {
+            return expr;
+        }
+
+        String result = expr;
+        boolean changed = true;
+        int maxRounds = 10;
+        while (changed && maxRounds-- > 0) {
+            changed = false;
+            String prev = result;
+
+            // 0. ST 结构体初值列表
+            String stInitRegex = "\\(\\s*(\\w+\\s*:=\\s*([^,()]+|\\([^()]*\\)))(\\s*,\\s*\\w+\\s*:=\\s*([^,()]+|\\([^()]*\\)))*\\s*\\)";
+            Matcher stInitMatcher = Pattern.compile(stInitRegex).matcher(result);
+            if (stInitMatcher.find()) {
+                String matched = stInitMatcher.group();
+                if (matched.contains(":=")) {
+                    String inner = matched.substring(1, matched.length() - 1).trim();
+                    String[] parts = inner.split(",");
+                    StringBuilder sb = new StringBuilder("{");
+                    for (int i = 0; i < parts.length; i++) {
+                        String part = parts[i].trim();
+                        int eqIdx = part.indexOf(":=");
+                        if (eqIdx >= 0) {
+                            String val = part.substring(eqIdx + 2).trim();
+                            if (i > 0) sb.append(",");
+                            sb.append(val);
+                        }
+                    }
+                    sb.append("}");
+                    String newResult = result.substring(0, stInitMatcher.start()) + sb.toString() + result.substring(stInitMatcher.end());
+                    result = newResult;
+                    changed = true;
+                    continue;
+                }
+            }
+
+            // 1. 字面量
+            Matcher litMatcher = LITERAL_PATTERN.matcher(result);
+            StringBuilder sb = new StringBuilder();
+            while (litMatcher.find()) {
+                changed = true;
+                String type = litMatcher.group(1);
+                String value = litMatcher.group(2).trim();
+                if ("BOOL".equals(type)) {
+                    value = value.equals("TRUE") || value.equals("1") ? "true" : "false";
+                }
+                litMatcher.appendReplacement(sb, "(" + value + ")");
+            }
+            litMatcher.appendTail(sb);
+            result = sb.toString();
+
+            // 2. RFM 变量引用（带括号）
+            Matcher varMatcher = RFM_VAR_PATTERN.matcher(result);
+            sb = new StringBuilder();
+            while (varMatcher.find()) {
+                changed = true;
+                String type = varMatcher.group(1);
+                String symbolId = varMatcher.group(2);
+                String nativeType = toNativeType(type);
+                String varName = findVarNameBySymbolId(symbolId);
+                if (varName != null) {
+                    Integer offset = offsetMap.get(varName);
+                    String nType = typeMap.getOrDefault(varName, nativeType);
+                    if (offset != null) {
+                        varMatcher.appendReplacement(sb, "gvl.read<" + nType + ">(" + offset + ")");
+                    } else if (isIOVariable(varName)) {
+                        String ioRead = emitIORead(varName);
+                        varMatcher.appendReplacement(sb, ioRead != null ? ioRead : varName);
+                    } else {
+                        varMatcher.appendReplacement(sb, varName);
+                    }
+                } else {
+                    varMatcher.appendReplacement(sb, "gvl.read<" + nativeType + ">(" + symbolId + ")");
+                }
+            }
+            varMatcher.appendTail(sb);
+            result = sb.toString();
+
+            // 3. RFM 函数调用
+            Matcher callMatcher = RFM_CALL_PATTERN.matcher(result);
+            sb = new StringBuilder();
+            while (callMatcher.find()) {
+                changed = true;
+                String funcType = callMatcher.group(1);
+                String params = callMatcher.group(3);
+                params = params.replaceAll("&", "").trim();
+                callMatcher.appendReplacement(sb, funcType + "(" + params + ")");
+            }
+            callMatcher.appendTail(sb);
+            result = sb.toString();
+
+            // 4. 简单 RFM 变量引用
+            Matcher simpleVarMatcher = RFM_VAR_SIMPLE_PATTERN.matcher(result);
+            sb = new StringBuilder();
+            while (simpleVarMatcher.find()) {
+                changed = true;
+                String type = simpleVarMatcher.group(1);
+                String symbolId = simpleVarMatcher.group(2);
+                String varName = findVarNameBySymbolId(symbolId);
+                if (varName != null) {
+                    Integer offset = offsetMap.get(varName);
+                    String nType = typeMap.getOrDefault(varName, toNativeType(type));
+                    if (offset != null) {
+                        simpleVarMatcher.appendReplacement(sb, "gvl.read<" + nType + ">(" + offset + ")");
+                    } else if (isIOVariable(varName)) {
+                        String ioRead = emitIORead(varName);
+                        simpleVarMatcher.appendReplacement(sb, ioRead != null ? ioRead : varName);
+                    } else {
+                        simpleVarMatcher.appendReplacement(sb, varName);
+                    }
+                } else {
+                    simpleVarMatcher.appendReplacement(sb, symbolId);
+                }
+            }
+            simpleVarMatcher.appendTail(sb);
+            result = sb.toString();
+
+            // 5. 数组元素访问
+            String arrayAccessPattern = "([A-Z][A-Z0-9$_]*)\\[(.*?)\\]";
+            Matcher arrayAccessMatcher = Pattern.compile(arrayAccessPattern).matcher(result);
+            sb = new StringBuilder();
+            while (arrayAccessMatcher.find()) {
+                changed = true;
+                String arrName = arrayAccessMatcher.group(1);
+                String indexExpr = arrayAccessMatcher.group(2);
+                String arrType = typeMap.get(arrName);
+                Integer arrOffset = offsetMap.get(arrName);
+                if (arrType != null && arrType.startsWith("ARRAY[") && arrOffset != null) {
+                    Pattern typePattern = Pattern.compile("ARRAY\\[(\\d+)\\] OF (\\w+)");
+                    Matcher typeMatcher = typePattern.matcher(arrType);
+                    if (typeMatcher.find()) {
+                        String elemType = typeMatcher.group(2);
+                        int count = Integer.parseInt(typeMatcher.group(1));
+                        String translatedIndex = translateExpr(indexExpr);
+                        arrayAccessMatcher.appendReplacement(sb,
+                            "gvl.safeArrayAt<" + elemType + ">(" + arrOffset + ", " + translatedIndex + ", " + count + ")");
+                        continue;
+                    }
+                }
+                arrayAccessMatcher.appendReplacement(sb, arrayAccessMatcher.group(0));
+            }
+            arrayAccessMatcher.appendTail(sb);
+            result = sb.toString();
+
+            if (!changed && result.equals(prev)) break;
+        }
+
+        // 6. 清理残余解引用星号
+        result = result.replaceAll("\\(\\*([A-Za-z_]\\w*)\\)", "($1)");
+        result = result.replaceAll("(?<![\\w*+\\-/<>])\\*([A-Za-z_]\\w*)(?![\\w*+\\-/<>])", "$1");
+        result = result.replace("( *", "(");
+        result = result.replace("*this->returnValue", "returnValue");
+
+        // 7. GVL 变量替换
+        for (Map.Entry<String, Integer> entry : offsetMap.entrySet()) {
+            String varName = entry.getKey();
+            Integer offset = entry.getValue();
+            String type = typeMap.get(varName);
+            if (type == null || offset == null) continue;
+            if (type.startsWith("ARRAY[")) continue;
+            if (shadowedGvlVars.contains(varName)) continue;
+            if (ioVarMap.containsKey(varName)) continue;
+            String regex = "(?<![A-Za-z0-9_])" + Pattern.quote(varName) + "(?![A-Za-z0-9_])";
+            result = result.replaceAll(regex, "gvl.read<" + type + ">(" + offset + ")");
+        }
+
+        // 7b. I/O 映射变量替换
+        for (String varName : ioVarMap.keySet()) {
+            if (shadowedGvlVars.contains(varName)) continue;
+            String ioRead = emitIORead(varName);
+            if (ioRead != null) {
+                String regex = "(?<![A-Za-z0-9_])" + Pattern.quote(varName) + "(?![A-Za-z0-9_])";
+                result = result.replaceAll(regex, ioRead);
+            }
+        }
+
+        return result;
+    }
+
+    // ═══ POU 注册表 ═══
+
+    public String emitPOURegistration(String fileId, List<String> progNames) {
+        if (progNames == null || progNames.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n// ─── Auto-generated POU Registration (").append(fileId).append(") ───\n");
+        sb.append("void registerPOU_").append(fileId).append("(POURegistry& reg) {\n");
+        for (String name : progNames) {
+            String mangled = mangleProgName(name);
+            sb.append("    POUCallbacks cbs;\n");
+            sb.append("    cbs.init = PROGRAM_").append(mangled).append("_init;\n");
+            sb.append("    cbs.cyclic = PROGRAM_").append(mangled).append("_cyclic;\n");
+            sb.append("    cbs.pre = PROGRAM_").append(mangled).append("_pre;\n");
+            sb.append("    cbs.post = PROGRAM_").append(mangled).append("_post;\n");
+            sb.append("    reg.add(\"").append(name).append("\", cbs);\n");
+        }
+        sb.append("}\n");
+        return sb.toString();
+    }
+
+    // ═══ FB 调用 ═══
+
+    public String emitFBCall(String fbInstanceName, String fbTypeName,
+                              List<String> paramNames, List<String> paramValues) {
+        StringBuilder sb = new StringBuilder();
+        Integer fbOffset = offsetMap.get(fbInstanceName);
+        if (fbOffset == null) {
+            sb.append("\n\t\t// FB instance ").append(fbInstanceName).append(" not in GVL, direct call");
+            sb.append("\n\t\t").append(fbInstanceName).append(".update();");
+            return sb.toString();
+        }
+        for (int i = 0; i < paramNames.size(); i++) {
+            String fieldName = paramNames.get(i);
+            String value = paramValues.get(i);
+            Integer fieldOffset = getStructFieldOffset(fbTypeName, fieldName);
+            if (fieldOffset != null) {
+                String fieldType = getStructFieldType(fbTypeName, fieldName);
+                sb.append("\n\t\tgvl.write<").append(fieldType).append(">(")
+                  .append(fbOffset + fieldOffset).append(", ").append(value).append(");");
+            }
+        }
+        sb.append("\n\t\tgvl.ptr<").append(fbTypeName).append(">(")
+          .append(fbOffset).append(")->update();");
+        return sb.toString();
+    }
+
+    // ═══ 数组类型信息 ═══
+
+    private static class ArrayInfo {
+        int count;
+        String elemType;
+    }
+
+    public ArrayInfo parseArrayType(String typeName) {
+        if (typeName == null) return null;
+        ArrayInfo info = new ArrayInfo();
+        Pattern pattern = Pattern.compile(
+            "ARRAY\\[(\\d+)\\.\\.(\\d+)\\]\\s+OF\\s+(\\w+)");
+        Matcher matcher = pattern.matcher(typeName);
+        if (matcher.find()) {
+            int low = Integer.parseInt(matcher.group(1));
+            int high = Integer.parseInt(matcher.group(2));
+            info.count = high - low + 1;
+            info.elemType = toNativeType(matcher.group(3));
+            return info;
+        }
+        return null;
+    }
+
+    // ═══ 辅助方法 ═══
+
+    public String getOffsetDefinitions() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("// GVL Offset Definitions\n");
+        for (Map.Entry<String, Integer> entry : offsetMap.entrySet()) {
+            String type = typeMap.get(entry.getKey());
+            sb.append("// ").append(entry.getKey())
+              .append(" : ").append(type)
+              .append(" @ offset ").append(entry.getValue())
+              .append("\n");
+        }
+        sb.append("// Total GVL usage: ").append(currentOffset).append(" bytes\n");
+        return sb.toString();
+    }
+
+    public Map<String, Integer> getOffsetMap() {
+        return Collections.unmodifiableMap(offsetMap);
+    }
+
+    public Map<String, String> getTypeMap() {
+        return Collections.unmodifiableMap(typeMap);
+    }
+}

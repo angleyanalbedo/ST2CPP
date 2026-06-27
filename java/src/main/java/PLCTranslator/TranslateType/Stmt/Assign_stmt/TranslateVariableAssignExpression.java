@@ -20,11 +20,11 @@ public class TranslateVariableAssignExpression {
         PLCVariable varExpression = PLCTranslatorNew.getVariable(ctx.expression(), "assign expression");
 
         if(varSymbol.getSort() != PLCModifierEnum.Sort.FC) {
-            // 使用 CodeGenerator 生成赋值
-            sb.append(PLCTranslatorNew.codeGen.emitAssign(varSymbol.getName(), varSymbol.getAssignVar()));
+            String translated = PLCTranslatorNew.gvlCtx.translateExpr(varSymbol.getAssignVar());
+            sb.append("\n\t\t").append(PLCTranslatorNew.gvlCtx.writeExpr(varSymbol.getName(), translated)).append(";");
         }else{
-            // 函数返回值赋值
-            sb.append(PLCTranslatorNew.codeGen.emitFuncReturnAssign(varExpression.getAssignVar()));
+            String translated = PLCTranslatorNew.gvlCtx.translateExpr(varExpression.getAssignVar());
+            sb.append("\n\t\treturn ").append(translated).append(";");
         }
         return sb.toString();
 

@@ -1,6 +1,6 @@
 package PLCSymbolAndScope;
 
-import PLCTranslator.FlatCodeGenerator;
+import PLCTranslator.GvlContext;
 
 public final class CompilerState {
 
@@ -9,6 +9,6 @@ public final class CompilerState {
     public static void reset() {
         PLCScopeStack.reset();
         IDGenerator.resetStatic();
-        FlatCodeGenerator.resetStatic();
+        GvlContext.resetStatic();
     }
 }
