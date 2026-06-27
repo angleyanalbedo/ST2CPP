@@ -195,19 +195,7 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     }
 
     @Override public String visitPrimary_expr(PLCSTPARSERParser.Primary_exprContext ctx) {
-        if (ctx.expression() != null) {
-            return "(" + visit(ctx.expression()) + ")";
-        }
-        if (ctx.variable_access() != null) {
-            return new PLCTranslator.TranslateType.Expr.TranslateVariable_access().translateNode(ctx.variable_access(), this);
-        }
-        if (ctx.func_call() != null) {
-            return (String) visit(ctx.func_call());
-        }
-        if (ctx.constant() != null) return ctx.constant().getText();
-        if (ctx.enum_value() != null) return ctx.enum_value().getText();
-        if (ctx.ref_value() != null) return ctx.ref_value().getText();
-        return ctx.getChild(0).getText();
+        return new PLCTranslator.TranslateType.Expr.TranslatePrimary_expr().translateNode(ctx, this);
     }
 
     @Override public String visitVariable_access(PLCSTPARSERParser.Variable_accessContext ctx) {
@@ -631,7 +619,23 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
      * @return 生成的代码字符串
      */
     @Override public String visitEnum_type_decl(PLCSTPARSERParser.Enum_type_declContext ctx) {
-        return translateEnumTypeDeclFlat(ctx, gvlCtx);
+        PLCEnumDeclSymbol enumSymbol = (PLCEnumDeclSymbol) properties.get(ctx).get(0);
+        String enumName = enumSymbol.getName();
+        int protoTypeId = enumSymbol.getEnumConstTypeId();
+        PLCTypeDeclSymbol protoType = PLCTotalSymbolTable.getTypeByTypeID(protoTypeId);
+        String underlyingType = protoType != null ? gvlCtx.toNativeType(protoType.getRuntimeName()) : "INT";
+        String runtimeTypeName = "PLC_Enum_Value<" + enumSymbol.getTypeId() + ">";
+        gvlCtx.registerEnumType(enumName, runtimeTypeName, underlyingType);
+        List<String> entries = new ArrayList<>();
+        for (PLCVariable var : enumSymbol.getEnumValues()) {
+            String valueExpr = stripParens(var.getAssignVar());
+            if (valueExpr.equals("0")) {
+                entries.add(var.getName());
+            } else {
+                entries.add(var.getName() + " = " + valueExpr);
+            }
+        }
+        return gvlCtx.emitEnumDecl(enumName, underlyingType, entries);
     }
 
     /**
@@ -690,10 +694,6 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
      * @return 生成的代码字符串
      */
     @Override public String visitStruct_type_decl(PLCSTPARSERParser.Struct_type_declContext ctx) {
-        return translateStructTypeDeclFlat(ctx, gvlCtx);
-    }
-
-    private String translateStructTypeDeclFlat(PLCSTPARSERParser.Struct_type_declContext ctx, GvlContext gvlCtx) {
         PLCStructDeclSymbol structSymbol = (PLCStructDeclSymbol) properties.get(ctx).get(0);
         String structName = structSymbol.getName();
         String runtimeType = "PLC_Struct_Value<" + structSymbol.getTypeId() + ">";
@@ -734,32 +734,6 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
         gvlCtx.registerVariable(structName, String.valueOf(structSymbol.getSymbolId()));
 
         return sb.toString();
-    }
-
-    private String translateEnumTypeDeclFlat(PLCSTPARSERParser.Enum_type_declContext ctx, GvlContext gvlCtx) {
-        PLCEnumDeclSymbol enumSymbol = (PLCEnumDeclSymbol) properties.get(ctx).get(0);
-        String enumName = enumSymbol.getName();
-
-        // 获取 underlying type 的原生 C++ 类型名
-        int protoTypeId = enumSymbol.getEnumConstTypeId();
-        PLCTypeDeclSymbol protoType = PLCTotalSymbolTable.getTypeByTypeID(protoTypeId);
-        String underlyingType = protoType != null ? gvlCtx.toNativeType(protoType.getRuntimeName()) : "INT";
-
-        String runtimeTypeName = "PLC_Enum_Value<" + enumSymbol.getTypeId() + ">";
-        gvlCtx.registerEnumType(enumName, runtimeTypeName, underlyingType);
-
-        List<String> entries = new ArrayList<>();
-        for (PLCVariable var : enumSymbol.getEnumValues()) {
-            String valueExpr = stripParens(var.getAssignVar());
-            // 如果是默认值 "0" 则省略 = Value，由 C++ 编译器自动编号
-            if (valueExpr.equals("0")) {
-                entries.add(var.getName());
-            } else {
-                entries.add(var.getName() + " = " + valueExpr);
-            }
-        }
-
-        return gvlCtx.emitEnumDecl(enumName, underlyingType, entries);
     }
 
     /**

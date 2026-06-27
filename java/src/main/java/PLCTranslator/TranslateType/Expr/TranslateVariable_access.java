@@ -8,6 +8,12 @@ public class TranslateVariable_access {
         String varName = ctx.variable().getText();
         String cleanName = varName.startsWith("*") ? varName.substring(1) : varName;
 
+        // 枚举值模式：TYPE#VALUE → TYPE::VALUE
+        if (cleanName.contains("#")) {
+            int hashIdx = cleanName.indexOf('#');
+            return cleanName.substring(0, hashIdx) + "::" + cleanName.substring(hashIdx + 1);
+        }
+
         if (t.gvlCtx.ioVarMap.containsKey(cleanName)) {
             String ioRead = t.gvlCtx.emitIORead(cleanName);
             if (ioRead != null) return ioRead;

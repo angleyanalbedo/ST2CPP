@@ -205,11 +205,8 @@ public class GvlContext {
 
     public String toNativeType(String typeName) {
         if (typeName == null) return typeName;
-        String mapped = enumRuntimeToUnderlying.get(typeName);
-        if (mapped != null) return mapped;
-        mapped = structTypeToName.get(typeName);
-        if (mapped != null) return mapped;
-        mapped = enumNameToUnderlying.get(typeName);
+        // 枚举类型保持原样，不降级为底层类型
+        String mapped = structTypeToName.get(typeName);
         if (mapped != null) return mapped;
         mapped = TYPE_MAP.get(typeName);
         return mapped != null ? mapped : typeName;

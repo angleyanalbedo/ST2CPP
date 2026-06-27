@@ -1,5 +1,6 @@
 package PLCTranslator.TranslateType.Prog_decl;
 
+import PLCSymbolAndScope.PLCSymbolTables.PLCTotalSymbolTable;
 import PLCSymbolAndScope.PLCSymbols.*;
 import PLCTranslator.GvlContext;
 import PLCTranslator.PLCTranslatorNew;
@@ -132,7 +133,7 @@ public class TranslateProg_decl {
                 location
             );
         } else {
-            emitVarDeclInline(sb, varSymbol.getName(), varSymbol.getRuntimeTypeName(), varSymbol.getAssignVar(), translatorNew.gvlCtx);
+            emitVarDeclInline(sb, varSymbol.getName(), varSymbol.getRuntimeTypeName(), varSymbol.getAssignVar(), varSymbol.getTypeId(), translatorNew.gvlCtx);
         }
     }
 
@@ -178,7 +179,7 @@ public class TranslateProg_decl {
         return sb.toString();
     }
 
-    private void emitVarDeclInline(StringBuilder sb, String name, String typeName, String assignVar, GvlContext gvlCtx) {
+    private void emitVarDeclInline(StringBuilder sb, String name, String typeName, String assignVar, int typeId, GvlContext gvlCtx) {
         if (typeName != null && typeName.startsWith("ARRAY")) {
             int count = 0;
             String elemType = "INT";
@@ -201,6 +202,15 @@ public class TranslateProg_decl {
                 return;
             }
         }
+
+        // 枚举变量不分配 GVL 偏移，通过语义检查阶段的 typeId 判断
+        if (typeId != 0) {
+            PLCTypeDeclSymbol typeDecl = PLCTotalSymbolTable.getTypeByTypeID(typeId);
+            if (typeDecl instanceof PLCEnumDeclSymbol) {
+                return;
+            }
+        }
+
         String nativeType = gvlCtx.toNativeType(typeName);
         gvlCtx.allocateOffset(name, nativeType);
         if (assignVar != null && !assignVar.isEmpty() && !"0".equals(assignVar) && !"\"\"".equals(assignVar)) {
