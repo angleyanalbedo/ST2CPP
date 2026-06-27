@@ -2,6 +2,7 @@ package PLCTranslator;
 
 import PLCSymbolAndScope.PLCSymbolTables.PLCTotalSymbolTable;
 import PLCSymbolAndScope.PLCSymbols.PLCEnumDeclSymbol;
+import PLCSymbolAndScope.PLCSymbols.PLCBaseFUNDeclSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCStructDeclSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCTypeDeclSymbol;
@@ -128,15 +129,56 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     }
 
     public static String translateBinaryChain(ParserRuleContext ctx, int opStartIndex, int opStep,
-                                              PLCTranslatorNew translatorNew) {
+                                              PLCTranslatorNew t) {
         StringBuilder sb = new StringBuilder();
-        sb.append(translatorNew.visit(ctx.getChild(0)));
+        sb.append(translateChild(ctx.getChild(0), t));
         for (int i = opStartIndex; i < ctx.getChildCount(); i += opStep) {
             String op = ctx.getChild(i).getText();
             sb.append(" ").append(mapOperator(op)).append(" ");
-            sb.append(translatorNew.visit(ctx.getChild(i + 1)));
+            sb.append(translateChild(ctx.getChild(i + 1), t));
         }
         return sb.toString();
+    }
+
+    public static String translateChild(org.antlr.v4.runtime.tree.ParseTree node, PLCTranslatorNew t) {
+        if (node instanceof PLCSTPARSERParser.ExpressionContext c) return new PLCTranslator.TranslateType.Expr.TranslateExpression().translateNode(c, t);
+        if (node instanceof PLCSTPARSERParser.Xor_exprContext c) return new PLCTranslator.TranslateType.Expr.TranslateXor_expr().translateNode(c, t);
+        if (node instanceof PLCSTPARSERParser.And_exprContext c) return new PLCTranslator.TranslateType.Expr.TranslateAnd_expr().translateNode(c, t);
+        if (node instanceof PLCSTPARSERParser.Compare_exprContext c) return new PLCTranslator.TranslateType.Expr.TranslateCompare_expr().translateNode(c, t);
+        if (node instanceof PLCSTPARSERParser.Equ_exprContext c) return new PLCTranslator.TranslateType.Expr.TranslateEqu_expr().translateNode(c, t);
+        if (node instanceof PLCSTPARSERParser.Add_exprContext c) return new PLCTranslator.TranslateType.Expr.TranslateAdd_expr().translateNode(c, t);
+        if (node instanceof PLCSTPARSERParser.TermContext c) return new PLCTranslator.TranslateType.Expr.TranslateTerm().translateNode(c, t);
+        if (node instanceof PLCSTPARSERParser.Power_exprContext c) return new PLCTranslator.TranslateType.Expr.TranslatePower_expr().translateNode(c, t);
+        if (node instanceof PLCSTPARSERParser.Unary_exprContext c) return new PLCTranslator.TranslateType.Expr.TranslateUnary_expr().translateNode(c, t);
+        if (node instanceof PLCSTPARSERParser.Primary_exprContext c) return translatePrimaryExpr(c, t);
+        if (node instanceof PLCSTPARSERParser.Variable_accessContext c) return new PLCTranslator.TranslateType.Expr.TranslateVariable_access().translateNode(c, t);
+        return node.getText();
+    }
+
+    public static String translatePrimaryExpr(PLCSTPARSERParser.Primary_exprContext ctx, PLCTranslatorNew t) {
+        if (ctx.expression() != null) {
+            return "(" + translateExpression(ctx.expression(), t) + ")";
+        }
+        if (ctx.variable_access() != null) {
+            return new PLCTranslator.TranslateType.Expr.TranslateVariable_access().translateNode(ctx.variable_access(), t);
+        }
+        if (ctx.func_call() != null) {
+            PLCSTPARSERParser.Func_callContext fc = ctx.func_call();
+            PLCSymbol sym = getSymbol(fc, "func_call in expression");
+            String funcName = sym instanceof PLCBaseFUNDeclSymbol fd ? fd.getStdFunction() : fc.func_access().getText();
+            StringBuilder args = new StringBuilder();
+            for (int i = 0; i < fc.param_assign().size(); i++) {
+                if (i > 0) args.append(", ");
+                PLCSTPARSERParser.Param_assignContext p = fc.param_assign(i);
+                if (p instanceof PLCSTPARSERParser.InputParamContext ip) {
+                    args.append(translateExpression(ip.expression(), t));
+                } else {
+                    args.append(p.getText());
+                }
+            }
+            return funcName + "(" + args + ")";
+        }
+        return ctx.getChild(0).getText();
     }
 
     public static String mapOperator(String op) {
@@ -156,11 +198,8 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
         return new PLCTranslator.TranslateType.Expr.TranslateExpression().translateNode(ctx, t);
     }
 
-    /**
-     * 翻译程序初始处
-     * @param ctx the parse tree
-     * @return 生成的代码字符串
-     */
+    // ─── Statement visitors ───
+
     @Override
     public String visitStartpoint(PLCSTPARSERParser.StartpointContext ctx) {
         TranslateStartpoint translateStartpoint = new TranslateStartpoint();
