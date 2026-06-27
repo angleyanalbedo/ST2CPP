@@ -69,6 +69,9 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     private boolean emitHeader = true;
     private boolean emitPOURegistration = true;
 
+    // 标记当前是否在 PROGRAM cyclic 函数体内（影响变量翻译方式）
+    public boolean inCyclic = false;
+
     public PLCTranslatorNew(ParseTreeProperty<java.util.ArrayList<PLCSymbol>> properties) {
         PLCTranslatorNew.properties = properties;
         PLCTranslatorNew.gvlCtx = new GvlContext();

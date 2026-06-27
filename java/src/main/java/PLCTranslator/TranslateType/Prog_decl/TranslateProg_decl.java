@@ -27,8 +27,15 @@ public class TranslateProg_decl {
         sb.append("\n}");
 
         sb.append("\nvoid PROGRAM_").append(mangled).append("_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {");
+        // 开头：声明局部变量 + 从 GVL 加载
+        sb.append(emitCyclicPrologue(translatorNew));
+        // 设置 inCyclic 标志，让变量翻译直接使用变量名
+        translatorNew.inCyclic = true;
         String result = translatorNew.visit(ctx.fb_body());
+        translatorNew.inCyclic = false;
         sb.append(result);
+        // 结尾：将局部变量写回 GVL
+        sb.append(emitCyclicEpilogue(translatorNew));
         sb.append("\n}");
 
         sb.append("\nvoid PROGRAM_").append(mangled).append("_post(GVL& gvl, ProcessImage& io) {");
@@ -233,5 +240,44 @@ public class TranslateProg_decl {
             return s.substring(1, s.length() - 1).trim();
         }
         return s;
+    }
+
+    /**
+     * cyclic 开头：为每个 GVL 变量生成局部 C++ 变量声明并从 GVL 加载
+     */
+    private String emitCyclicPrologue(PLCTranslatorNew translatorNew) {
+        StringBuilder sb = new StringBuilder();
+        GvlContext gvlCtx = translatorNew.gvlCtx;
+        for (java.util.Map.Entry<String, Integer> entry : gvlCtx.offsetMap.entrySet()) {
+            String varName = entry.getKey();
+            int offset = entry.getValue();
+            String type = gvlCtx.typeMap.get(varName);
+            if (type == null) continue;
+            if (type.startsWith("ARRAY[")) continue;
+            if (gvlCtx.ioVarMap.containsKey(varName)) continue;
+            // 声明局部变量 + 从 GVL 加载
+            sb.append("\n\t").append(type).append(" ").append(varName).append(" = gvl.read<")
+              .append(type).append(">(").append(offset).append(");");
+        }
+        return sb.toString();
+    }
+
+    /**
+     * cyclic 结尾：将所有局部变量写回 GVL
+     */
+    private String emitCyclicEpilogue(PLCTranslatorNew translatorNew) {
+        StringBuilder sb = new StringBuilder();
+        GvlContext gvlCtx = translatorNew.gvlCtx;
+        for (java.util.Map.Entry<String, Integer> entry : gvlCtx.offsetMap.entrySet()) {
+            String varName = entry.getKey();
+            int offset = entry.getValue();
+            String type = gvlCtx.typeMap.get(varName);
+            if (type == null) continue;
+            if (type.startsWith("ARRAY[")) continue;
+            if (gvlCtx.ioVarMap.containsKey(varName)) continue;
+            sb.append("\n\tgvl.write<").append(type).append(">(").append(offset)
+              .append(", ").append(varName).append(");");
+        }
+        return sb.toString();
     }
 }

@@ -22,6 +22,10 @@ public class TranslateVariable_access {
         String type = t.gvlCtx.typeMap.get(cleanName);
         Integer offset = t.gvlCtx.offsetMap.get(cleanName);
         if (type != null && offset != null && !t.gvlCtx.shadowedGvlVars.contains(cleanName)) {
+            // cyclic 内直接使用变量名（已通过 prologue 加载为局部变量）
+            if (t.inCyclic) {
+                return cleanName;
+            }
             return "gvl.read<" + type + ">(" + offset + ")";
         }
 

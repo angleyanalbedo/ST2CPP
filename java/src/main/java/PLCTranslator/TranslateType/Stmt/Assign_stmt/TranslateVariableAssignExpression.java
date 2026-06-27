@@ -38,9 +38,14 @@ public class TranslateVariableAssignExpression {
             String type = translatorNew.gvlCtx.typeMap.get(varName);
 
             if (offset != null && type != null) {
-                // GVL 变量 → gvl.write
-                sb.append("\n\t\tgvl.write<").append(type).append(">(")
-                  .append(offset).append(", ").append(rhs).append(");");
+                if (translatorNew.inCyclic) {
+                    // cyclic 内直接赋值局部变量（epilogue 会统一写回 GVL）
+                    sb.append("\n\t\t").append(varName).append(" = ").append(rhs).append(";");
+                } else {
+                    // 非 cyclic → gvl.write
+                    sb.append("\n\t\tgvl.write<").append(type).append(">(")
+                      .append(offset).append(", ").append(rhs).append(");");
+                }
             } else {
                 // 非 GVL 变量（FC 局部变量等）→ 直接赋值
                 sb.append("\n\t\t").append(varName).append(" = ").append(rhs).append(";");
