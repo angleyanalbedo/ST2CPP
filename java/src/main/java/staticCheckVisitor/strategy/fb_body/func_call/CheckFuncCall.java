@@ -115,7 +115,12 @@ public class CheckFuncCall {
                     throw new PLCSemanticException("type mismatch");
                 }
 
-                paramList.put(paramName, param.getRuntimeName());
+                String paramExpr = param.getAssignVar();
+                if (paramExpr != null && isSimpleExpr(paramExpr)) {
+                    paramList.put(paramName, paramExpr);
+                } else {
+                    paramList.put(paramName, param.getRuntimeName());
+                }
             }
 
 
@@ -153,5 +158,15 @@ public class CheckFuncCall {
         funcCallVar.setRuntimeTypeName(funcRuntimeTypeName);
 
         return funcCallVar;
+    }
+
+    private boolean isSimpleExpr(String expr) {
+        if (expr == null) return false;
+        String trimmed = expr.trim();
+        // 纯数字常数
+        if (trimmed.matches("^-?\\d+\\.?\\d*$")) return true;
+        // 简单变量名
+        if (trimmed.matches("^[A-Za-z_][A-Za-z0-9_]*$")) return true;
+        return false;
     }
 }

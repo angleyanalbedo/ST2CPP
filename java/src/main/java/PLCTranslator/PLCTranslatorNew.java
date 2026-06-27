@@ -63,6 +63,9 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     static public ParseTreeProperty<java.util.ArrayList<PLCSymbol>> properties = new ParseTreeProperty<>();
     static public GvlContext gvlCtx;
 
+    // 表达式中函数调用产生的临时变量声明，需在语句级统一输出
+    public java.util.List<String> pendingDecls = new java.util.ArrayList<>();
+
     private boolean emitHeader = true;
     private boolean emitPOURegistration = true;
 
@@ -163,20 +166,7 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
             return new PLCTranslator.TranslateType.Expr.TranslateVariable_access().translateNode(ctx.variable_access(), t);
         }
         if (ctx.func_call() != null) {
-            PLCSTPARSERParser.Func_callContext fc = ctx.func_call();
-            PLCSymbol sym = getSymbol(fc, "func_call in expression");
-            String funcName = sym instanceof PLCBaseFUNDeclSymbol fd ? fd.getStdFunction() : fc.func_access().getText();
-            StringBuilder args = new StringBuilder();
-            for (int i = 0; i < fc.param_assign().size(); i++) {
-                if (i > 0) args.append(", ");
-                PLCSTPARSERParser.Param_assignContext p = fc.param_assign(i);
-                if (p instanceof PLCSTPARSERParser.InputParamContext ip) {
-                    args.append(translateExpression(ip.expression(), t));
-                } else {
-                    args.append(p.getText());
-                }
-            }
-            return funcName + "(" + args + ")";
+            return t.visit(ctx.func_call());
         }
         return ctx.getChild(0).getText();
     }
@@ -244,20 +234,7 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
             return new PLCTranslator.TranslateType.Expr.TranslateVariable_access().translateNode(ctx.variable_access(), this);
         }
         if (ctx.func_call() != null) {
-            PLCSTPARSERParser.Func_callContext fc = ctx.func_call();
-            PLCSymbol sym = getSymbol(fc, "func_call in expression");
-            String funcName = sym instanceof PLCBaseFUNDeclSymbol fd ? fd.getStdFunction() : fc.func_access().getText();
-            StringBuilder args = new StringBuilder();
-            for (int i = 0; i < fc.param_assign().size(); i++) {
-                if (i > 0) args.append(", ");
-                PLCSTPARSERParser.Param_assignContext p = fc.param_assign(i);
-                if (p instanceof PLCSTPARSERParser.InputParamContext ip) {
-                    args.append(visit(ip.expression()));
-                } else {
-                    args.append(p.getText());
-                }
-            }
-            return funcName + "(" + args + ")";
+            return (String) visit(ctx.func_call());
         }
         if (ctx.constant() != null) return ctx.constant().getText();
         if (ctx.enum_value() != null) return ctx.enum_value().getText();

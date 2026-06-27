@@ -45,7 +45,13 @@ public class TranslateCallFunc {
             }
         }else{
             String result = translatorNew.visit(ctx.getChild(0));
-            sb.append(result);
+            for (String decl : translatorNew.pendingDecls) {
+                sb.append(decl);
+            }
+            translatorNew.pendingDecls.clear();
+            if (result != null) {
+                sb.append(result);
+            }
         }
 
 
