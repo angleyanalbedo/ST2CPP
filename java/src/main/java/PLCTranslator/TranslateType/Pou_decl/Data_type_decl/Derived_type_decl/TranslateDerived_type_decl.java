@@ -4,16 +4,12 @@ import PLCSymbolAndScope.PLCSymbols.PLCVariable;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
 
-//搁置
 public class TranslateDerived_type_decl {
 
     public String translateNode(PLCSTPARSERParser.Derived_type_declContext ctx, PLCTranslatorNew translatorNew){
-        //typedef名称
-        String typeName = ctx.derived_type_name().getText();
-
-        //获取typedef类型名
+        String newName = ctx.derived_type_name().getText();
         PLCVariable typedefSymbol = PLCTranslatorNew.getVariable(ctx.derived_spec_init(), "derived type spec");
-
-        return "";
+        String baseType = translatorNew.gvlCtx.toNativeType(typedefSymbol.getRuntimeTypeName());
+        return "\nusing " + newName + " = " + baseType + ";";
     }
 }

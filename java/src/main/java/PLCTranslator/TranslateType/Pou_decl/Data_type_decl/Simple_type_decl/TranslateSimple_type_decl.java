@@ -6,12 +6,9 @@ import antlr4.PLCSTPARSERParser;
 
 public class TranslateSimple_type_decl {
     public String translateNode(PLCSTPARSERParser.Simple_type_declContext ctx, PLCTranslatorNew translatorNew){
-        //typedef名称
-        String typeName = ctx.simple_type_name().getText();
-
-        //获取typedef类型名
+        String newName = ctx.simple_type_name().getText();
         PLCVariable typedefSymbol = PLCTranslatorNew.getVariable(ctx.simple_spec_init(), "simple type spec");
-
-        return "";
+        String baseType = translatorNew.gvlCtx.toNativeType(typedefSymbol.getRuntimeTypeName());
+        return "\nusing " + newName + " = " + baseType + ";";
     }
 }

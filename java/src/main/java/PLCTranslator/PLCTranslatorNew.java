@@ -48,6 +48,7 @@ import PLCTranslator.TranslateType.Stmt.Subprog_ctrl_stmt.CallFunc.TranslateFunc
 import PLCTranslator.TranslateType.Stmt.Subprog_ctrl_stmt.Invocation.TranslateInvocation1;
 import PLCTranslator.TranslateType.Stmt.Subprog_ctrl_stmt.Invocation.TranslateInvocation2;
 import PLCTranslator.TranslateType.Stmt.Subprog_ctrl_stmt.TranslateCallFunc;
+import PLCTranslator.TranslateType.Stmt.Subprog_ctrl_stmt.TranslateReturn;
 import PLCTranslator.TranslateType.Stmt.Subprog_ctrl_stmt.TranslateSuperCall;
 import PLCTranslator.TranslateType.Stmt.TranslateStmt;
 import PLCTranslator.TranslateType.Stmt_list.TranslateStmt_list;
@@ -392,7 +393,8 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
      */
     @Override
     public String visitReturn(PLCSTPARSERParser.ReturnContext ctx) {
-        return "";
+        TranslateReturn translateReturn = new TranslateReturn();
+        return translateReturn.translateNode(ctx, this);
     }
 
     /**
