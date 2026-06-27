@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <cerrno>
 
 // ═══ BCM2835/2836/2837/2711 GPIO 寄存器偏移 ═══
 // 所有型号的 GPIO 寄存器基地址相对偏移一致

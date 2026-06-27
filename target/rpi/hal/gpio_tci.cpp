@@ -10,6 +10,8 @@
 #include <cerrno>
 #include <cstdlib>
 
+using namespace rt_plc;
+
 
 RpiGpioTCI::RpiGpioTCI()
     : m_inputCount(0), m_outputCount(0)
