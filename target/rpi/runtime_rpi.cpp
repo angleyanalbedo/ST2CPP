@@ -17,16 +17,18 @@
 #include <csignal>
 #include <unistd.h>
 #include <cstring>
+#include <time.h>
 
 using namespace rt_plc;
 
 extern void registerAllPOUs(POURegistry& reg);
-extern "C" int  plc_rpi_create_timer(int64_t intervalUs);
-extern "C" void plc_rpi_destroy_timer();
 extern "C" int  plc_rpi_set_rt_priority(int priority);
 extern "C" uint32_t plc_rpi_get_tick_count();
 extern "C" int64_t  plc_rpi_get_uptime_us();
 extern "C" void plc_rpi_print_jitter_stats();
+extern "C" void plc_rpi_jitter_init();
+extern "C" void plc_rpi_jitter_sample();
+extern "C" void plc_rpi_jitter_set_target(int64_t targetUs);
 
 static Scheduler sched;
 static RpiGpioTCI gpioTCI;
@@ -98,30 +100,42 @@ int main(int argc, char* argv[]) {
     plc_rpi_set_rt_priority(90);
     plc_init();
 
-    if (plc_rpi_create_timer(cycleUs) != 0) {
-        platform::logErr("Timer failed, falling back to busy loop\n");
-        while (running) {
-            plc_runtime_tick();
-            platform::sleepUs(cycleUs);
-        }
-    } else {
-        platform::logInfo("Timer started: %lldus period\n", (long long)cycleUs);
-        platform::logInfo("Press Ctrl+C to stop\n");
+    platform::logInfo("Timer started: %lldus period\n", (long long)cycleUs);
+    platform::logInfo("Press Ctrl+C to stop\n");
 
-        int64_t lastDiagUs = 0;
-        while (running) {
-            usleep(100000);
-            int64_t now = platform::steadyUs();
-            if (now - lastDiagUs > 5000000) {
-                lastDiagUs = now;
-                platform::logInfo("[DIAG] ticks=%u uptime=%lldms\n",
-                                 plc_rpi_get_tick_count(),
-                                 plc_rpi_get_uptime_us() / 1000);
-            }
+    plc_rpi_jitter_init();
+    plc_rpi_jitter_set_target(cycleUs);
+
+    // 单线程 clock_nanosleep 驱动，避免 SIGEV_THREAD 调度抖动
+    struct timespec next;
+    clock_gettime(CLOCK_MONOTONIC, &next);
+
+    int64_t lastDiagUs = 0;
+    while (running) {
+        // 精确等待到下一个周期
+        clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, nullptr);
+
+        // 推进下一个周期时间点（不依赖当前时间，避免累积漂移）
+        next.tv_nsec += cycleUs * 1000;
+        while (next.tv_nsec >= 1000000000L) {
+            next.tv_sec++;
+            next.tv_nsec -= 1000000000L;
+        }
+
+        // 执行 PLC tick
+        plc_runtime_tick();
+        plc_rpi_jitter_sample();
+
+        // 每 5 秒输出一次诊断
+        int64_t now = platform::steadyUs();
+        if (now - lastDiagUs > 5000000) {
+            lastDiagUs = now;
+            platform::logInfo("[DIAG] ticks=%u uptime=%lldms\n",
+                             plc_rpi_get_tick_count(),
+                             plc_rpi_get_uptime_us() / 1000);
         }
     }
 
-    plc_rpi_destroy_timer();
     sched.stop();
     plc_rpi_print_jitter_stats();
     platform::logInfo("Stopped. Total ticks: %u\n", plc_rpi_get_tick_count());

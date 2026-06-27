@@ -29,74 +29,55 @@ using namespace rt_plc::platform;
 
 
 // ═══════════════════════════════════════════════════════
-// POSIX Timer：高精度 PLC 周期 tick
+// 抖动统计（主循环 clock_nanosleep 驱动）
 // ═══════════════════════════════════════════════════════
 
 extern "C" void plc_runtime_tick();
 
-static timer_t posix_timer_id = 0;
 static volatile int64_t tick_start_us = 0;
 static volatile uint32_t tick_count = 0;
-
-// 抖动统计
 static volatile int64_t jitter_last_us = 0;
 static volatile int64_t jitter_sum = 0;
 static volatile int64_t jitter_min = 999999;
 static volatile int64_t jitter_max = 0;
 static volatile uint64_t jitter_count = 0;
+static volatile int64_t jitter_target_us = 1000;
 
-static void timer_handler(sigval_t /*sv*/) {
+extern "C" void plc_rpi_jitter_set_target(int64_t targetUs) {
+    jitter_target_us = targetUs;
+}
+
+extern "C" void plc_rpi_jitter_init() {
+    tick_start_us = steadyUs();
+    jitter_last_us = tick_start_us;
+    tick_count = 0;
+    jitter_min = 999999;
+    jitter_max = 0;
+    jitter_sum = 0;
+    jitter_count = 0;
+}
+
+extern "C" void plc_rpi_jitter_sample() {
     int64_t now = steadyUs();
     int64_t delta = now - jitter_last_us;
     jitter_last_us = now;
 
-    if (tick_count > 0 && delta > 0) {
-        jitter_sum += delta;
-        if (delta < jitter_min) jitter_min = delta;
-        if (delta > jitter_max) jitter_max = delta;
+    // 计算抖动 = 实际间隔与目标周期的偏差
+    int64_t j = delta - jitter_target_us;
+    if (j < 0) j = -j;
+
+    if (tick_count > 0 && delta > 0 && delta < 100000) {
+        jitter_sum += j;
+        if (j < jitter_min) jitter_min = j;
+        if (j > jitter_max) jitter_max = j;
         jitter_count++;
     }
-
     tick_count++;
-    plc_runtime_tick();
 }
 
-
-extern "C" int plc_rpi_create_timer(int64_t intervalUs) {
-    struct sigevent sev = {};
-    sev.sigev_notify          = SIGEV_THREAD;
-    sev.sigev_notify_function = timer_handler;
-    sev.sigev_value.sival_ptr = nullptr;
-
-    if (timer_create(CLOCK_MONOTONIC, &sev, &posix_timer_id) != 0) {
-        logErr("timer_create failed: %s\n", strerror(errno));
-        return -1;
-    }
-
-    struct itimerspec its = {};
-    its.it_interval.tv_sec  = intervalUs / 1000000;
-    its.it_interval.tv_nsec = (intervalUs % 1000000) * 1000;
-    its.it_value = its.it_interval;
-
-    if (timer_settime(posix_timer_id, 0, &its, nullptr) != 0) {
-        logErr("timer_settime failed: %s\n", strerror(errno));
-        timer_delete(posix_timer_id);
-        posix_timer_id = 0;
-        return -1;
-    }
-
-    tick_start_us = steadyUs();
-    jitter_last_us = tick_start_us;
-    return 0;
-}
-
-
-extern "C" void plc_rpi_destroy_timer() {
-    if (posix_timer_id) {
-        timer_delete(posix_timer_id);
-        posix_timer_id = 0;
-    }
-}
+// ═══════════════════════════════════════════════════════
+// POSIX Timer（已废弃，改用 clock_nanosleep 驱动）
+// ═══════════════════════════════════════════════════════
 
 
 // ═══════════════════════════════════════════════════════

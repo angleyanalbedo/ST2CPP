@@ -1,7 +1,8 @@
 # target/rpi/Makefile — 树莓派 PLC Runtime
 #
 # 用法：
-#   make                     # 本地编译
+#   make                     # 本地编译（含 POU）
+#   make stub                # 最小编译（无 POU，纯运行时 + GPIO）
 #   make CROSS=aarch64-linux-gnu-  # 交叉编译（生成 ARM 二进制）
 #   make run                 # 本地编译 + 运行
 #   make clean               # 清理
@@ -58,9 +59,19 @@ LDFLAGS   = $(OPT) -lpthread
 TARGET   = plc_runtime_rpi
 
 # ═══ 构建 ═══
-.PHONY: all run clean registry
+.PHONY: all stub run clean registry
 
 all: $(REGISTRY) $(TARGET)
+
+# 无 POU 模式：用 pou_stub.cpp 替代编译器输出
+STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) $(MAIN_SRC) $(HAL_SRC) pou_stub.cpp
+STUB_TARGET = plc_runtime_stub
+
+stub: $(STUB_TARGET)
+
+$(STUB_TARGET): $(STUB_SRCS)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+	@echo "=== Build (stub): $@ ==="
 
 SRCS = $(RT_SRCS) $(PLAT_SRC) $(MAIN_SRC) $(HAL_SRC) $(POU_SRCS) $(REGISTRY)
 
@@ -78,5 +89,8 @@ else
 	@echo "交叉编译模式，请手动将 $(TARGET) 上传到树莓派运行"
 endif
 
+stub-run: stub
+	sudo ./$(STUB_TARGET) --cycle-us $(CYCLE_US)
+
 clean:
-	rm -f $(TARGET) $(REGISTRY)
+	rm -f $(TARGET) $(STUB_TARGET) $(REGISTRY)
