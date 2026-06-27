@@ -541,11 +541,13 @@ public class GvlContext {
             if (!changed && result.equals(prev)) break;
         }
 
-        // 6. 清理残余解引用星号
+        // 6. 清理残余解引用星号和地址运算符
         result = result.replaceAll("\\(\\*([A-Za-z_]\\w*)\\)", "($1)");
         result = result.replaceAll("(?<![\\w*+\\-/<>])\\*([A-Za-z_]\\w*)(?![\\w*+\\-/<>])", "$1");
         result = result.replace("( *", "(");
         result = result.replace("*this->returnValue", "returnValue");
+        result = result.replaceAll("(?<![\\w*+\\-/<>])&([A-Za-z_]\\w*)(?![\\w*+\\-/<>])", "$1");
+        result = result.replace("( &", "(");
 
         // 7. GVL 变量替换
         for (Map.Entry<String, Integer> entry : offsetMap.entrySet()) {

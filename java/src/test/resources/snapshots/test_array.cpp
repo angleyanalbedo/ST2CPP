@@ -304,7 +304,7 @@ void PROGRAM_test_array_P_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 		gvl.write<INT>(12, (0));
 		INT I = (0);
 		for( ; I <= (4);I++){
-		gvl.safeArrayAt<INT>(0, I, 5) = (I) *((10)) ;
+		(gvl.safeArrayAt<INT>(0, I, 5)) = (I) *((10)) ;
 		gvl.write<INT>(12, (gvl.read<INT>(12)) +((gvl.safeArrayAt<INT>(0, I, 5))) );
 		}
 		gvl.write<INT>(10, I);

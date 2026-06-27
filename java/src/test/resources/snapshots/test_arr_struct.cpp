@@ -310,8 +310,8 @@ void PROGRAM_test_arr_struct_MAIN_pre(GVL& gvl, ProcessImage& io) {
 void PROGRAM_test_arr_struct_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 		INT I = (0);
 		for( ; I <= (4);I = I + (1)){
-		gvl.safeArrayAt<MY_POINT>(0, I, 5).X = (I) *((10)) ;
-		gvl.safeArrayAt<MY_POINT>(0, I, 5).Y = (I) *((20)) ;
+		(gvl.safeArrayAt<MY_POINT>(0, I, 5).X) = (I) *((10)) ;
+		(gvl.safeArrayAt<MY_POINT>(0, I, 5).Y) = (I) *((20)) ;
 		}
 		gvl.write<INT>(20, I);
 		gvl.write<INT>(22, ((gvl.safeArrayAt<MY_POINT>(0, 0, 5).X)) +((gvl.safeArrayAt<MY_POINT>(0, 1, 5).X)) );
