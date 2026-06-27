@@ -11,17 +11,11 @@ public class PLCVariable extends PLCSymbol{
     * */
 
     public String getUniqueName() {
-        StringBuilder sb = new StringBuilder();
-        String typeName = PLCTotalSymbolTable.getTypeByTypeID(this.getTypeId()).getName();
-        sb.append("(*::PLC::RFM->getSymbolByID<").append(typeName).append("*>(").append(this.symbolId).append("))");
-        return new String(sb);
+        return this.name;
     }
 
     public String getUniqueNameOfInstance(int instanceSymbolId){
-        StringBuilder sb = new StringBuilder();
-        String typeName = PLCTotalSymbolTable.getTypeByTypeID(this.getTypeId()).getName();
-        sb.append("(*::PLC::RFM->getSymbolByID<").append(typeName).append("*>(").append(instanceSymbolId).append(", ").append(this.symbolId).append("))");
-        return new String(sb);
+        return this.name;
     }
 
     //变量段类型

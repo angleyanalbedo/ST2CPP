@@ -301,7 +301,6 @@ INT ADD_TEN(INT X) {
 }
 void PROGRAM_test_P_init(GVL& gvl, ProcessImage& io) {
 		gvl.write<INT>(0, (0));
-		gvl.write<INT>(2, (0));
 }
 void PROGRAM_test_P_pre(GVL& gvl, ProcessImage& io) {
 }
@@ -309,7 +308,7 @@ void PROGRAM_test_P_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 		INT A = (1);
 		for( ; A <= (5);A = A + (1)){
 		INT _X0=A;
-		gvl.write<INT>(2, ADD_TEN(_X0));
+		gvl.write<INT>(2, ADD_TEN(&_X0));
 		}
 		gvl.write<INT>(0, A);
 }

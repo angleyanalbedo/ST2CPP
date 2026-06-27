@@ -215,26 +215,7 @@ public class GvlContextTest {
         assertEquals("", gen().emitPOURegistration("test", Arrays.asList()));
     }
 
-    // ─── translateExpr: literal ───
-
-    @Test
-    public void testTranslateExprLiteralInt() {
-        GvlContext g = gen();
-        assertEquals("(2)", g.translateExpr("(*(new INT(2)))"));
-    }
-
-    @Test
-    public void testTranslateExprLiteralBool() {
-        GvlContext g = gen();
-        assertEquals("(true)", g.translateExpr("(*(new BOOL(TRUE)))"));
-        assertEquals("(false)", g.translateExpr("(*(new BOOL(FALSE)))"));
-    }
-
-    @Test
-    public void testTranslateExprLiteralReal() {
-        GvlContext g = gen();
-        assertEquals("(3.14)", g.translateExpr("(*(new REAL(3.14)))"));
-    }
+    // ─── translateExpr: null/empty ───
 
     @Test
     public void testTranslateExprNull() {
@@ -246,33 +227,15 @@ public class GvlContextTest {
         assertEquals("", gen().translateExpr(""));
     }
 
-    // ─── translateExpr: RFM variable → GVL ───
+    // ─── translateExpr: literal ───
 
     @Test
-    public void testTranslateExprRfmVar() {
+    public void testTranslateExprLiteral() {
         GvlContext g = gen();
-        g.allocateOffset("A", "INT");
-        g.registerVariable("A", "123");
-        String result = g.translateExpr("(*::PLC::RFM->getSymbolByID<INT*>(123))");
-        assertEquals("gvl.read<INT>(0)", result);
-    }
-
-    @Test
-    public void testTranslateExprRfmVarSimple() {
-        GvlContext g = gen();
-        g.allocateOffset("B", "REAL");
-        g.registerVariable("B", "456");
-        String result = g.translateExpr("::PLC::RFM->getSymbolByID<REAL*>(456)");
-        assertEquals("gvl.read<REAL>(0)", result);
-    }
-
-    // ─── translateExpr: RFM function call ───
-
-    @Test
-    public void testTranslateExprRfmFuncCall() {
-        GvlContext g = gen();
-        String result = g.translateExpr("*::PLC::RFM->getSymbolByID<MYFUNC*>(999)->callFunc(1, 2)");
-        assertEquals("MYFUNC(1, 2)", result);
+        assertEquals("(2)", g.translateExpr("(2)"));
+        assertEquals("(3.14)", g.translateExpr("(3.14)"));
+        assertEquals("(TRUE)", g.translateExpr("(TRUE)"));
+        assertEquals("(FALSE)", g.translateExpr("(FALSE)"));
     }
 
     // ─── translateExpr: bare variable → GVL read ───

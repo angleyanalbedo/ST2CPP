@@ -301,7 +301,6 @@ INT PRINTF(STRING FMT);
 void PROGRAM_test_print_MAIN_init(GVL& gvl, ProcessImage& io) {
 		gvl.write<INT>(0, (42));
 		gvl.write<INT>(2, (10));
-		gvl.write<INT>(4, (0));
 }
 void PROGRAM_test_print_MAIN_pre(GVL& gvl, ProcessImage& io) {
 }

@@ -37,14 +37,7 @@ public class VisitInt_literal implements Strategy {
             intSymbol.setSort(PLCModifierEnum.Sort.INT);
             String constNum = ctx.getChild(ctx.getChildCount()-1).getText();
 
-            StringBuilder assignVar = new StringBuilder();
-            assignVar.append("(*").
-                    append("(new ").
-                    append(forceTranslateType.getRuntimeName()).
-                    append("(").
-                    append(constNum).
-                    append(")").append(")").append(")");
-            intSymbol.setAssignVar(new String(assignVar));
+            intSymbol.setAssignVar("(" + constNum + ")");
 
 //            intSymbol.setAssignVar( "new" + forceTranslateType.getRuntimeName() + "(" + constNum + ")");
             return visitor.packSymbols(intSymbol);
@@ -52,7 +45,7 @@ public class VisitInt_literal implements Strategy {
             PLCVariable intSymbol = new PLCVariable();
             intSymbol.setTypeId(IDGenerator.INTID);
             intSymbol.setSort(PLCModifierEnum.Sort.INT);
-            intSymbol.setAssignVar("(*(new INT(" + ctx.getChild(ctx.getChildCount()-1).getText() + ")))");
+            intSymbol.setAssignVar("(" + ctx.getChild(ctx.getChildCount()-1).getText() + ")");
             return visitor.packSymbols(intSymbol);
         }
 

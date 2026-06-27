@@ -29,11 +29,11 @@ public class VisitReal_literal implements Strategy {
             realSymbol.setTypeId(forceTranslateType.getTypeId());
             realSymbol.setSort(PLCModifierEnum.Sort.REAL);
             StringBuilder realVar = new StringBuilder();
-            realVar.append("(*(new "). append(forceTranslateType.getRuntimeName()).append("(");
+            realVar.append("(");
             for(int i=2; i <= ctx.getChildCount()-1; i++){
                 realVar.append(ctx.getChild(i).getText());
             }
-            realVar.append(")))");
+            realVar.append(")");
             realSymbol.setAssignVar(new String(realVar));
 
             return visitor.packSymbols(realSymbol);
@@ -41,7 +41,7 @@ public class VisitReal_literal implements Strategy {
             PLCVariable realSymbol = new PLCVariable();
             realSymbol.setTypeId(IDGenerator.REAL);
             realSymbol.setSort(PLCModifierEnum.Sort.REAL);
-            realSymbol.setAssignVar("(*(new REAL(" + ctx.getText() + ")))");
+            realSymbol.setAssignVar("(" + ctx.getText() + ")");
             return visitor.packSymbols(realSymbol);
         }
 

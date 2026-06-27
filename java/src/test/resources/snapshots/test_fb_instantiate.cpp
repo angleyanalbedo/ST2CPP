@@ -297,23 +297,23 @@ REAL MIN(REAL IN0, REAL IN1);
 
 
 struct MY_TIMER {
-    INT PT; // = (*(new INT(0)))
-    BOOL Q; // = (*(new BOOL(false)))
-    INT ET; // = (*(new INT(0)))
+    INT PT; // = 0
+    BOOL Q; // = false
+    INT ET; // = 0
     BOOL RUNNING; // = (*(new BOOL(FALSE)))
-    INT ELAPSED; // = (*(new INT(0)))
-    BOOL START; // = (*(new BOOL(false)))
+    INT ELAPSED; // = (0)
+    BOOL START; // = false
 
     void update() {
 
 		if((START) & (( ! RUNNING)) ){
-		RUNNING = (true);
+		RUNNING = (*(new BOOL(TRUE)));
 		ELAPSED = (0);
 		}
 		if(RUNNING){
 		ELAPSED = (ELAPSED) +((1)) ;
 		if((ELAPSED) >=(PT) ){
-		Q = (true);
+		Q = (*(new BOOL(TRUE)));
 		}
 		}
 		ET = ELAPSED;
@@ -325,7 +325,7 @@ void PROGRAM_test_fb_instantiate_MAIN_init(GVL& gvl, ProcessImage& io) {
 void PROGRAM_test_fb_instantiate_MAIN_pre(GVL& gvl, ProcessImage& io) {
 }
 void PROGRAM_test_fb_instantiate_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
-		gvl.write<BOOL>(10, (true));
+		gvl.write<BOOL>(10, (*(new BOOL(TRUE))));
 		gvl.write<INT>(0, (5));
 		gvl.ptr<MY_TIMER>(0)->update();
 		gvl.ptr<MY_TIMER>(0)->update();

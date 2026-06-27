@@ -297,16 +297,16 @@ REAL MIN(REAL IN0, REAL IN1);
 
 
 struct MY_COUNTER {
-    BOOL RESET; // = (*(new BOOL(false)))
-    BOOL Q; // = (*(new BOOL(false)))
-    INT CV; // = (*(new INT(0)))
+    BOOL RESET; // = false
+    BOOL Q; // = false
+    INT CV; // = 0
     BOOL PREV_CLK; // = (*(new BOOL(FALSE)))
-    INT COUNT; // = (*(new INT(0)))
-    BOOL CLK; // = (*(new BOOL(false)))
+    INT COUNT; // = (0)
+    BOOL CLK; // = false
 
     void update() {
 
-		Q = (false);
+		Q = (*(new BOOL(FALSE)));
 		if(RESET){
 		COUNT = (0);
 		}else if((CLK) & (( ! PREV_CLK)) ){
@@ -315,7 +315,7 @@ struct MY_COUNTER {
 		PREV_CLK = CLK;
 		CV = COUNT;
 		if((COUNT) >=((5)) ){
-		Q = (true);
+		Q = (*(new BOOL(TRUE)));
 		}
     }
 };

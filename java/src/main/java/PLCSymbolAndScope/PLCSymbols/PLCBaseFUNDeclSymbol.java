@@ -129,9 +129,7 @@ public class PLCBaseFUNDeclSymbol extends PLCImportScopeTypeDeclType implements 
     }
 
     public String getStdFunction(){
-        StringBuilder funcCall = new StringBuilder();
-        funcCall.append("::PLC::RFM->getSymbolByID<").append(this.name).append("*>(").append(this.symbolId).append(")->callFunc");
-        return new String(funcCall);
+        return this.name;
     }
 
     @Override

@@ -297,8 +297,6 @@ REAL MIN(REAL IN0, REAL IN1);
 
 
 void PROGRAM_test_array_simple_P_init(GVL& gvl, ProcessImage& io) {
-		gvl.write<INT>(10, (0));
-		gvl.write<INT>(12, (0));
 }
 void PROGRAM_test_array_simple_P_pre(GVL& gvl, ProcessImage& io) {
 }

@@ -381,25 +381,6 @@ public class GvlContext {
             String ioWrite = emitIOWrite(cleanName, valueExpr);
             if (ioWrite != null) return ioWrite;
         }
-        String rfmClean = cleanName.trim();
-        if (rfmClean.startsWith("(") && rfmClean.endsWith(")")) {
-            rfmClean = rfmClean.substring(1, rfmClean.length() - 1).trim();
-        }
-        Matcher rfmWriteMatcher = RFM_VAR_SIMPLE_PATTERN.matcher(rfmClean);
-        if (rfmWriteMatcher.matches()) {
-            String type = rfmWriteMatcher.group(1);
-            String symbolId = rfmWriteMatcher.group(2);
-            String nativeType = toNativeType(type);
-            String foundVarName = findVarNameBySymbolId(symbolId);
-            if (foundVarName != null) {
-                Integer offset = offsetMap.get(foundVarName);
-                String nType = typeMap.getOrDefault(foundVarName, nativeType);
-                if (offset != null) {
-                    return "gvl.write<" + nType + ">(" + offset + ", " + valueExpr + ")";
-                }
-            }
-            return "gvl.write<" + nativeType + ">(" + symbolId + ", " + valueExpr + ")";
-        }
         if (cleanName.trim().equals("this->returnValue")) {
             return "return " + valueExpr;
         }
@@ -492,18 +473,6 @@ public class GvlContext {
 
     // ═══ 表达式转换 ═══
 
-    private static final Pattern LITERAL_PATTERN =
-            Pattern.compile("\\(\\*\\(\\s*new\\s+(\\w+)\\s*\\(([^)]*)\\)\\s*\\)\\s*\\)");
-
-    private static final Pattern RFM_VAR_PATTERN =
-            Pattern.compile("\\(\\*::PLC::RFM->getSymbolByID<(\\w+)\\*>\\s*\\(\\s*(\\d+)\\s*\\)\\s*\\)");
-
-    private static final Pattern RFM_CALL_PATTERN =
-            Pattern.compile("\\*::PLC::RFM->getSymbolByID<(\\w+)\\*>\\s*\\(\\s*(\\d+)\\s*\\)->callFunc\\s*\\(([^)]*)\\)");
-
-    public static final Pattern RFM_VAR_SIMPLE_PATTERN =
-            Pattern.compile("\\*?::PLC::RFM->getSymbolByID<(\\w+)\\*>\\s*\\(\\s*(\\d+)\\s*\\)");
-
     public String translateExpr(String expr) {
         if (expr == null || expr.isEmpty()) {
             return expr;
@@ -516,117 +485,10 @@ public class GvlContext {
             changed = false;
             String prev = result;
 
-            // 0. ST 结构体初值列表
-            String stInitRegex = "\\(\\s*(\\w+\\s*:=\\s*([^,()]+|\\([^()]*\\)))(\\s*,\\s*\\w+\\s*:=\\s*([^,()]+|\\([^()]*\\)))*\\s*\\)";
-            Matcher stInitMatcher = Pattern.compile(stInitRegex).matcher(result);
-            if (stInitMatcher.find()) {
-                String matched = stInitMatcher.group();
-                if (matched.contains(":=")) {
-                    String inner = matched.substring(1, matched.length() - 1).trim();
-                    String[] parts = inner.split(",");
-                    StringBuilder sb = new StringBuilder("{");
-                    for (int i = 0; i < parts.length; i++) {
-                        String part = parts[i].trim();
-                        int eqIdx = part.indexOf(":=");
-                        if (eqIdx >= 0) {
-                            String val = part.substring(eqIdx + 2).trim();
-                            if (i > 0) sb.append(",");
-                            sb.append(val);
-                        }
-                    }
-                    sb.append("}");
-                    String newResult = result.substring(0, stInitMatcher.start()) + sb.toString() + result.substring(stInitMatcher.end());
-                    result = newResult;
-                    changed = true;
-                    continue;
-                }
-            }
-
-            // 1. 字面量
-            Matcher litMatcher = LITERAL_PATTERN.matcher(result);
-            StringBuilder sb = new StringBuilder();
-            while (litMatcher.find()) {
-                changed = true;
-                String type = litMatcher.group(1);
-                String value = litMatcher.group(2).trim();
-                if ("BOOL".equals(type)) {
-                    value = value.equals("TRUE") || value.equals("1") ? "true" : "false";
-                }
-                litMatcher.appendReplacement(sb, "(" + value + ")");
-            }
-            litMatcher.appendTail(sb);
-            result = sb.toString();
-
-            // 2. RFM 变量引用（带括号）
-            Matcher varMatcher = RFM_VAR_PATTERN.matcher(result);
-            sb = new StringBuilder();
-            while (varMatcher.find()) {
-                changed = true;
-                String type = varMatcher.group(1);
-                String symbolId = varMatcher.group(2);
-                String nativeType = toNativeType(type);
-                String varName = findVarNameBySymbolId(symbolId);
-                if (varName != null) {
-                    Integer offset = offsetMap.get(varName);
-                    String nType = typeMap.getOrDefault(varName, nativeType);
-                    if (offset != null) {
-                        varMatcher.appendReplacement(sb, "gvl.read<" + nType + ">(" + offset + ")");
-                    } else if (isIOVariable(varName)) {
-                        String ioRead = emitIORead(varName);
-                        varMatcher.appendReplacement(sb, ioRead != null ? ioRead : varName);
-                    } else {
-                        varMatcher.appendReplacement(sb, varName);
-                    }
-                } else {
-                    varMatcher.appendReplacement(sb, "gvl.read<" + nativeType + ">(" + symbolId + ")");
-                }
-            }
-            varMatcher.appendTail(sb);
-            result = sb.toString();
-
-            // 3. RFM 函数调用
-            Matcher callMatcher = RFM_CALL_PATTERN.matcher(result);
-            sb = new StringBuilder();
-            while (callMatcher.find()) {
-                changed = true;
-                String funcType = callMatcher.group(1);
-                String params = callMatcher.group(3);
-                params = params.replaceAll("&", "").trim();
-                callMatcher.appendReplacement(sb, funcType + "(" + params + ")");
-            }
-            callMatcher.appendTail(sb);
-            result = sb.toString();
-
-            // 4. 简单 RFM 变量引用
-            Matcher simpleVarMatcher = RFM_VAR_SIMPLE_PATTERN.matcher(result);
-            sb = new StringBuilder();
-            while (simpleVarMatcher.find()) {
-                changed = true;
-                String type = simpleVarMatcher.group(1);
-                String symbolId = simpleVarMatcher.group(2);
-                String varName = findVarNameBySymbolId(symbolId);
-                if (varName != null) {
-                    Integer offset = offsetMap.get(varName);
-                    String nType = typeMap.getOrDefault(varName, toNativeType(type));
-                    if (offset != null) {
-                        simpleVarMatcher.appendReplacement(sb, "gvl.read<" + nType + ">(" + offset + ")");
-                    } else if (isIOVariable(varName)) {
-                        String ioRead = emitIORead(varName);
-                        simpleVarMatcher.appendReplacement(sb, ioRead != null ? ioRead : varName);
-                    } else {
-                        simpleVarMatcher.appendReplacement(sb, varName);
-                    }
-                } else {
-                    simpleVarMatcher.appendReplacement(sb, symbolId);
-                }
-            }
-            simpleVarMatcher.appendTail(sb);
-            result = sb.toString();
-
             // 5. 数组元素访问
             String arrayAccessPattern = "([A-Z][A-Z0-9$_]*)\\[(.*?)\\]";
             Matcher arrayAccessMatcher = Pattern.compile(arrayAccessPattern).matcher(result);
-            sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder();
             while (arrayAccessMatcher.find()) {
                 changed = true;
                 String arrName = arrayAccessMatcher.group(1);
