@@ -1,0 +1,20 @@
+TYPE
+    DIRECTION : (NORTH, EAST, SOUTH, WEST);
+END_TYPE
+
+FUNCTION_BLOCK MINI
+    VAR_OUTPUT
+        DIR : INT;
+    END_VAR
+    VAR
+        STP : INT := 0;
+    END_VAR
+    DIR := 42;
+END_FUNCTION_BLOCK
+
+PROGRAM MAIN
+    VAR
+        M : MINI;
+    END_VAR
+    M();
+END_PROGRAM

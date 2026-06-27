@@ -349,11 +349,13 @@ public class GvlContext {
             String ioRead = emitIORead(cleanName);
             if (ioRead != null) return ioRead;
         }
-        String arrayElemPattern = "^\\(?([A-Z][A-Z0-9$_]*)\\[(.+)\\]\\)?$";
-        Matcher arrayMatcher = Pattern.compile(arrayElemPattern).matcher(cleanName.trim());
-        if (arrayMatcher.matches()) {
-            String arrName = arrayMatcher.group(1);
-            String indexExpr = arrayMatcher.group(2);
+        String arrayAccessPattern = "([A-Z][A-Z0-9$_]*)\\[(.*?)\\]";
+        Matcher arrayAccessMatcher = Pattern.compile(arrayAccessPattern).matcher(cleanName.trim());
+        StringBuilder sb = new StringBuilder();
+        boolean foundArray = false;
+        while (arrayAccessMatcher.find()) {
+            String arrName = arrayAccessMatcher.group(1);
+            String indexExpr = arrayAccessMatcher.group(2);
             String arrType = typeMap.get(arrName);
             Integer arrOffset = offsetMap.get(arrName);
             if (arrType != null && arrType.startsWith("ARRAY[") && arrOffset != null) {
@@ -363,9 +365,17 @@ public class GvlContext {
                     String elemType = typeMatcher.group(2);
                     int count = Integer.parseInt(typeMatcher.group(1));
                     String translatedIndex = translateExpr(indexExpr);
-                    return "gvl.safeArrayAt<" + elemType + ">(" + arrOffset + ", " + translatedIndex + ", " + count + ")";
+                    arrayAccessMatcher.appendReplacement(sb,
+                        "gvl.safeArrayAt<" + elemType + ">(" + arrOffset + ", " + translatedIndex + ", " + count + ")");
+                    foundArray = true;
+                    continue;
                 }
             }
+            arrayAccessMatcher.appendReplacement(sb, Matcher.quoteReplacement(arrayAccessMatcher.group(0)));
+        }
+        arrayAccessMatcher.appendTail(sb);
+        if (foundArray) {
+            return sb.toString();
         }
         String type = typeMap.get(cleanName);
         Integer offset = offsetMap.get(cleanName);
@@ -384,11 +394,15 @@ public class GvlContext {
         if (cleanName.trim().equals("this->returnValue")) {
             return "return " + valueExpr;
         }
-        String arrayElemPattern = "^\\(?([A-Z][A-Z0-9$_]*)\\[(.+)\\]\\)?$";
-        Matcher arrayMatcher = Pattern.compile(arrayElemPattern).matcher(cleanName.trim());
-        if (arrayMatcher.matches()) {
-            String arrName = arrayMatcher.group(1);
-            String indexExpr = arrayMatcher.group(2);
+        String trimmed = cleanName.trim();
+        String stripped = trimmed;
+        String arrayAccessPattern = "([A-Z][A-Z0-9$_]*)\\[(.*?)\\]";
+        Matcher arrayAccessMatcher = Pattern.compile(arrayAccessPattern).matcher(trimmed);
+        StringBuilder sb = new StringBuilder();
+        boolean foundArray = false;
+        while (arrayAccessMatcher.find()) {
+            String arrName = arrayAccessMatcher.group(1);
+            String indexExpr = arrayAccessMatcher.group(2);
             String arrType = typeMap.get(arrName);
             Integer arrOffset = offsetMap.get(arrName);
             if (arrType != null && arrType.startsWith("ARRAY[") && arrOffset != null) {
@@ -398,12 +412,20 @@ public class GvlContext {
                     String elemType = typeMatcher.group(2);
                     int count = Integer.parseInt(typeMatcher.group(1));
                     String translatedIndex = translateExpr(indexExpr);
-                    return "gvl.safeArrayAt<" + elemType + ">(" + arrOffset + ", " + translatedIndex + ", " + count + ") = " + valueExpr;
+                    arrayAccessMatcher.appendReplacement(sb,
+                        "gvl.safeArrayAt<" + elemType + ">(" + arrOffset + ", " + translatedIndex + ", " + count + ")");
+                    foundArray = true;
+                    continue;
                 }
             }
+            arrayAccessMatcher.appendReplacement(sb, Matcher.quoteReplacement(arrayAccessMatcher.group(0)));
         }
-        String trimmed = cleanName.trim();
-        String stripped = trimmed;
+        arrayAccessMatcher.appendTail(sb);
+        if (foundArray) {
+            return sb.toString() + " = " + valueExpr;
+        }
+        trimmed = sb.toString();
+        stripped = trimmed;
         if (stripped.startsWith("(") && stripped.endsWith(")")) {
             stripped = stripped.substring(1, stripped.length() - 1).trim();
         }
