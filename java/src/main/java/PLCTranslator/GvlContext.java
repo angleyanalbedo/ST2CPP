@@ -223,6 +223,10 @@ public class GvlContext {
         if (layout != null) return layout.totalSize;
         String underlying = enumNameToUnderlying.get(nativeType);
         if (underlying != null) return getTypeSize(underlying);
+        ArrayInfo arrayInfo = parseArrayType(nativeType);
+        if (arrayInfo != null) {
+            return arrayInfo.count * getTypeSize(arrayInfo.elemType);
+        }
         return 4;
     }
 
@@ -619,7 +623,7 @@ public class GvlContext {
 
     // ═══ 数组类型信息 ═══
 
-    private static class ArrayInfo {
+    public static class ArrayInfo {
         int count;
         String elemType;
     }
@@ -627,14 +631,22 @@ public class GvlContext {
     public ArrayInfo parseArrayType(String typeName) {
         if (typeName == null) return null;
         ArrayInfo info = new ArrayInfo();
-        Pattern pattern = Pattern.compile(
+        Pattern rangePattern = Pattern.compile(
             "ARRAY\\[(\\d+)\\.\\.(\\d+)\\]\\s+OF\\s+(\\w+)");
-        Matcher matcher = pattern.matcher(typeName);
+        Matcher matcher = rangePattern.matcher(typeName);
         if (matcher.find()) {
             int low = Integer.parseInt(matcher.group(1));
             int high = Integer.parseInt(matcher.group(2));
             info.count = high - low + 1;
             info.elemType = toNativeType(matcher.group(3));
+            return info;
+        }
+        Pattern simplePattern = Pattern.compile(
+            "ARRAY\\[(\\d+)\\]\\s+OF\\s+(\\w+)");
+        matcher = simplePattern.matcher(typeName);
+        if (matcher.find()) {
+            info.count = Integer.parseInt(matcher.group(1));
+            info.elemType = toNativeType(matcher.group(2));
             return info;
         }
         return null;

@@ -624,11 +624,22 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
         for (PLCVariable fieldVar : structSymbol.getVariables()) {
             String fieldName = fieldVar.getName();
             String fieldType = gvlCtx.toNativeType(fieldVar.getRuntimeTypeName());
-            int fieldSize = gvlCtx.getTypeSize(fieldType);
-            int aligned = fieldSize <= 1 ? currentOffset : (currentOffset + fieldSize - 1) / fieldSize * fieldSize;
-            fields.add(new GvlContext.StructField(fieldName, fieldType, aligned));
-            sb.append("\n    ").append(fieldType).append(" ").append(fieldName).append(";");
-            currentOffset = aligned + fieldSize;
+            GvlContext.ArrayInfo arrayInfo = gvlCtx.parseArrayType(fieldVar.getRuntimeTypeName());
+            int fieldSize;
+            if (arrayInfo != null) {
+                fieldSize = arrayInfo.count * gvlCtx.getTypeSize(arrayInfo.elemType);
+                int aligned = fieldSize <= 1 ? currentOffset : (currentOffset + fieldSize - 1) / fieldSize * fieldSize;
+                fields.add(new GvlContext.StructField(fieldName, fieldType, aligned));
+                sb.append("\n    ").append(arrayInfo.elemType).append(" ")
+                  .append(fieldName).append("[").append(arrayInfo.count).append("];");
+                currentOffset = aligned + fieldSize;
+            } else {
+                fieldSize = gvlCtx.getTypeSize(fieldType);
+                int aligned = fieldSize <= 1 ? currentOffset : (currentOffset + fieldSize - 1) / fieldSize * fieldSize;
+                fields.add(new GvlContext.StructField(fieldName, fieldType, aligned));
+                sb.append("\n    ").append(fieldType).append(" ").append(fieldName).append(";");
+                currentOffset = aligned + fieldSize;
+            }
         }
 
         sb.append("\n};\n");
