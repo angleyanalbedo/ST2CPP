@@ -55,6 +55,7 @@ import PLCTranslator.TranslateType.Stmt_list.TranslateStmt_list;
 import antlr4.PLCSTPARSERBaseVisitor;
 import antlr4.PLCSTPARSERParser;
 import org.antlr.v4.runtime.tree.ParseTreeProperty;
+import org.antlr.v4.runtime.ParserRuleContext;
 
 public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     //树节点信息
@@ -124,6 +125,35 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
                     + " but got " + sym.getClass().getSimpleName() + " (" + sym.getName() + ")");
         }
         return (PLCVariable) sym;
+    }
+
+    public static String translateBinaryChain(ParserRuleContext ctx, int opStartIndex, int opStep,
+                                              PLCTranslatorNew translatorNew) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(translatorNew.visit(ctx.getChild(0)));
+        for (int i = opStartIndex; i < ctx.getChildCount(); i += opStep) {
+            String op = ctx.getChild(i).getText();
+            sb.append(" ").append(mapOperator(op)).append(" ");
+            sb.append(translatorNew.visit(ctx.getChild(i + 1)));
+        }
+        return sb.toString();
+    }
+
+    public static String mapOperator(String op) {
+        return switch (op) {
+            case "OR" -> "||";
+            case "XOR" -> "^";
+            case "AND" -> "&&";
+            case "=" -> "==";
+            case "<>" -> "!=";
+            case "MOD" -> "%";
+            case "NOT" -> "!";
+            default -> op;
+        };
+    }
+
+    public static String translateExpression(PLCSTPARSERParser.ExpressionContext ctx, PLCTranslatorNew t) {
+        return new PLCTranslator.TranslateType.Expr.TranslateExpression().translateNode(ctx, t);
     }
 
     /**
