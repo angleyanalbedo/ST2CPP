@@ -95,6 +95,8 @@ public class FlatCodeGenerator implements CodeGenerator {
     // ─── FOR 循环 GVL 局部变量遮盖 ───
     // 被 FOR 循环局部变量遮盖的 GVL 变量名集合（O(1) 查询用）
     private final Set<String> shadowedGvlVars = new HashSet<>();
+    // 已在本函数作用域中声明过局部变量的 GVL 变量名集合（防止重复声明）
+    private final Set<String> locallyDeclaredGvlVars = new HashSet<>();
     // 嵌套顺序栈，内含变量名/类型/偏移
     private static class ShadowEntry {
         String varName; String type; int offset;
@@ -463,6 +465,28 @@ public class FlatCodeGenerator implements CodeGenerator {
             if (ioWrite != null) return ioWrite;
         }
 
+        // RFM 变量写入：(*::PLC::RFM->getSymbolByID<type*>(symId)) → gvl.write<type>(offset, value)
+        String rfmClean = cleanName.trim();
+        if (rfmClean.startsWith("(") && rfmClean.endsWith(")")) {
+            rfmClean = rfmClean.substring(1, rfmClean.length() - 1).trim();
+        }
+        Matcher rfmWriteMatcher = RFM_VAR_SIMPLE_PATTERN.matcher(rfmClean);
+        if (rfmWriteMatcher.matches()) {
+            String type = rfmWriteMatcher.group(1);
+            String symbolId = rfmWriteMatcher.group(2);
+            String nativeType = toNativeType(type);
+            String foundVarName = findVarNameBySymbolId(symbolId);
+            if (foundVarName != null) {
+                Integer offset = offsetMap.get(foundVarName);
+                String nType = typeMap.getOrDefault(foundVarName, nativeType);
+                if (offset != null) {
+                    return "gvl.write<" + nType + ">(" + offset + ", " + valueExpr + ")";
+                }
+            }
+            // Fallback：直接使用 symbolId（translateExpr 的 read 路径也使用相同策略）
+            return "gvl.write<" + nativeType + ">(" + symbolId + ", " + valueExpr + ")";
+        }
+
         // 处理函数返回值：*this->returnValue → return
         if (cleanName.trim().equals("this->returnValue")) {
             return "return " + valueExpr;
@@ -735,8 +759,15 @@ public class FlatCodeGenerator implements CodeGenerator {
             // 注册为遮盖变量（translateExpr 跳过 GVL 替换）
             shadowedGvlVars.add(cleanVar);
             shadowStack.addLast(new ShadowEntry(cleanVar, type, offset));
-            sb.append("\n\t\t").append(type).append(" ").append(cleanVar).append(" = ")
-              .append(translateExpr(fromAssignVar)).append(";");
+            // 如果本作用域已声明过同名局部变量，用赋值代替声明
+            if(locallyDeclaredGvlVars.contains(cleanVar)){
+                sb.append("\n\t\t").append(cleanVar).append(" = ")
+                  .append(translateExpr(fromAssignVar)).append(";");
+            }else{
+                locallyDeclaredGvlVars.add(cleanVar);
+                sb.append("\n\t\t").append(type).append(" ").append(cleanVar).append(" = ")
+                  .append(translateExpr(fromAssignVar)).append(";");
+            }
             sb.append("\n\t\tfor( ; ").append(cleanVar).append(" <= ")
               .append(translateExpr(toAssignVar)).append(";");
         } else {
@@ -1011,7 +1042,7 @@ public class FlatCodeGenerator implements CodeGenerator {
             Pattern.compile("\\*::PLC::RFM->getSymbolByID<(\\w+)\\*>\\s*\\(\\s*(\\d+)\\s*\\)->callFunc\\s*\\(([^)]*)\\)");
 
     private static final Pattern RFM_VAR_SIMPLE_PATTERN =
-            Pattern.compile("::PLC::RFM->getSymbolByID<(\\w+)\\*>\\s*\\(\\s*(\\d+)\\s*\\)");
+            Pattern.compile("\\*?::PLC::RFM->getSymbolByID<(\\w+)\\*>\\s*\\(\\s*(\\d+)\\s*\\)");
 
     @Override
     public String translateExpr(String expr) {
@@ -1025,6 +1056,36 @@ public class FlatCodeGenerator implements CodeGenerator {
         while (changed && maxRounds-- > 0) {
             changed = false;
             String prev = result;
+
+            // 0. ST 结构体初值列表： (NAME:=val, NAME:=val, ...) → {val, val, ...}
+            // 匹配形如 (A:=1, B:=2.0, C:=X) 的 ST 风格结构体初始化表达式
+            String stInitRegex = "\\(\\s*(\\w+\\s*:=\\s*([^,()]+|\\([^()]*\\)))(\\s*,\\s*\\w+\\s*:=\\s*([^,()]+|\\([^()]*\\)))*\\s*\\)";
+            java.util.regex.Matcher stInitMatcher = java.util.regex.Pattern.compile(stInitRegex).matcher(result);
+            if (stInitMatcher.find()) {
+                // 检查是否为 ST init（有 := 分隔符）
+                String matched = stInitMatcher.group();
+                if (matched.contains(":=")) {
+                    // 去掉外层括号，改为花括号
+                    String inner = matched.substring(1, matched.length() - 1).trim();
+                    // 分割每个 NAME:=val 对
+                    String[] parts = inner.split(",");
+                    StringBuilder sb = new StringBuilder("{");
+                    for (int i = 0; i < parts.length; i++) {
+                        String part = parts[i].trim();
+                        int eqIdx = part.indexOf(":=");
+                        if (eqIdx >= 0) {
+                            String val = part.substring(eqIdx + 2).trim();
+                            if (i > 0) sb.append(",");
+                            sb.append(val);
+                        }
+                    }
+                    sb.append("}");
+                    String newResult = result.substring(0, stInitMatcher.start()) + sb.toString() + result.substring(stInitMatcher.end());
+                    result = newResult;
+                    changed = true;
+                    continue;
+                }
+            }
 
             // 1. 字面量：(*(new INT(2))) → (2)
             Matcher litMatcher = LITERAL_PATTERN.matcher(result);

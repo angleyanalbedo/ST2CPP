@@ -29,13 +29,13 @@ public class TranslateFunc_decl {
 
         //获取变量段变量信息组装所需语句
         if(ctx.io_var_decls().size() != 0) {
-            this.packageIOSentences((ArrayList<PLCSTPARSERParser.Io_var_declsContext>) ctx.io_var_decls());
+            this.packageIOSentences((ArrayList<PLCSTPARSERParser.Io_var_declsContext>) ctx.io_var_decls(), translatorNew);
         }
         if(ctx.func_var_decls().size() != 0) {
-            this.packageFuncVarSentences((ArrayList<PLCSTPARSERParser.Func_var_declsContext>)  ctx.func_var_decls());
+            this.packageFuncVarSentences((ArrayList<PLCSTPARSERParser.Func_var_declsContext>)  ctx.func_var_decls(), translatorNew);
         }
         if(ctx.temp_var_decls().size() != 0) {
-            this.packageTempVarSentences((ArrayList<PLCSTPARSERParser.Temp_var_declsContext>) ctx.temp_var_decls());
+            this.packageTempVarSentences((ArrayList<PLCSTPARSERParser.Temp_var_declsContext>) ctx.temp_var_decls(), translatorNew);
         }
 
         //翻译函数声明
@@ -81,7 +81,7 @@ public class TranslateFunc_decl {
             sb.append(translatorNew.codeGen.emitFuncDeclEnd());
         } else {
             // 外部函数声明（无 body）→ 仅生成原型
-            String nativeReturn = mapToNativeType(returnValueType);
+            String nativeReturn = mapToNativeType(returnValueType, translatorNew);
             sb.append("\n" + nativeReturn + " " + funcName + "(" + params.toString() + ");\n");
         }
 
@@ -92,7 +92,7 @@ public class TranslateFunc_decl {
      * @describe 组装和输入输出变量相关的语句
      * @param ioList io变量段结点
      */
-    void packageIOSentences(ArrayList<PLCSTPARSERParser.Io_var_declsContext> ioList) {
+    void packageIOSentences(ArrayList<PLCSTPARSERParser.Io_var_declsContext> ioList, PLCTranslatorNew translatorNew) {
         for (PLCSTPARSERParser.Io_var_declsContext io_var_declsContext : ioList) {
             ArrayList<PLCSymbol> ioVarList = properties.get(io_var_declsContext);
             for (PLCSymbol symbol : ioVarList) {
@@ -101,7 +101,7 @@ public class TranslateFunc_decl {
 
                 // 参数使用原生 C++ 类型
                 String nativeType = tempSymbol.getRuntimeTypeName();
-                nativeType = mapToNativeType(nativeType);
+                nativeType = mapToNativeType(nativeType, translatorNew);
                 if(sections == PLCModifierEnum.VarSections.VAR_INPUT){
                     this.funcParaSentences.add(nativeType + " " + tempSymbol.getName());
                     this.callFuncParaSentences.add(tempSymbol.getName());
@@ -114,23 +114,23 @@ public class TranslateFunc_decl {
         }
     }
 
-    void packageFuncVarSentences(ArrayList<PLCSTPARSERParser.Func_var_declsContext> funcVarList){
+    void packageFuncVarSentences(ArrayList<PLCSTPARSERParser.Func_var_declsContext> funcVarList, PLCTranslatorNew translatorNew){
         for (PLCSTPARSERParser.Func_var_declsContext func_var_declsContext : funcVarList) {
             ArrayList<PLCSymbol> ioVarList = properties.get(func_var_declsContext);
             for (PLCSymbol symbol : ioVarList) {
                 PLCVariable tempSymbol = (PLCVariable) symbol;
-                String nativeType = mapToNativeType(tempSymbol.getRuntimeTypeName());
+                String nativeType = mapToNativeType(tempSymbol.getRuntimeTypeName(), translatorNew);
                 this.funcCallInitSentences.add("\n\t" + nativeType + " " + tempSymbol.getName() + " = " + PLCTranslatorNew.codeGen.translateExpr(tempSymbol.getAssignVar()) + ";");
             }
         }
     }
 
-    void packageTempVarSentences(ArrayList<PLCSTPARSERParser.Temp_var_declsContext> tempVarList){
+    void packageTempVarSentences(ArrayList<PLCSTPARSERParser.Temp_var_declsContext> tempVarList, PLCTranslatorNew translatorNew){
         for (PLCSTPARSERParser.Temp_var_declsContext temp_var_declsContext : tempVarList) {
             ArrayList<PLCSymbol> ioVarList = properties.get(temp_var_declsContext);
             for (PLCSymbol symbol : ioVarList) {
                 PLCVariable tempSymbol = (PLCVariable) symbol;
-                String nativeType = mapToNativeType(tempSymbol.getRuntimeTypeName());
+                String nativeType = mapToNativeType(tempSymbol.getRuntimeTypeName(), translatorNew);
                 this.funcCallInitSentences.add("\n\t" + nativeType + " " + tempSymbol.getName() + " = " + PLCTranslatorNew.codeGen.translateExpr(tempSymbol.getAssignVar()) + ";");
             }
         }
@@ -138,9 +138,16 @@ public class TranslateFunc_decl {
 
     /**
      * 将运行时类型名映射为原生 C++ 类型名
+     * 先委托 codeGen.toNativeType（处理 PLC_Struct_Value<ID> 等映射），
+     * 再用 switch 映射 PLC_*_Value 包装类型名
      */
-    static String mapToNativeType(String runtimeTypeName) {
+    static String mapToNativeType(String runtimeTypeName, PLCTranslatorNew translatorNew) {
         if (runtimeTypeName == null) return "int";
+        // 优先使用 codeGen 的类型映射（struct、enum 等）
+        String codeGenMapped = translatorNew.codeGen.toNativeType(runtimeTypeName);
+        if (codeGenMapped != null && !codeGenMapped.equals(runtimeTypeName)) {
+            return codeGenMapped;
+        }
         switch (runtimeTypeName) {
             case "PLC_SINT_Value": return "SINT";
             case "PLC_INT_Value": return "INT";

@@ -71,6 +71,18 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
         PLCTranslatorNew.codeGen = new FlatCodeGenerator(); // 默认 Flat
     }
 
+    /**
+     * 重写 aggregateResult 以拼接所有子节点结果而非仅保留最后一个。
+     * ANTLR 默认实现返回 nextResult，导致 visitChildren 中只有末子节点生效。
+     * 表达式树中有多个 func_call 时，所有临时变量声明都需要保留。
+     */
+    @Override
+    protected String aggregateResult(String aggregate, String nextResult) {
+        if (aggregate == null) return nextResult;
+        if (nextResult == null) return aggregate;
+        return aggregate + nextResult;
+    }
+
     public PLCTranslatorNew(ParseTreeProperty<java.util.ArrayList<PLCSymbol>> properties, CodeGenerator codeGenerator) {
         PLCTranslatorNew.properties = properties;
         PLCTranslatorNew.codeGen = codeGenerator;

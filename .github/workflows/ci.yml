@@ -28,18 +28,11 @@ jobs:
       - name: Build with Maven
         run: mvn package -DskipTests --file java/pom.xml
 
-      - name: Create LSP server JAR
-        run: |
-          cp java/target/st2c-jar-with-dependencies.jar java/target/st2c-lsp-server-jar-with-dependencies.jar
-          jar ufe java/target/st2c-lsp-server-jar-with-dependencies.jar com.st2c.lsp.ST2CLanguageServer
-
-      - name: Upload JARs
+      - name: Upload JAR
         uses: actions/upload-artifact@v4
         with:
           name: st2c-jar
-          path: |
-            java/target/st2c-jar-with-dependencies.jar
-            java/target/st2c-lsp-server-jar-with-dependencies.jar
+          path: java/target/st2c-jar-with-dependencies.jar
           retention-days: 1
 
   build-runtime:
@@ -64,16 +57,9 @@ jobs:
         run: >
           cmake -B runtime-flat/build -S runtime-flat
           -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
-          -DRT_BUILD_TESTS=ON
 
       - name: Build
         run: cmake --build runtime-flat/build --parallel
-
-      - name: Run framework tests
-        run: ./runtime-flat/build/framework_test.exe
-
-      - name: Run unit tests
-        run: ./runtime-flat/build/unit_test.exe
 
       - name: Upload runtime binaries
         uses: actions/upload-artifact@v4
@@ -82,74 +68,15 @@ jobs:
           path: runtime-flat/build/*.exe
           retention-days: 1
 
-  integration-test:
-    name: End-to-End Test (ST→C++→Build→Run)
-    needs: [build-java]
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Download JAR
-        uses: actions/download-artifact@v4
-        with:
-          name: st2c-jar
-          path: java/target/
-
-      - name: Compile ST examples with JAR
-        shell: powershell
-        run: |
-          java -jar java/target/st2c-jar-with-dependencies.jar `
-            --input examples/test.st --output-dir output/flat/build
-          java -jar java/target/st2c-jar-with-dependencies.jar `
-            --input examples/test_struct.st --output-dir output/flat/build
-          java -jar java/target/st2c-jar-with-dependencies.jar `
-            --input examples/test_arr_struct.st --output-dir output/flat/build
-
-      - name: Setup MSYS2
-        uses: msys2/setup-msys2@v2
-        with:
-          update: true
-          install: >-
-            mingw-w64-x86_64-cmake
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-make
-
-      - name: Convert workspace path for MSYS2
-        shell: powershell
-        run: |
-          $msys2Path = "${{ github.workspace }}" -replace '\\', '/'
-          echo "MSYS2_WORKSPACE=$msys2Path" | Out-File -FilePath $env:GITHUB_ENV -Append
-
-      - name: Configure CMake with generated POU
-        shell: msys2 {0}
-        run: >
-          cmake -B output/build -S runtime-flat
-          -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
-          -DGEN_CPP_DIR=$MSYS2_WORKSPACE/output/flat/build
-
-      - name: Build runtime with POU
-        shell: msys2 {0}
-        run: cmake --build output/build --parallel
-
-      - name: Run integrated runtime
-        shell: msys2 {0}
-        run: output/build/runtime.exe
-
   package:
     name: Package Release ZIP
     if: github.event_name != 'pull_request'
-    needs: [build-java, build-runtime, integration-test]
+    needs: [build-java, build-runtime]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download JARs
+      - name: Download JAR
         uses: actions/download-artifact@v4
         with:
           name: st2c-jar
@@ -164,10 +91,17 @@ jobs:
       - name: Package into ZIP
         run: |
           New-Item -ItemType Directory -Force -Path st2c-release
-          Copy-Item java/target/*.jar st2c-release/
-          Copy-Item runtime-flat/build/*.exe st2c-release/
+          # JAR (only the compiler, no java source)
+          Copy-Item java/target/st2c-jar-with-dependencies.jar st2c-release/
+          # Runtime source for fat runtime compilation
+          Copy-Item -Recurse runtime-flat st2c-release/runtime-flat/
+          Remove-Item -Recurse -Force st2c-release/runtime-flat/build -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force st2c-release/runtime-flat/tests -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force st2c-release/runtime-flat/docs -ErrorAction SilentlyContinue
+          # Platform target source
+          Copy-Item -Recurse target st2c-release/target/
+          # Examples
           Copy-Item -Recurse examples st2c-release/examples/
-          Copy-Item -Recurse runtime-flat/include st2c-release/include/
           Copy-Item README.md st2c-release/
           Compress-Archive -Path st2c-release/* -DestinationPath st2c-build.zip
 

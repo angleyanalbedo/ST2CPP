@@ -41,8 +41,6 @@ public class TranslateCase_stmt {
         //**********************************************翻译后续case为else if*********************************************
         for(int i = 1; i<ctx.case_selection().size(); i++){
             ArrayList<PLCSymbol> caseTempList = PLCTranslatorNew.properties.get(ctx.case_selection(i).case_list());
-//            System.out.println("else if(("+varExpression.getAssignVar()+"=="+((PLCVariable)caseTempList.get(0)).getAssignVar()+
-//                    ")");
             sb.append("\nelse if(("+translatorNew.codeGen.translateExpr(varExpression.getAssignVar())+"=="+translatorNew.codeGen.translateExpr(((PLCVariable)caseTempList.get(0)).getAssignVar())+
                     ")");
 
@@ -50,21 +48,24 @@ public class TranslateCase_stmt {
                 sb.append("\n||("+translatorNew.codeGen.translateExpr(varExpression.getAssignVar())+"=="+ translatorNew.codeGen.translateExpr(ctx.case_selection(i).case_list().case_list_elem(t).getText())+")");
             }
 
-//            System.out.println("){");
             sb.append("\n){");
             result = translatorNew.visit(ctx.case_selection(i).stmt_list());
             sb.append(result);
 
-//            System.out.println("}");
-            sb.append("\n}");
+            // If this is the last case_selection AND there's an else_stmt following,
+            // don't close the body — emitElse() will provide the closing brace.
+            // Otherwise close it now.
+            if(ctx.else_stmt() == null || i < ctx.case_selection().size() - 1){
+                sb.append("\n}");
+            }
         }
 
         //***********************************************翻译else语句****************************************************
         if(ctx.else_stmt() != null){
             result = translatorNew.visit(ctx.else_stmt());
             sb.append(result);
+            sb.append("\n}"); // close the else body
         }else{
-//            System.out.println("else{}");
             sb.append("\nelse{}");
         }
         return sb.toString();
