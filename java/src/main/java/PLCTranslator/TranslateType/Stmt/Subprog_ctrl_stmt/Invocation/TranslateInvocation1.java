@@ -16,8 +16,13 @@ public class TranslateInvocation1 {
 
         List<String> paramValues = new ArrayList<>();
         for (PLCSTPARSERParser.Param_assignContext param_assignContext : ctx.param_assign()) {
-            PLCVariable paraSymbol = PLCTranslatorNew.getVariable(param_assignContext, "invocation1 parameter");
-            paramValues.add(translatorNew.gvlCtx.translateExpr(paraSymbol.getAssignVar()));
+            String paramValue;
+            if (param_assignContext instanceof PLCSTPARSERParser.InputParamContext ip) {
+                paramValue = translatorNew.visit(ip.expression());
+            } else {
+                paramValue = param_assignContext.getText();
+            }
+            paramValues.add(paramValue);
         }
 
         String instanceExpr = isThis ? "this" : ("&" + instanceSymbol.getName());

@@ -750,13 +750,9 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
 
         List<String> entries = new ArrayList<>();
         for (PLCVariable var : enumSymbol.getEnumValues()) {
-            String valueExpr = gvlCtx.translateExpr(var.getAssignVar()).trim();
-            // 去除外层括号以判断默认值
-            String stripped = valueExpr.startsWith("(") && valueExpr.endsWith(")")
-                ? valueExpr.substring(1, valueExpr.length() - 1).trim()
-                : valueExpr;
+            String valueExpr = stripParens(var.getAssignVar());
             // 如果是默认值 "0" 则省略 = Value，由 C++ 编译器自动编号
-            if (stripped.equals("0")) {
+            if (valueExpr.equals("0")) {
                 entries.add(var.getName());
             } else {
                 entries.add(var.getName() + " = " + valueExpr);
@@ -776,6 +772,13 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
         return translateFunc_call.translateNode(ctx, this);
     }
 
-
+    private String stripParens(String s) {
+        if (s == null) return "";
+        s = s.trim();
+        if (s.startsWith("(") && s.endsWith(")")) {
+            return s.substring(1, s.length() - 1).trim();
+        }
+        return s;
+    }
 
 }

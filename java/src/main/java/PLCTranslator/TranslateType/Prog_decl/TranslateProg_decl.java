@@ -204,8 +204,24 @@ public class TranslateProg_decl {
         String nativeType = gvlCtx.toNativeType(typeName);
         gvlCtx.allocateOffset(name, nativeType);
         if (assignVar != null && !assignVar.isEmpty() && !"0".equals(assignVar) && !"\"\"".equals(assignVar)) {
-            String translated = gvlCtx.translateExpr(assignVar);
-            sb.append("\n\t\t").append(gvlCtx.writeExpr(name, translated)).append(";");
+            String initValue = stripParens(assignVar);
+            String type = gvlCtx.typeMap.get(name);
+            Integer offset = gvlCtx.offsetMap.get(name);
+            if (type != null && offset != null) {
+                sb.append("\n\t\tgvl.write<").append(type).append(">(")
+                  .append(offset).append(", ").append(initValue).append(");");
+            } else {
+                sb.append("\n\t\t").append(name).append(" = ").append(initValue).append(";");
+            }
         }
+    }
+
+    private String stripParens(String s) {
+        if (s == null) return "";
+        s = s.trim();
+        if (s.startsWith("(") && s.endsWith(")")) {
+            return s.substring(1, s.length() - 1).trim();
+        }
+        return s;
     }
 }

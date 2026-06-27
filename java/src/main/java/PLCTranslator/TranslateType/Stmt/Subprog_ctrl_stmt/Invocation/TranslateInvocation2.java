@@ -18,7 +18,13 @@ public class TranslateInvocation2 {
         for (PLCSTPARSERParser.Param_assignContext param_assignContext : ctx.param_assign()) {
             PLCVariable paraSymbol = PLCTranslatorNew.getVariable(param_assignContext, "invocation2 parameter");
             paramNames.add(paraSymbol.getName());
-            paramValues.add(translatorNew.gvlCtx.translateExpr(paraSymbol.getAssignVar()));
+            String paramValue;
+            if (param_assignContext instanceof PLCSTPARSERParser.InputParamContext ip) {
+                paramValue = translatorNew.visit(ip.expression());
+            } else {
+                paramValue = param_assignContext.getText();
+            }
+            paramValues.add(paramValue);
         }
 
         return translatorNew.gvlCtx.emitFBCall(fbInstanceName, fbTypeName, paramNames, paramValues);
