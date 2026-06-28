@@ -379,6 +379,124 @@ public class GvlContext {
         return null;
     }
 
+    public String getOffsetDefinitions() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("// GVL Offset Definitions\n");
+        for (Map.Entry<String, Integer> entry : offsetMap.entrySet()) {
+            String type = typeMap.get(entry.getKey());
+            sb.append("// ").append(entry.getKey())
+              .append(" : ").append(type)
+              .append(" @ offset ").append(entry.getValue())
+              .append("\n");
+        }
+        sb.append("// Total GVL usage: ").append(currentOffset).append(" bytes\n");
+        return sb.toString();
+    }
+     /**
+     * @deprecated 请改用 visitor 路径 (t.visit(ctx)) 翻译表达式。
+     *             此方法仅用于常量等简单字符串的正则替换，新代码不应再调用。只是给一个测试用例调用
+     */
+    @Deprecated
+    public String emitPOURegistration(String fileId, List<String> progNames) {
+        if (progNames == null || progNames.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n// ─── Auto-generated POU Registration (").append(fileId).append(") ───\n");
+        sb.append("void registerPOU_").append(fileId).append("(POURegistry& reg) {\n");
+        for (String name : progNames) {
+            String mangled = mangleProgName(name);
+            sb.append("    POUCallbacks cbs;\n");
+            sb.append("    cbs.init = PROGRAM_").append(mangled).append("_init;\n");
+            sb.append("    cbs.cyclic = PROGRAM_").append(mangled).append("_cyclic;\n");
+            sb.append("    cbs.pre = PROGRAM_").append(mangled).append("_pre;\n");
+            sb.append("    cbs.post = PROGRAM_").append(mangled).append("_post;\n");
+            sb.append("    reg.add(\"").append(name).append("\", cbs);\n");
+        }
+        sb.append("}\n");
+        return sb.toString();
+    }
+
+    /**
+     * @deprecated 请改用 visitor 路径 (t.visit(ctx)) 翻译表达式。
+     *             此方法仅用于常量等简单字符串的正则替换，新代码不应再调用。
+     */
+    @Deprecated
+    public String translateExpr(String expr) {
+        if (expr == null || expr.isEmpty()) {
+            return expr;
+        }
+
+        String result = expr;
+        boolean changed = true;
+        int maxRounds = 10;
+        while (changed && maxRounds-- > 0) {
+            changed = false;
+
+            // 5. 数组元素访问
+            String arrayAccessPattern = "([A-Z][A-Z0-9$_]*)\\[(.*?)\\]";
+            Matcher arrayAccessMatcher = Pattern.compile(arrayAccessPattern).matcher(result);
+            StringBuilder sb = new StringBuilder();
+            while (arrayAccessMatcher.find()) {
+                changed = true;
+                String arrName = arrayAccessMatcher.group(1);
+                String indexExpr = arrayAccessMatcher.group(2);
+                String arrType = typeMap.get(arrName);
+                Integer arrOffset = offsetMap.get(arrName);
+                if (arrType != null && arrType.startsWith("ARRAY[") && arrOffset != null) {
+                    Pattern typePattern = Pattern.compile("ARRAY\\[(\\d+)\\] OF (\\w+)");
+                    Matcher typeMatcher = typePattern.matcher(arrType);
+                    if (typeMatcher.find()) {
+                        String elemType = typeMatcher.group(2);
+                        int count = Integer.parseInt(typeMatcher.group(1));
+                        String translatedIndex = translateExpr(indexExpr);
+                        arrayAccessMatcher.appendReplacement(sb,
+                            "gvl.safeArrayAt<" + elemType + ">(" + arrOffset + ", " + translatedIndex + ", " + count + ")");
+                        continue;
+                    }
+                }
+                arrayAccessMatcher.appendReplacement(sb, arrayAccessMatcher.group(0));
+            }
+            arrayAccessMatcher.appendTail(sb);
+            result = sb.toString();
+
+            if (!changed) break;
+        }
+
+        // 6. 清理残余解引用星号和地址运算符
+        result = result.replaceAll("\\(\\*([A-Za-z_]\\w*)\\)", "($1)");
+        result = result.replaceAll("(?<![\\w*+\\-/<>])\\*([A-Za-z_]\\w*)(?![\\w*+\\-/<>])", "$1");
+        result = result.replace("( *", "(");
+        result = result.replace("*this->returnValue", "returnValue");
+        result = result.replaceAll("(?<![\\w*+\\-/<>])&([A-Za-z_]\\w*)(?![\\w*+\\-/<>])", "$1");
+        result = result.replace("( &", "(");
+
+        // 7. GVL 变量替换
+        for (Map.Entry<String, Integer> entry : offsetMap.entrySet()) {
+            String varName = entry.getKey();
+            Integer offset = entry.getValue();
+            String type = typeMap.get(varName);
+            if (type == null || offset == null) continue;
+            if (type.startsWith("ARRAY[")) continue;
+            if (shadowedGvlVars.contains(varName)) continue;
+            if (ioVarMap.containsKey(varName)) continue;
+            String regex = "(?<![A-Za-z0-9_])" + Pattern.quote(varName) + "(?![A-Za-z0-9_])";
+            result = result.replaceAll(regex, "gvl.read<" + type + ">(" + offset + ")");
+        }
+
+        // 7b. I/O 映射变量替换
+        for (String varName : ioVarMap.keySet()) {
+            if (shadowedGvlVars.contains(varName)) continue;
+            String ioRead = emitIORead(varName);
+            if (ioRead != null) {
+                String regex = "(?<![A-Za-z0-9_])" + Pattern.quote(varName) + "(?![A-Za-z0-9_])";
+                result = result.replaceAll(regex, ioRead);
+            }
+        }
+
+        return result;
+    }
+
     public Map<String, Integer> getOffsetMap() {
         return Collections.unmodifiableMap(offsetMap);
     }
