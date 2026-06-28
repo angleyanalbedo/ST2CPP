@@ -9,8 +9,13 @@
 #   make registry            # 仅生成 POU 注册桥接
 #
 # 注意：
-#   - SOEM 在 Windows 下需要 Npcap SDK（或 WinPcap）
-#   - 默认使用 MinGW（g++），MSVC 请设置 CROSS=
+#   - SOEM 在 Windows 下需要 Npcap 运行时（已安装）或 SDK
+#   - SOEM 的 ec_options.h 由 CMake configure_file 生成，Makefile 不自生成；
+#     若缺失则从 ec_options.h.in 手动生成（参见 target/lib/soem/CMakeLists.txt）
+#   - x64 MinGW 可链接 Npcap DLL（C:\Windows\System32\Npcap\*.dll），方法：
+#       gendef - wpcap.dll | Set-Content lib/wpcap.def
+#       dlltool -d lib/wpcap.def -D wpcap.dll -l lib/libwpcap.a -k -m i386:x86-64
+#   - 默认使用 MinGW64（g++），MSVC 请设置 CROSS=
 #   - Windows 非实时 OS，1ms 周期抖动约 100-500us
 
 CROSS   ?=
