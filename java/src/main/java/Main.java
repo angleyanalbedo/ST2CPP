@@ -1,4 +1,5 @@
 import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
+import PLCTranslator.CompilerConfig;
 import PLCTranslator.GvlContext;
 import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERLexer;
@@ -17,208 +18,96 @@ import java.io.FileWriter;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * ST2C++ 编译器入口（Flat 后端）
  */
 public class Main {
 
-    private static final String VERSION = "1.1.0";
-
     public static void main(String[] args) throws Exception {
-        // 默认参数
-        String backend = "flat";
-        List<String> inputFiles = new ArrayList<>();
-        String outputFile = null;
-        String outputDir = null;
-        String fileId = null;
-        boolean noStdlib = false;
-        String customStdlib = null;
-        boolean verbose = false;
-        boolean localCache = true;
-
-        // 解析命令行参数
-        for (int i = 0; i < args.length; i++) {
-            String arg = args[i];
-            switch (arg) {
-                case "-h":
-                case "--help":
-                    printHelp();
-                    return;
-                case "-v":
-                case "--version":
-                    System.out.println("ST2C++ version " + VERSION);
-                    return;
-                case "--backend":
-                    if (i + 1 < args.length) backend = args[++i];
-                    break;
-                case "--input":
-                    if (i + 1 < args.length) {
-                        inputFiles.add(args[++i]);
-                    } else {
-                        System.err.println("Error: --input requires a file path");
-                        System.exit(1);
-                    }
-                    break;
-                case "--output":
-                    if (i + 1 < args.length) outputFile = args[++i];
-                    break;
-                case "--output-dir":
-                    if (i + 1 < args.length) outputDir = args[++i];
-                    break;
-                case "--file-id":
-                    if (i + 1 < args.length) fileId = args[++i];
-                    break;
-                case "--no-stdlib":
-                    noStdlib = true;
-                    break;
-                case "--stdlib":
-                    if (i + 1 < args.length) customStdlib = args[++i];
-                    break;
-                case "--verbose":
-                    verbose = true;
-                    break;
-                case "--no-local-cache":
-                    localCache = false;
-                    break;
-                default:
-                    System.err.println("Unknown option: " + arg);
-                    System.err.println("Use --help for usage information.");
-                    System.exit(1);
+        CompilerConfig cfg = new CompilerConfig();
+        if (!cfg.parse(args)) {
+            if (args.length > 0 && (args[0].equals("-h") || args[0].equals("--help"))) {
+                cfg.printHelp();
             }
+            return;
         }
+        cfg.validate();
 
-        // 如果没有指定输入文件，使用默认文件名
-        if (inputFiles.isEmpty()) {
-            inputFiles.add("pou.st");
-        }
-
-        // 解析输出文件路径（基于用户输入，不含 stdlib）
-        if (outputDir != null) {
-            String baseName = new File(inputFiles.get(0)).getName();
-            String stem = inputFiles.size() == 1
-                    ? (baseName.endsWith(".st") ? baseName.substring(0, baseName.length() - 3) : baseName)
-                    : "main";
-            outputFile = new File(outputDir, stem + ".cpp").getPath();
-        } else if (outputFile == null) {
-            outputFile = "main.cpp";
-        }
-
-        // 推导 fileId（从用户输入文件名派生，去掉 .st 后缀）
-        if (fileId == null) {
-            if (inputFiles.size() == 1) {
-                String inputName = new File(inputFiles.get(0)).getName();
-                fileId = inputName.endsWith(".st") ? inputName.substring(0, inputName.length() - 3) : inputName;
-            } else {
-                fileId = "combined";
-            }
-        }
-
-        // 验证输入文件存在
-
-        for (String inputPath : inputFiles) {
-            File input = new File(inputPath);
-            if (!input.exists()) {
-                System.err.println("Error: Input file not found: " + inputPath);
-                System.exit(1);
-            }
-        }
-
-        // 自动创建输出目录
-        File outputFileObj = new File(outputFile);
-        File outputParentDir = outputFileObj.getParentFile();
-        if (outputParentDir != null && !outputParentDir.exists()) {
-            outputParentDir.mkdirs();
-        }
-
-        // 重置编译器静态状态，确保干净编译
         PLCSymbolAndScope.CompilerState.reset();
-
         long startTime = System.currentTimeMillis();
 
         GvlContext gvlCtx = new GvlContext();
-        gvlCtx.setFileId(fileId);
+        gvlCtx.setFileId(cfg.resolvedFileId);
 
-        if (verbose) {
-            System.out.println("[Input]  " + String.join(", ", inputFiles));
-            System.out.println("[Output] " + outputFile);
+        if (cfg.verbose) {
+            System.out.println("[Input]  " + String.join(", ", cfg.inputFiles));
+            System.out.println("[Output] " + cfg.resolvedOutputFile);
+            System.out.println("[Cache]  " + (cfg.localCache ? "enabled" : "disabled"));
         }
 
-        // 注册访问策略（只需一次）
         new Registrant().autoRegister();
 
-        // 共享符号表和属性（跨所有输入文件）
         ParseTreeProperty<ArrayList<PLCSymbol>> property = new ParseTreeProperty<>();
         PLCVisitor plcVisitor = new PLCVisitor(property);
         PLCTranslatorNew translatorNew = new PLCTranslatorNew(property, gvlCtx);
-        translatorNew.setLocalCache(localCache);
+        translatorNew.setLocalCache(cfg.localCache);
 
         StringBuilder fullCodeBuilder = new StringBuilder();
         int fileIndex = 0;
 
-        // 加载标准库（默认从内置 resource 加载，可通过 --stdlib 覆盖，--no-stdlib 禁用）
-        if (!noStdlib) {
-            CharStream stdlibStream = null;
-            if (customStdlib != null) {
-                File f = new File(customStdlib);
-                if (!f.exists()) {
-                    System.err.println("Error: stdlib file not found: " + customStdlib);
-                    System.exit(1);
-                }
-                stdlibStream = CharStreams.fromFileName(customStdlib);
-            } else {
-                InputStream is = Main.class.getClassLoader().getResourceAsStream("iec_stdlib.st");
-                if (is != null) {
-                    stdlibStream = CharStreams.fromStream(is, StandardCharsets.UTF_8);
-                } else {
-                    System.err.println("Warning: built-in stdlib not found, skipping");
-                }
-            }
+        // 标准库
+        if (!cfg.noStdlib) {
+            CharStream stdlibStream = loadStdlib(cfg.customStdlib);
             if (stdlibStream != null) {
                 fullCodeBuilder.append(processStream(stdlibStream, plcVisitor, translatorNew, fileIndex++));
             }
         }
 
-        // 处理用户输入文件
-        for (String inputPath : inputFiles) {
+        // 用户源文件
+        for (String inputPath : cfg.inputFiles) {
             CharStream charStream = CharStreams.fromFileName(inputPath);
             fullCodeBuilder.append(processStream(charStream, plcVisitor, translatorNew, fileIndex++));
         }
 
-        fullCodeBuilder.append("\n");
         // POU 注册
-        fileId = gvlCtx.getFileId();
-        java.util.List<String> progNames = gvlCtx.getProgramNames();
-        if (progNames != null && !progNames.isEmpty()) {
-            fullCodeBuilder.append("// ─── Auto-generated POU Registration (").append(fileId).append(") ───\n");
-            fullCodeBuilder.append("void registerPOU_").append(fileId).append("(POURegistry& reg) {\n");
-            for (String name : progNames) {
-                String mangled = fileId.isEmpty() ? name : fileId + "_" + name;
-                fullCodeBuilder.append("    POUCallbacks cbs;\n");
-                fullCodeBuilder.append("    cbs.init = PROGRAM_").append(mangled).append("_init;\n");
-                fullCodeBuilder.append("    cbs.cyclic = PROGRAM_").append(mangled).append("_cyclic;\n");
-                fullCodeBuilder.append("    cbs.pre = PROGRAM_").append(mangled).append("_pre;\n");
-                fullCodeBuilder.append("    cbs.post = PROGRAM_").append(mangled).append("_post;\n");
-                fullCodeBuilder.append("    reg.add(\"").append(name).append("\", cbs);\n");
-            }
-            fullCodeBuilder.append("}\n");
-        }
+        fullCodeBuilder.append("\n");
+        fullCodeBuilder.append(emitPOURegistration(cfg.resolvedFileId, gvlCtx));
 
+        // 写文件
         String fullCode = fullCodeBuilder.toString();
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(cfg.resolvedOutputFile))) {
             writer.write(fullCode != null ? fullCode : "");
         }
 
         long elapsed = System.currentTimeMillis() - startTime;
-
-        if (verbose) {
-            int codeLines = fullCode != null ? fullCode.split("\n").length : 0;
-            System.out.println("[Stats]  Generated " + codeLines + " lines of C++ code");
+        if (cfg.verbose) {
+            int lines = fullCode != null ? fullCode.split("\n").length : 0;
+            System.out.println("[Stats]  Generated " + lines + " lines of C++ code");
             System.out.println("[Time]   " + elapsed + " ms");
         }
+        System.out.println("Translation completed: " + cfg.resolvedOutputFile);
+    }
 
-        System.out.println("Translation completed: " + outputFile);
+    private static CharStream loadStdlib(String customPath) {
+        try {
+            if (customPath != null) {
+                File f = new File(customPath);
+                if (!f.exists()) {
+                    System.err.println("Error: stdlib file not found: " + customPath);
+                    System.exit(1);
+                }
+                return CharStreams.fromFileName(customPath);
+            }
+            InputStream is = Main.class.getClassLoader().getResourceAsStream("iec_stdlib.st");
+            if (is != null) {
+                return CharStreams.fromStream(is, StandardCharsets.UTF_8);
+            }
+            System.err.println("Warning: built-in stdlib not found, skipping");
+        } catch (Exception e) {
+            System.err.println("Error loading stdlib: " + e.getMessage());
+        }
+        return null;
     }
 
     private static String processStream(CharStream charStream, PLCVisitor plcVisitor,
@@ -234,29 +123,23 @@ public class Main {
         return (code != null ? (fileIndex > 0 ? "\n" : "") + code : "");
     }
 
-    private static void printHelp() {
-        System.out.println("ST2C++ - Structured Text to C++ Translator");
-        System.out.println("Version: " + VERSION);
-        System.out.println();
-        System.out.println("Usage: java Main [options]");
-        System.out.println();
-        System.out.println("Options:");
-        System.out.println("  -h, --help           Show this help message and exit");
-        System.out.println("  -v, --version        Show version information and exit");
-        System.out.println("  --backend <mode>     Reserved, only 'flat' is supported");
-        System.out.println("  --input <file>       Input ST source file (.st)");
-        System.out.println("  --output <file>      Output C++ file (.cpp)");
-        System.out.println("  --output-dir <dir>   Auto-name output as <dir>/<stem>.cpp");
-        System.out.println("  --file-id <id>       POU registration ID (default: output stem)");
-        System.out.println("  --no-stdlib          Disable built-in standard library");
-        System.out.println("  --stdlib <file>      Override built-in standard library with custom file");
-        System.out.println("  --no-local-cache     Disable cyclic local variable caching (prologue/epilogue)");
-        System.out.println("                       All variable access goes through gvl.read/write directly");
-        System.out.println("  --verbose            Print detailed translation statistics");
-        System.out.println();
-        System.out.println("Examples:");
-        System.out.println("  java -jar st2c.jar --input program.st --output out.cpp");
-        System.out.println("  java -jar st2c.jar --input test.st --output-dir output/flat/build");
-        System.out.println("  java -jar st2c.jar --input pou.st --no-stdlib");
+    private static String emitPOURegistration(String fileId, GvlContext gvlCtx) {
+        StringBuilder sb = new StringBuilder();
+        java.util.List<String> progNames = gvlCtx.getProgramNames();
+        if (progNames == null || progNames.isEmpty()) return "";
+
+        sb.append("// ─── Auto-generated POU Registration (").append(fileId).append(") ───\n");
+        sb.append("void registerPOU_").append(fileId).append("(POURegistry& reg) {\n");
+        for (String name : progNames) {
+            String mangled = fileId.isEmpty() ? name : fileId + "_" + name;
+            sb.append("    POUCallbacks cbs;\n");
+            sb.append("    cbs.init = PROGRAM_").append(mangled).append("_init;\n");
+            sb.append("    cbs.cyclic = PROGRAM_").append(mangled).append("_cyclic;\n");
+            sb.append("    cbs.pre = PROGRAM_").append(mangled).append("_pre;\n");
+            sb.append("    cbs.post = PROGRAM_").append(mangled).append("_post;\n");
+            sb.append("    reg.add(\"").append(name).append("\", cbs);\n");
+        }
+        sb.append("}\n");
+        return sb.toString();
     }
 }
