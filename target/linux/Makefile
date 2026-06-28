@@ -82,8 +82,9 @@ clean:
 	-rm -f $(TARGET) $(STUB_TARGET) $(ECAT_TARGET) $(REGISTRY)
 
 # ═══ EtherCAT (SOEM) 构建 — 共享 SOEM 子模块 ═══
-SOEM_DIR  = ../lib/soem
-ECAT_SRC  = ethercat_tci.cpp
+SOEM_DIR     = ../lib/soem
+SOEM_OPTIONS = $(SOEM_DIR)/include/soem/ec_options.h
+ECAT_SRC     = ethercat_tci.cpp
 SOEM_CFLAGS = -O2 -D_GNU_SOURCE -DRT_PLATFORM_LINUX -DSOEM_LINUX \
               -I$(SOEM_DIR)/include \
               -I$(SOEM_DIR)/oshw/linux \
@@ -117,6 +118,12 @@ build/soem_linux_nicdrv.o: $(SOEM_DIR)/oshw/linux/nicdrv.c
 	$(CC) $(SOEM_CFLAGS) -c $< -o $@
 
 ethercat: $(ECAT_TARGET)
+
+$(SOEM_OPTIONS): $(SOEM_OPTIONS).in
+	python3 $(SOEM_DIR)/gen_options.py $(SOEM_OPTIONS).in $(SOEM_OPTIONS) 2>/dev/null || \
+	python  $(SOEM_DIR)/gen_options.py $(SOEM_OPTIONS).in $(SOEM_OPTIONS)
+
+$(SOEM_C_OBJS): $(SOEM_OPTIONS)
 
 $(ECAT_TARGET): $(ECAT_CPP_SRCS) $(SOEM_C_OBJS)
 	$(CXX) $(CXXFLAGS) $(ECAT_CXXFLAGS) -o $@ $(ECAT_CPP_SRCS) $(SOEM_C_OBJS) $(LDFLAGS) -lpcap

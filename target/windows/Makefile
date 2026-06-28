@@ -90,8 +90,9 @@ clean:
 
 # ═══ EtherCAT (SOEM) 构建 — 共享 SOEM 子模块 ═══
 # Windows 需要 Npcap SDK（或 WinPcap），SOEM 自带 wpcap 库文件
-SOEM_DIR  = ../lib/soem
-ECAT_SRC  = ethercat_tci.cpp
+SOEM_DIR     = ../lib/soem
+SOEM_OPTIONS = $(SOEM_DIR)/include/soem/ec_options.h
+ECAT_SRC     = ethercat_tci.cpp
 SOEM_CFLAGS = -O2 -DRT_PLATFORM_WINDOWS -DSOEM_WIN32 \
               -I$(SOEM_DIR)/include \
               -I$(SOEM_DIR)/oshw/win32 \
@@ -129,6 +130,12 @@ build/soem_win_nicdrv.o: $(SOEM_DIR)/oshw/win32/nicdrv.c
 	$(CC) $(SOEM_CFLAGS) -c $< -o $@
 
 ethercat: $(ECAT_TARGET)
+
+$(SOEM_OPTIONS): $(SOEM_OPTIONS).in
+	python3 $(SOEM_DIR)/gen_options.py $(SOEM_OPTIONS).in $(SOEM_OPTIONS) 2>/dev/null || \
+	python  $(SOEM_DIR)/gen_options.py $(SOEM_OPTIONS).in $(SOEM_OPTIONS)
+
+$(SOEM_C_OBJS): $(SOEM_OPTIONS)
 
 $(ECAT_TARGET): $(ECAT_CPP_SRCS) $(SOEM_C_OBJS)
 	$(CXX) $(CXXFLAGS) $(ECAT_CXXFLAGS) -o $@ $(ECAT_CPP_SRCS) $(SOEM_C_OBJS) $(LDFLAGS) -lws2_32 $(SOEM_WINPCAP_LIB)
