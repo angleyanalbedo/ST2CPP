@@ -483,7 +483,7 @@ enum_value_spec   //元素初始化                            //SC DONE
                 ;
 
 enum_value                                              //SC DONE
-                : ( enum_type_name '#' )?
+                : enum_type_name '#'
                   identifier
                 ;
 
@@ -1899,7 +1899,7 @@ unary_expr                                                  //SC DONE
                 ;
 
 
-//enum_value和variable_access都能匹配id，但是由于enum_value在前，所以id会匹配到enum_value上
+//enum_value要求Type#Value格式（#强制），裸id走variable_access
 primary_expr                                        //SC DONE
                 : constant
                 | enum_value

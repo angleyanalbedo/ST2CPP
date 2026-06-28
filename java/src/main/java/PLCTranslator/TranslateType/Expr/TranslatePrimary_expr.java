@@ -16,19 +16,6 @@ public class TranslatePrimary_expr {
         }
         if (ctx.constant() != null) return ctx.constant().getText();
         if (ctx.enum_value() != null) {
-            String valueName = ctx.enum_value().identifier().getText();
-            if (t.inCyclic) {
-                return valueName;
-            }
-            if (t.gvlCtx.isIOVariable(valueName)) {
-                String ioRead = t.gvlCtx.emitIORead(valueName);
-                if (ioRead != null) return ioRead;
-            }
-            String type = t.gvlCtx.typeMap.get(valueName);
-            Integer offset = t.gvlCtx.offsetMap.get(valueName);
-            if (type != null && offset != null && !t.gvlCtx.shadowedGvlVars.contains(valueName)) {
-                return "gvl.read<" + type + ">(" + offset + ")";
-            }
             return translateEnumValue(ctx.enum_value(), t);
         }
         if (ctx.ref_value() != null) return ctx.ref_value().getText();
