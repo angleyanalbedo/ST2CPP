@@ -34,6 +34,17 @@ public class TranslateVariableAssignExpression {
             // 查 GVL offsetMap 决定输出形式
             String varName = varSymbol.getName();
             if (varName.startsWith("*")) varName = varName.substring(1);
+
+            // AT 地址 I/O 变量 → io.writeOutput / io.writeOutputBit
+            if (translatorNew.gvlCtx.isIOVariable(varName)) {
+                String ioWrite = translatorNew.gvlCtx.emitIOWrite(varName, rhs);
+                if (ioWrite != null) {
+                    sb.append("\n\t\t").append(ioWrite).append(";");
+                    return sb.toString();
+                }
+            }
+
+            // 查 GVL offsetMap 决定输出形式
             Integer offset = translatorNew.gvlCtx.offsetMap.get(varName);
             String type = translatorNew.gvlCtx.typeMap.get(varName);
 
