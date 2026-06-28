@@ -1,4 +1,4 @@
-package PLCTranslator.TranslateType;
+package PLCTranslator.TranslateType.Pou_decl.Data_type_decl.Struct_type_decl;
 
 import PLCSymbolAndScope.PLCSymbolTables.PLCTotalSymbolTable;
 import PLCSymbolAndScope.PLCSymbols.*;
@@ -22,7 +22,6 @@ public class TranslateStruct_type_decl {
     public static String resolveFieldType(PLCVariable fieldVar, GvlContext gvlCtx) {
         int typeId = fieldVar.getTypeId();
         if (typeId == 0) {
-            // 没有类型信息，回退到 runtimeTypeName
             return gvlCtx.toNativeType(fieldVar.getRuntimeTypeName());
         }
 
@@ -31,17 +30,14 @@ public class TranslateStruct_type_decl {
             return gvlCtx.toNativeType(fieldVar.getRuntimeTypeName());
         }
 
-        // 枚举类型 → 直接用枚举名（C++ 中就是 enum 名）
         if (typeDecl instanceof PLCEnumDeclSymbol) {
             return typeDecl.getName();
         }
 
-        // 结构体类型 → 直接用结构体名
         if (typeDecl instanceof PLCStructDeclSymbol) {
             return typeDecl.getName();
         }
 
-        // 数组类型 → 返回元素类型（数组维度由 arrayBounds 处理）
         if (typeDecl instanceof PLCArrayDeclSymbol) {
             PLCArrayDeclSymbol arrayDecl = (PLCArrayDeclSymbol) typeDecl;
             PLCTypeDeclSymbol elemType = PLCTotalSymbolTable.getTypeByTypeID(
@@ -49,10 +45,9 @@ public class TranslateStruct_type_decl {
             if (elemType != null) {
                 return gvlCtx.toNativeType(elemType.getName());
             }
-            return "INT"; // fallback
+            return "INT";
         }
 
-        // 基础类型（INT, DINT, REAL, BOOL 等）
         return gvlCtx.toNativeType(typeDecl.getName());
     }
 
@@ -75,7 +70,6 @@ public class TranslateStruct_type_decl {
             int fieldSize;
 
             if (arrayBounds != null) {
-                // 数组字段：通过 arrayBounds 计算总元素数
                 int totalCount = 1;
                 for (int[] dim : arrayBounds) {
                     totalCount *= dim[2];
@@ -88,7 +82,6 @@ public class TranslateStruct_type_decl {
                   .append(fieldName).append("[").append(totalCount).append("];");
                 currentOffset = aligned + fieldSize;
             } else {
-                // 标量/结构体/枚举字段
                 fieldSize = gvlCtx.getTypeSize(fieldType);
                 int aligned = fieldSize <= 1 ? currentOffset
                     : (currentOffset + fieldSize - 1) / fieldSize * fieldSize;

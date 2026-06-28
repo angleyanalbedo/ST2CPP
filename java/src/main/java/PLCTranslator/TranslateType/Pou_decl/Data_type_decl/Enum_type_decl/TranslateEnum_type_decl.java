@@ -1,4 +1,4 @@
-package PLCTranslator.TranslateType;
+package PLCTranslator.TranslateType.Pou_decl.Data_type_decl.Enum_type_decl;
 
 import PLCSymbolAndScope.PLCSymbolTables.PLCTotalSymbolTable;
 import PLCSymbolAndScope.PLCSymbols.PLCEnumDeclSymbol;

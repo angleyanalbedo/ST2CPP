@@ -19,7 +19,7 @@ import PLCTranslator.TranslateType.Method_prototype.TranslateMethod_prototype;
 import PLCTranslator.TranslateType.Namespace_decl.TranslateNamespace_decl;
 import PLCTranslator.TranslateType.Namespace_decl.TranslateNamespace_elements;
 import PLCTranslator.TranslateType.Pou_decl.Data_type_decl.Array_type_decl.TranslateArray_type_decl;
-import PLCTranslator.TranslateType.Pou_decl.Data_type_decl.Derived_type_decl.TranslateDerived_type_decl;
+import PLCTranslator.TranslateType.Pou_decl.Data_type_decl.Subrange_type_decl.TranslateSubrange_type_decl;
 import PLCTranslator.TranslateType.Pou_decl.Data_type_decl.Simple_type_decl.TranslateSimple_type_decl;
 import PLCTranslator.TranslateType.Pou_decl.Data_type_decl.Str_type_decl.TranslateStr_type_decl;
 import PLCTranslator.TranslateType.Pou_decl.Data_type_decl.Struct_type_decl.TranslateStruct_decl;
@@ -607,13 +607,13 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     }
 
     /**
-     * 翻译派生类型声明
+     * 翻译子范围类型声明
      * @param ctx the parse tree
      * @return 生成的代码字符串
      */
-    @Override public String visitDerived_type_decl(PLCSTPARSERParser.Derived_type_declContext ctx) {
-        TranslateDerived_type_decl translateDerived_type_decl = new TranslateDerived_type_decl();
-        return translateDerived_type_decl.translateNode(ctx, this);
+    @Override public String visitSubrange_type_decl(PLCSTPARSERParser.Subrange_type_declContext ctx) {
+        TranslateSubrange_type_decl translateSubrange_type_decl = new TranslateSubrange_type_decl();
+        return translateSubrange_type_decl.translateNode(ctx, this);
     }
 
     /**
@@ -622,7 +622,7 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
      * @return 生成的代码字符串
      */
     @Override public String visitEnum_type_decl(PLCSTPARSERParser.Enum_type_declContext ctx) {
-        return new PLCTranslator.TranslateType.TranslateEnum_type_decl().translate(ctx, gvlCtx);
+        return new PLCTranslator.TranslateType.Pou_decl.Data_type_decl.Enum_type_decl.TranslateEnum_type_decl().translate(ctx, gvlCtx);
     }
 
     /**
@@ -681,7 +681,7 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
      * @return 生成的代码字符串
      */
     @Override public String visitStruct_type_decl(PLCSTPARSERParser.Struct_type_declContext ctx) {
-        return new PLCTranslator.TranslateType.TranslateStruct_type_decl().translate(ctx, gvlCtx);
+        return new PLCTranslator.TranslateType.Pou_decl.Data_type_decl.Struct_type_decl.TranslateStruct_type_decl().translate(ctx, gvlCtx);
     }
 
     /**
