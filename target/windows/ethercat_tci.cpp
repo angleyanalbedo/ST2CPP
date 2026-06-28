@@ -113,7 +113,7 @@ void EthercatTCI::syncInputs(rt_plc::ProcessImage& img) {
         if (m.plcBitOff >= 0) {
             rt_plc::BOOL val = (slaveInput[m.pdoByteOff] & (1 << m.plcBitOff)) ? TRUE : FALSE;
             img.writeInputBit(m.plcByteOff, m.plcBitOff, val);
-        } else if (m.plcByteOff + m.sizeBytes <= rt_plc::PROCESS_IMAGE_SIZE) {
+        } else if ((size_t)(m.plcByteOff + m.sizeBytes) <= rt_plc::PROCESS_IMAGE_SIZE) {
             memcpy(img.inputs + m.plcByteOff, slaveInput + m.pdoByteOff, m.sizeBytes);
         }
     }
@@ -130,7 +130,7 @@ void EthercatTCI::syncOutputs(rt_plc::ProcessImage& img) {
             rt_plc::BOOL val = img.readOutputBit(m.plcByteOff, m.plcBitOff);
             if (val) slaveOutput[m.pdoByteOff] |=  (1 << m.plcBitOff);
             else     slaveOutput[m.pdoByteOff] &= ~(1 << m.plcBitOff);
-        } else if (m.plcByteOff + m.sizeBytes <= rt_plc::PROCESS_IMAGE_SIZE) {
+        } else if ((size_t)(m.plcByteOff + m.sizeBytes) <= rt_plc::PROCESS_IMAGE_SIZE) {
             memcpy(slaveOutput + m.pdoByteOff, img.outputs + m.plcByteOff, m.sizeBytes);
         }
     }

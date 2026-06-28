@@ -11,8 +11,8 @@
  *   - timeBeginPeriod(1)：可降至 ~15ms 调度的 ~100us 抖动
  *
  * 编译（MinGW 或 MSVC）：
- *   g++ -O2 -std=c++17 -I../../runtime-flat/include \
- *       ../../runtime-flat/src/*.cpp runtime_windows.cpp \
+ *   g++ -O2 -std=c++17 -I../../runtime-flat/include
+ *       ../../runtime-flat/src/ *.cpp runtime_windows.cpp
  *       -lwinmm -o plc_runtime_windows.exe
  *
  * 运行：

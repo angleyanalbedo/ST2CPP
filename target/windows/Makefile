@@ -109,7 +109,7 @@ SOEM_C_OBJS = $(patsubst $(SOEM_DIR)/src/%.c,build/soem_win_%.o,$(wildcard $(SOE
 
 ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(ECAT_SRC) ../pou_stub.cpp
 
-SOEM_WINPCAP_LIB = -L$(SOEM_DIR)/oshw/win32/wpcap/Lib -lwpcap -lpacket
+SOEM_WINPCAP_LIB = -Llib -lwpcap -lpacket
 
 build/soem_win_%.o: $(SOEM_DIR)/src/%.c
 	$(CC) $(SOEM_CFLAGS) -c $< -o $@
@@ -126,7 +126,7 @@ build/soem_win_nicdrv.o: $(SOEM_DIR)/oshw/win32/nicdrv.c
 ethercat: $(ECAT_TARGET)
 
 $(ECAT_TARGET): $(ECAT_CPP_SRCS) $(SOEM_C_OBJS)
-	$(CXX) $(CXXFLAGS) $(ECAT_CXXFLAGS) -o $@ $(ECAT_CPP_SRCS) $(SOEM_C_OBJS) $(LDFLAGS) $(SOEM_WINPCAP_LIB)
+	$(CXX) $(CXXFLAGS) $(ECAT_CXXFLAGS) -o $@ $(ECAT_CPP_SRCS) $(SOEM_C_OBJS) $(LDFLAGS) -lws2_32 $(SOEM_WINPCAP_LIB)
 	@echo "=== Build (ethercat): $@ ==="
 
 ECAT_CYCLES ?= 1000
