@@ -49,10 +49,9 @@ tar_path = os.path.join(tempfile.gettempdir(), "st2c.tar.gz")
 root = "ST2C-master"
 
 with tarfile.open(tar_path, "w:gz") as tar:
-    tar.add(os.path.join(root, "runtime-flat/include"), arcname="runtime-flat/include")
-    tar.add(os.path.join(root, "runtime-flat/src"), arcname="runtime-flat/src")
-    tar.add(os.path.join(root, "target/rpi/platform_rpi.cpp"), arcname="target/rpi/platform_rpi.cpp")
-    tar.add(os.path.join(root, "target/rpi/runtime_rpi.cpp"), arcname="target/rpi/runtime_rpi.cpp")
+    tar.add(os.path.join(root, "runtime-flat/"), arcname="runtime-flat/")
+    tar.add(os.path.join(root, "target/"), arcname="target/")
+
     # 上传编译器生成的 POU 代码
     tar.add(os.path.join(root, "output/flat/build"), arcname="output/flat/build")
 
@@ -66,17 +65,10 @@ sftp.close()
 
 ```python
 client.exec_command(f"cd {remote_dir} && tar xzf st2c.tar.gz")
-
-cmd = f"""cd {remote_dir} && g++ -O2 -std=c++17 -DRT_PLATFORM_LINUX \
-    -I runtime-flat/include \
-    runtime-flat/src/*.cpp \
-    target/rpi/platform_rpi.cpp target/rpi/runtime_rpi.cpp \
-    output/flat/build/*.cpp \
-    -lpthread -o plc_runtime_rpi 2>&1"""
-stdin, stdout, stderr = client.exec_command(cmd, timeout=120)
 print(stdout.read().decode())
 rc = stdout.channel.recv_exit_status()
 ```
+然后调用rpi 上的make 进行编译
 
 编译成功标志：`rc == 0`，无报错。
 
