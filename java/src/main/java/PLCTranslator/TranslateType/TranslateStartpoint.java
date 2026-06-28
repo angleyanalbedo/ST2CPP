@@ -1,4 +1,4 @@
-package PLCTranslator.TranslateType.Startpoint;
+package PLCTranslator.TranslateType;
 
 import PLCSymbolAndScope.PLCSymbols.PLCInterfaceDeclSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
@@ -8,7 +8,6 @@ import antlr4.PLCSTPARSERParser;
 
 import java.util.ArrayList;
 
-//PLCSt翻译起点
 public class TranslateStartpoint {
     public static ArrayList<String> funcInitSentences = new ArrayList<>();
 
@@ -20,7 +19,6 @@ public class TranslateStartpoint {
                     + "#include \"rt_runtime.h\"\n"
                     + "\nusing namespace rt_plc;\n\n");
         }
-        // 手动遍历子节点并拼接
         for (int i = 0; i < ctx.getChildCount(); i++) {
             String result = translatorNew.visit(ctx.getChild(i));
             if (result != null) {

@@ -30,7 +30,7 @@ import PLCTranslator.TranslateType.Pou_decl.Data_type_decl.TranslateType_decl;
 import PLCTranslator.TranslateType.Pou_decl.TranslateGlobal_var_decls;
 import PLCTranslator.TranslateType.Pou_decl.TranslatePou_decl;
 import PLCTranslator.TranslateType.Prog_decl.TranslateProg_decl;
-import PLCTranslator.TranslateType.Startpoint.TranslateStartpoint;
+import PLCTranslator.TranslateType.TranslateStartpoint;
 import PLCTranslator.TranslateType.Stmt.Assign_stmt.TranslateRefAssignExpression;
 import PLCTranslator.TranslateType.Stmt.Assign_stmt.TranslateRef_assign;
 import PLCTranslator.TranslateType.Stmt.Assign_stmt.TranslateVariableAssignExpression;
