@@ -114,8 +114,8 @@ typedef float     REAL;
 typedef double    LREAL;
 
 typedef int8_t    BOOL;
-#define TRUE  ((BOOL)1)
-#define FALSE ((BOOL)0)
+#define TRUE  1
+#define FALSE 0
 
 
 // ═══════════════════════════════════════════════════════

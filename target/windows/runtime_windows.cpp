@@ -19,12 +19,11 @@
  *   plc_runtime_windows.exe              # 1ms 周期
  *   plc_runtime_windows.exe --cycle-us 5000  # 5ms（Windows 更稳）
  *
- * 注意：<windows.h> 必须在其他所有头文件之前 include，
- * 以避免 rt_plc 命名空间中的 BOOL/DWORD/INT/UINT 与 Windows 宏冲突。
+ * 注意：types.h（经 rt_plc.h 引入）必须在 <windows.h> 之前 include。
+ * 避免 <windows.h> 的 ERROR/TRUE/FALSE 宏污染 enum 和 typedef。
+ * using namespace rt_plc; 虽会引入 BOOL/DWORD/INT/UINT，但本文件
+ * 未直接使用这些类型名，不产生歧义。
  */
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-
 #include "rt_runtime.h"
 #include "rt_plc.h"
 
@@ -38,12 +37,11 @@
 #include <cmath>
 #include <algorithm>
 
-using rt_plc::Scheduler;
-using rt_plc::CompositeTCI;
-using rt_plc::POURegistry;
-using rt_plc::StartupMode;
-using rt_plc::T_us;
-using rt_plc::platform;
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <mmsystem.h>
+
+using namespace rt_plc;
 
 // ═══ 配置 ═══
 static int64_t   cycleUs       = 1000;
@@ -168,19 +166,19 @@ static void plcTick() {
 }
 
 // ═══ WaitableTimer 回调 ═══
-static void CALLBACK timerAPC(LPVOID, DWORD, DWORD) {
+static void CALLBACK timerAPC(void*, unsigned long, unsigned long) {
     int64_t now = qpcUs();
     jitterSample(now);
     plcTick();
 }
 
 // ═══ 信号处理（Ctrl+C） ═══
-static BOOL WINAPI consoleHandler(DWORD dwType) {
+static int WINAPI consoleHandler(unsigned long dwType) {
     if (dwType == CTRL_C_EVENT || dwType == CTRL_BREAK_EVENT) {
         running = false;
-        return TRUE;
+        return 1;
     }
-    return FALSE;
+    return 0;
 }
 
 // ═══ 主函数 ═══

@@ -4,14 +4,11 @@
  * 通过 _WIN32 宏分支 Windows/MinGW（Sleep）与 POSIX（usleep）。
  * 适合开发机直接运行 EtherCAT，无需区分 linux/windows 目标。
  *
- * 注意：Windows 平台必须先将 <windows.h> 置于 rt_plc.h 族之前，
- * 以避免 rt_plc 命名空间中的 BOOL/DWORD/INT/UINT 与 Windows 宏冲突。
+ * 注意：types.h（经 ethercat_tci.h → rt_plc.h 引入）必须在 <windows.h>
+ * 之前 include，避免 ERROR/TRUE/FALSE 宏污染。
+ * 本文件不 using namespace rt_plc;，以避免 BOOL/DWORD/INT/UINT 歧义；
+ * 所有 rt_plc 类型均显式使用 rt_plc:: 前缀。
  */
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#endif
-
 #include "ethercat_tci.h"
 
 extern "C" {
@@ -22,15 +19,13 @@ extern "C" {
 #include <cstring>
 
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 #define SLEEP_MS(ms) Sleep(ms)
 #else
 #include <unistd.h>
 #define SLEEP_MS(ms) usleep((ms) * 1000)
 #endif
-
-using rt_plc::TCI;
-using rt_plc::ProcessImage;
-using rt_plc::BOOL;
 
 static ecx_contextt ctx;
 
@@ -111,7 +106,7 @@ void EthercatTCI::shutdown() {
     m_slaveCount = 0;
 }
 
-void EthercatTCI::syncInputs(ProcessImage& img) {
+void EthercatTCI::syncInputs(rt_plc::ProcessImage& img) {
     int wkc = ecx_receive_processdata(&ctx, EC_TIMEOUTRET);
     if (wkc == 0 && m_operational)
         fprintf(stderr, "[EtherCAT] WKC=0, comm lost\n");
@@ -123,15 +118,15 @@ void EthercatTCI::syncInputs(ProcessImage& img) {
         if (!slaveInput) continue;
 
         if (m.plcBitOff >= 0) {
-            BOOL val = (slaveInput[m.pdoByteOff] & (1 << m.plcBitOff)) ? TRUE : FALSE;
+            rt_plc::BOOL val = (slaveInput[m.pdoByteOff] & (1 << m.plcBitOff)) ? TRUE : FALSE;
             img.writeInputBit(m.plcByteOff, m.plcBitOff, val);
-        } else if (m.plcByteOff + m.sizeBytes <= PROCESS_IMAGE_SIZE) {
+        } else if (m.plcByteOff + m.sizeBytes <= rt_plc::PROCESS_IMAGE_SIZE) {
             memcpy(img.inputs + m.plcByteOff, slaveInput + m.pdoByteOff, m.sizeBytes);
         }
     }
 }
 
-void EthercatTCI::syncOutputs(ProcessImage& img) {
+void EthercatTCI::syncOutputs(rt_plc::ProcessImage& img) {
     for (int i = 0; i < ECAT_OUTPUT_MAP_SIZE; i++) {
         const PdoMapping& m = ECAT_OUTPUT_MAP[i];
         if (m.slaveIdx < 1 || m.slaveIdx > m_slaveCount) continue;
@@ -139,10 +134,10 @@ void EthercatTCI::syncOutputs(ProcessImage& img) {
         if (!slaveOutput) continue;
 
         if (m.plcBitOff >= 0) {
-            BOOL val = img.readOutputBit(m.plcByteOff, m.plcBitOff);
+            rt_plc::BOOL val = img.readOutputBit(m.plcByteOff, m.plcBitOff);
             if (val) slaveOutput[m.pdoByteOff] |=  (1 << m.plcBitOff);
             else     slaveOutput[m.pdoByteOff] &= ~(1 << m.plcBitOff);
-        } else if (m.plcByteOff + m.sizeBytes <= PROCESS_IMAGE_SIZE) {
+        } else if (m.plcByteOff + m.sizeBytes <= rt_plc::PROCESS_IMAGE_SIZE) {
             memcpy(slaveOutput + m.pdoByteOff, img.outputs + m.plcByteOff, m.sizeBytes);
         }
     }
