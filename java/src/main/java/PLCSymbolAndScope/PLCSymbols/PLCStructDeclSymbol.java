@@ -24,7 +24,16 @@ public class   PLCStructDeclSymbol extends PLCImportScopeTypeDeclType {
         super();
         sort = PLCModifierEnum.Sort.STRUCT_DECL;
         varSort = PLCModifierEnum.Sort.STRUCT;
-        this.runtimeName = "PLC_Struct_Decl<" + this.typeId + ">";
+    }
+
+    @Override
+    public String getRuntimeName() {
+        return name != null ? name : super.getRuntimeName();
+    }
+
+    @Override
+    public String getRuntimeTypeName() {
+        return name != null ? name : super.getRuntimeTypeName();
     }
 
     public PLCStructDeclSymbol(String name, int rowNum){
@@ -70,7 +79,6 @@ public class   PLCStructDeclSymbol extends PLCImportScopeTypeDeclType {
     @Override
     public void setTypeId(int typeId) {
         super.setTypeId(typeId);
-        this.setRuntimeName("PLC_Struct_Value<" + typeId + ">");
     }
 
     @Override
