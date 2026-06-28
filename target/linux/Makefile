@@ -29,18 +29,7 @@ registry: $(REGISTRY)
 
 $(REGISTRY): $(POU_SRCS)
 	python3 $(CURDIR)/../rpi/gen_registry.py --build-dir "$(BUILD)" --output "$@" 2>/dev/null || \
-	python $(CURDIR)/../rpi/gen_registry.py --build-dir "$(BUILD)" --output "$@" 2>/dev/null || \
-	{ echo "// Auto-generated" > $@; \
-	  echo '#include "rt_plc.h"' >> $@; \
-	  echo "using namespace rt_plc;" >> $@; \
-	  echo "" >> $@; \
-	  grep -oh 'registerPOU_[A-Za-z0-9_]*' $(POU_SRCS) | sort -u | \
-	    sed 's/^/extern void /; s/$$/(POURegistry\& reg);/' >> $@; \
-	  echo "" >> $@; \
-	  echo "void registerAllPOUs(POURegistry& reg) {" >> $@; \
-	  grep -oh 'registerPOU_[A-Za-z0-9_]*' $(POU_SRCS) | sort -u | \
-	    sed 's/^/    /; s/$$/(reg);/' >> $@; \
-	  echo "}" >> $@; }
+	python  $(CURDIR)/../rpi/gen_registry.py --build-dir "$(BUILD)" --output "$@"
 
 OPT      ?= -O2
 CXXFLAGS  = $(OPT) -std=c++17 -D_GNU_SOURCE \

@@ -21,8 +21,12 @@
 #include <fstream>
 #include <sstream>
 #include "core/platform.h"
+#include <csignal>
 
 using namespace rt_plc;
+
+static volatile bool running = true;
+static void signalHandler(int) { running = false; }
 
 // ═══════════════════════════════════════════════════════
 //  Minimal JSON Parser (tasks.json only)
@@ -195,20 +199,81 @@ void registerAllPOUs(POURegistry& reg) {}
 #endif
 
 // ═══════════════════════════════════════════════════════
+//  Jitter measurement
+// ═══════════════════════════════════════════════════════
+
+static struct {
+    int64_t intervalUs;
+    int64_t prevUs;
+    int64_t minJitter, maxJitter;
+    int64_t sumJitter;
+    int64_t sumSquareJitter;
+    uint64_t count;
+    bool ready;
+} jitter = {1000, 0, 999999, -999999, 0, 0, 0, false};
+
+static void jitterReset(int64_t us) {
+    jitter.intervalUs = us;
+    jitter.prevUs = 0; jitter.minJitter = 999999; jitter.maxJitter = -999999;
+    jitter.sumJitter = 0; jitter.sumSquareJitter = 0; jitter.count = 0; jitter.ready = false;
+}
+
+static void jitterSample(int64_t now) {
+    if (!jitter.ready) { jitter.prevUs = now; jitter.ready = true; return; }
+    int64_t actual = now - jitter.prevUs;
+    int64_t jit = actual - jitter.intervalUs;
+    jitter.prevUs = now;
+    jitter.minJitter = std::min(jitter.minJitter, jit);
+    jitter.maxJitter = std::max(jitter.maxJitter, jit);
+    jitter.sumJitter += jit;
+    jitter.sumSquareJitter += jit * jit;
+    jitter.count++;
+}
+
+static void printJitterStats() {
+    if (jitter.count > 0) {
+        int64_t avg = jitter.sumJitter / (int64_t)jitter.count;
+        double variance = jitter.count > 1
+            ? (double)jitter.sumSquareJitter / jitter.count - (double)avg * avg
+            : 0;
+        printf("\n=== Jitter Stats ===\n");
+        printf("  Target  : %lld us\n", (long long)jitter.intervalUs);
+        printf("  Samples : %llu\n", (unsigned long long)jitter.count);
+        printf("  Min     : %lld us\n", (long long)jitter.minJitter);
+        printf("  Max     : %lld us\n", (long long)jitter.maxJitter);
+        printf("  Avg     : %lld us\n", (long long)avg);
+        printf("  StdDev  : %lld us\n", (long long)(variance > 0 ? (int64_t)std::sqrt(variance) : 0));
+    }
+}
+
+// ═══════════════════════════════════════════════════════
 //  Main
 // ═══════════════════════════════════════════════════════
 
 int main(int argc, char* argv[]) {
     RT_LOG_INFO("=== ST2C++ Flat Runtime ===\n\n");
 
+    int64_t cycleUs = 1000;
+    int diagIntervalS = 5;
+    bool jitterOnly = false;
+
     // TCI 配置
     enum class TciMode { NONE, ETHERCAT };
     TciMode tciMode = TciMode::NONE;
     char ecatIfname[32] = "eth0";
+#if !defined(RT_ETHERCAT_ENABLED)
+    (void)tciMode; (void)ecatIfname;
+#endif
 
     for (int i = 1; i < argc; i++) {
         if (argv[i][0] != '-') continue;
-        if (strcmp(argv[i], "--tci") == 0 && i + 1 < argc) {
+        if (strcmp(argv[i], "--cycle-us") == 0 && i + 1 < argc) {
+            cycleUs = atol(argv[++i]);
+        } else if (strcmp(argv[i], "--diag-interval") == 0 && i + 1 < argc) {
+            diagIntervalS = atoi(argv[++i]);
+        } else if (strcmp(argv[i], "--jitter-only") == 0) {
+            jitterOnly = true;
+        } else if (strcmp(argv[i], "--tci") == 0 && i + 1 < argc) {
             i++;
             if (strcmp(argv[i], "ethercat") == 0) tciMode = TciMode::ETHERCAT;
             else fprintf(stderr, "Unknown TCI mode: %s (use ethercat)\n", argv[i]);
@@ -217,11 +282,19 @@ int main(int argc, char* argv[]) {
             i++;
         } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             printf("Usage: %s [options] [tasks.json]\n", argv[0]);
-            printf("  --tci <mode>      I/O 模式: ethercat\n");
-            printf("  --ecat-if <name>  EtherCAT 网卡接口 (默认 eth0)\n");
+            printf("  --cycle-us <us>       PLC 周期（微秒，默认 1000）\n");
+            printf("  --diag-interval <s>   诊断间隔（秒，默认 5）\n");
+            printf("  --jitter-only         纯定时器抖动测试\n");
+            printf("  --tci <mode>          I/O 模式: ethercat\n");
+            printf("  --ecat-if <name>      EtherCAT 网卡接口 (默认 eth0)\n");
+            printf("\n注意：桌面平台计时精度依赖 OS，1ms 周期抖动 ~100-500us\n");
             return 0;
         }
     }
+
+    // Ctrl+C / SIGINT
+    std::signal(SIGINT, signalHandler);
+    std::signal(SIGTERM, signalHandler);
 
     // ── Step 1: Register all compiled POUs ──
     POURegistry reg;
@@ -306,16 +379,55 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    RT_LOG_INFO("\n--- Running 100 ticks ---\n\n");
-
-    for (int i = 0; i < 100; i++) {
-        sched.tick();
-        platform::sleepUs(1000);  // 1ms
+    if (!jitterOnly) {
+        sched.start(StartupMode::COLD);
+        RT_LOG_INFO("Running... press Ctrl+C to stop\n");
+    } else {
+        RT_LOG_INFO("Jitter-only mode (no PLC scheduler)\n");
     }
 
-    RT_LOG_INFO("\n");
-    sched.printDiag();
-    RT_LOG_INFO("\n=== Runtime Complete ===\n");
+    jitterReset(cycleUs);
+    int64_t lastDiag = 0;
+    uint64_t tickCount = 0;
+
+    while (running) {
+        int64_t now = platform::steadyUs();
+
+        if (!jitterOnly) {
+            sched.tick();
+            tickCount++;
+        }
+
+        jitterSample(now);
+
+        // Wait until next cycle
+        int64_t next = now + cycleUs;
+        int64_t sleepUs = next - platform::steadyUs();
+        if (sleepUs > 0) platform::sleepUs(sleepUs);
+        // if sleepUs <= 0, we're already late (jitter will reflect this)
+
+        // Diagnostic output
+        now = platform::steadyUs();
+        if (now - lastDiag > (int64_t)diagIntervalS * 1000000) {
+            lastDiag = now;
+            if (jitter.count > 0) {
+                int64_t avg = jitter.sumJitter / (int64_t)jitter.count;
+                double variance = jitter.count > 1
+                    ? (double)jitter.sumSquareJitter / jitter.count - (double)avg * avg
+                    : 0;
+                platform::logInfo("[DIAG] ticks=%llu  [JITTER] min=%lld max=%lld avg=%lld stddev=%lld (samples=%llu)\n",
+                    (unsigned long long)tickCount,
+                    (long long)jitter.minJitter, (long long)jitter.maxJitter,
+                    (long long)avg,
+                    (long long)(variance > 0 ? (int64_t)std::sqrt(variance) : 0),
+                    (unsigned long long)jitter.count);
+            }
+        }
+    }
+
+    if (!jitterOnly) sched.stop();
+    printJitterStats();
+    platform::logInfo("Stopped. Total ticks: %llu\n", (unsigned long long)tickCount);
     return 0;
 }
 

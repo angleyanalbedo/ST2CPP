@@ -215,6 +215,11 @@ int main(int argc, char* argv[]) {
     // 提高定时器精度
     timeBeginPeriod(1);
 
+    // 提升进程/线程优先级 + 固定 CPU 核心（降低抖动）
+    SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+    SetThreadAffinityMask(GetCurrentThread(), 1);  // 锁定到 CPU 0
+
     // Ctrl+C 处理
     SetConsoleCtrlHandler(consoleHandler, TRUE);
 
