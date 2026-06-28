@@ -347,66 +347,65 @@ struct STATE_MACHINE {
 
 		FAULT = FALSE;
 		RUNNING = TRUE;
-if((CMD==0)){
-		MODE = 0;
-		ACCUM = 0;
-		SPEED = 0;
-		DIR = DIRECTION::NORTH;
-		RUNNING = FALSE;}
-else if((CMD==1)
-){
-		MODE = 10;
-		ACCUM = 0;
-		DIR = DIRECTION::EAST;
-}
-else if((CMD==2)
-){
-		MODE = 20;
-		ACCUM = 0;
-		DIR = DIRECTION::WEST;
-}
-else if((CMD==3)
-){
-		MODE = 30;
-		DIR = DIRECTION::SOUTH;
-}
-else if((CMD==10)
-){
-		MODE = 0;
-		FAULT = TRUE;
-		}else{
-		MODE = 99;
-		FAULT = TRUE;
-}
+	switch(CMD){
+		case 0:
+			MODE = 0;
+			ACCUM = 0;
+			SPEED = 0;
+			DIR = DIRECTION::NORTH;
+			RUNNING = FALSE;
+		break;
+		case 1:
+			MODE = 10;
+			ACCUM = 0;
+			DIR = DIRECTION::EAST;
+		break;
+		case 2:
+			MODE = 20;
+			ACCUM = 0;
+			DIR = DIRECTION::WEST;
+		break;
+		case 3:
+			MODE = 30;
+			DIR = DIRECTION::SOUTH;
+		break;
+		case 10:
+			MODE = 0;
+			FAULT = TRUE;
+		break;
+		default:
+			MODE = 99;
+			FAULT = TRUE;
+		break;
+	}
 		if(RUNNING){
-if((MODE==10)){
-		ACCUM = ACCUM + POSITION;
-		if(ACCUM >= 1000){
-		MODE = 11;
-		}}
-else if((MODE==20)
-){
-		ACCUM = ACCUM - POSITION;
-		if(ACCUM <= -1000){
-		MODE = 21;
-		}
-}
-else if((MODE==30)
-){
-		SPEED = 0;
-		RETRY = RETRY + 1;
-		if(RETRY >= 3){
-		MODE = 31;
-		}
-}
-else if((MODE==11)
-||(MODE==21)
-||(MODE==31)
-){
-		SPEED = 0;
-		RUNNING = FALSE;
-}
-else{}
+	switch(MODE){
+		case 10:
+			ACCUM = ACCUM + POSITION;
+			if(ACCUM >= 1000){
+			MODE = 11;
+			}
+		break;
+		case 20:
+			ACCUM = ACCUM - POSITION;
+			if(ACCUM <= -1000){
+			MODE = 21;
+			}
+		break;
+		case 30:
+			SPEED = 0;
+			RETRY = RETRY + 1;
+			if(RETRY >= 3){
+			MODE = 31;
+			}
+		break;
+		case 11:
+		case 21:
+		case 31:
+			SPEED = 0;
+			RUNNING = FALSE;
+		break;
+	}
 		}
     }
 };
