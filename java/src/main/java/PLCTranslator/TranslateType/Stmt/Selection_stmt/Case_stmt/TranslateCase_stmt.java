@@ -33,16 +33,20 @@ public class TranslateCase_stmt {
                 }
             }
 
+            sb.append("\n\t\t{");
             String result = translatorNew.visit(ctx.case_selection(i).stmt_list());
             sb.append(indentBody(result));
             sb.append("\n\t\tbreak;");
+            sb.append("\n\t\t}");
         }
 
         if(ctx.else_stmt() != null){
             sb.append("\n\t\tdefault:");
+            sb.append("\n\t\t{");
             String result = translatorNew.visit(ctx.else_stmt().stmt_list());
             sb.append(indentBody(result));
             sb.append("\n\t\tbreak;");
+            sb.append("\n\t\t}");
         }
 
         sb.append("\n\t}");
