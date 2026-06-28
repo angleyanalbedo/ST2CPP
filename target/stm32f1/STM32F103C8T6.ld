@@ -86,11 +86,11 @@ SECTIONS
         __bss_end__ = _ebss;
     } > RAM
 
+    PROVIDE(_estack = ORIGIN(RAM) + LENGTH(RAM));
     PROVIDE(_stack = ORIGIN(RAM) + LENGTH(RAM));
+    PROVIDE(__stack = ORIGIN(RAM) + LENGTH(RAM));
 
-    /DISCARD/ : {
-        libc.a (*)
-        libm.a (*)
-        libgcc.a (*)
-    }
+    PROVIDE(end = .);
+    PROVIDE(_end = .);
+    __heap_start = .;
 }

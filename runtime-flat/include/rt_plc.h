@@ -27,7 +27,7 @@ namespace rt_plc {
 #if !defined(PROCESS_IMAGE_SIZE_OVERRIDE)
 constexpr size_t PROCESS_IMAGE_SIZE = 65536;
 #else
-constexpr size_t PROCESS_IMAGE_SIZE = PROCESS_IMAGE_SIZE_CFG;
+constexpr size_t PROCESS_IMAGE_SIZE = PROCESS_IMAGE_SIZE_OVERRIDE;
 #endif
 
 #if defined(RT_PLATFORM_BARE_METAL)

@@ -1,11 +1,13 @@
 #include "rt_runtime.h"
 #include "rt_plc.h"
+#include "stm32f1xx_hal.h"
 
 #if defined(RT_PLATFORM_BARE_METAL)
 
 using namespace rt_plc;
 
 extern void registerAllPOUs(POURegistry& reg);
+extern "C" void plc_platform_init();
 
 static Scheduler sched;
 static bool initialized = false;

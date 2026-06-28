@@ -42,10 +42,14 @@ DEFINES   = -DRT_PLATFORM_BARE_METAL \
             -DSTM32F1xx \
             -DUSE_HAL_DRIVER \
             -DHSE_VALUE=8000000 \
-            -D$(MCU)
+            -DSTM32F103xB \
+            -DPROCESS_IMAGE_SIZE_OVERRIDE=1024 \
+            -DGVL_SIZE_OVERRIDE=4096 \
+            -DGVL_RETAIN_SIZE_OVERRIDE=1024
 
 CFLAGS    = $(OPT) $(MCUFLAGS) $(CSTANDARD) $(DEFINES) \
             -I$(RT_DIR)/include \
+            -I. \
             -I$(CMSIS_DIR)/Include \
             -I$(CMSIS_DIR)/Device/ST/STM32F1xx/Include \
             -I$(HAL_DRV)/Inc \
@@ -54,6 +58,7 @@ CFLAGS    = $(OPT) $(MCUFLAGS) $(CSTANDARD) $(DEFINES) \
 
 CXXFLAGS  = $(OPT) $(MCUFLAGS) $(CXXSTANDARD) $(DEFINES) \
             -I$(RT_DIR)/include \
+            -I. \
             -I$(CMSIS_DIR)/Include \
             -I$(CMSIS_DIR)/Device/ST/STM32F1xx/Include \
             -I$(HAL_DRV)/Inc \
@@ -91,10 +96,12 @@ else
     HAL_STUB := hal_stub.cpp
 endif
 
-SRCS      = $(RT_SRCS) $(PLAT_SRC) $(HAL_SRCS) $(HAL_STUB) startup_stm32f103.s system_stm32f1xx.c
-OBJS      = $(patsubst %.cpp,$(BUILD)/%.o,$(notdir $(SRCS))) \
-            $(patsubst %.c,$(BUILD)/%.o,$(notdir $(SRCS))) \
-            $(patsubst %.s,$(BUILD)/%.o,$(notdir $(SRCS)))
+SRCS      = $(PLAT_SRC) $(HAL_SRCS) $(HAL_STUB) startup_stm32f103xb.s system_stm32f1xx.c pou_stub.cpp
+RT_OBJS   = $(addprefix $(BUILD)/,diag.o event.o gvl.o program.o scheduler.o task.o watchdog.o)
+OBJS      = $(RT_OBJS) \
+            $(patsubst %.cpp,$(BUILD)/%.o,$(filter %.cpp,$(notdir $(SRCS)))) \
+            $(patsubst %.c,$(BUILD)/%.o,$(filter %.c,$(notdir $(SRCS)))) \
+            $(patsubst %.s,$(BUILD)/%.o,$(filter %.s,$(notdir $(SRCS))))
 
 TARGET    = plc_f1
 
@@ -102,29 +109,36 @@ TARGET    = plc_f1
 
 all: $(BUILD)/$(TARGET).elf $(BUILD)/$(TARGET).bin $(BUILD)/$(TARGET).hex
 
-$(BUILD)/%.o: %.cpp
+vpath %.c $(HAL_DRV)/Src
+
+# CMSIS 启动/系统文件路径
+STARTUP_DIR = $(CMSIS_DIR)/Device/ST/STM32F1xx/Source/Templates
+vpath %.s $(STARTUP_DIR)/gcc
+vpath %.c $(STARTUP_DIR)
+
+$(BUILD)/%.o: %.cpp | $(BUILD)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(BUILD)/%.o: %.c
+$(BUILD)/%.o: %.c | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD)/%.o: %.s
+$(BUILD)/%.o: %.s | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # 从 RT_DIR/src/ 编译
-$(BUILD)/diag.o: $(RT_DIR)/src/diag.cpp
+$(BUILD)/diag.o: $(RT_DIR)/src/diag.cpp | $(BUILD)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
-$(BUILD)/event.o: $(RT_DIR)/src/event.cpp
+$(BUILD)/event.o: $(RT_DIR)/src/event.cpp | $(BUILD)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
-$(BUILD)/gvl.o: $(RT_DIR)/src/gvl.cpp
+$(BUILD)/gvl.o: $(RT_DIR)/src/gvl.cpp | $(BUILD)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
-$(BUILD)/program.o: $(RT_DIR)/src/program.cpp
+$(BUILD)/program.o: $(RT_DIR)/src/program.cpp | $(BUILD)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
-$(BUILD)/scheduler.o: $(RT_DIR)/src/scheduler.cpp
+$(BUILD)/scheduler.o: $(RT_DIR)/src/scheduler.cpp | $(BUILD)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
-$(BUILD)/task.o: $(RT_DIR)/src/task.cpp
+$(BUILD)/task.o: $(RT_DIR)/src/task.cpp | $(BUILD)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
-$(BUILD)/watchdog.o: $(RT_DIR)/src/watchdog.cpp
+$(BUILD)/watchdog.o: $(RT_DIR)/src/watchdog.cpp | $(BUILD)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(BUILD)/$(TARGET).elf: $(OBJS)

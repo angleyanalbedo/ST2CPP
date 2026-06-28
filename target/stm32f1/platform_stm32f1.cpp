@@ -3,6 +3,11 @@
 
 #if defined(RT_PLATFORM_BARE_METAL)
 
+#include "stm32f1xx_hal.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <stdarg.h>
+
 // ═══════════════════════════════════════════════════════
 // 用户需根据实际硬件修改以下宏
 // ═══════════════════════════════════════════════════════
@@ -181,8 +186,8 @@ extern "C" void plc_platform_init() {
 
     PLC_TICK_TIM->CR1 |= TIM_CR1_CEN;
 
-    platform::logInfo("PLC F1 Platform: %luMHz TIM2=1ms TIM3=us\n",
-                      PLC_SYSTEM_CORE_CLOCK / 1000000);
+    rt_plc::platform::logInfo("PLC F1 Platform: %luMHz TIM2=1ms TIM3=us\n",
+                               PLC_SYSTEM_CORE_CLOCK / 1000000);
 }
 
 extern "C" uint32_t plc_platform_get_tick_count() {
@@ -190,7 +195,7 @@ extern "C" uint32_t plc_platform_get_tick_count() {
 }
 
 extern "C" int64_t plc_platform_get_uptime_us() {
-    return steadyUs();
+    return rt_plc::platform::steadyUs();
 }
 
 #endif // RT_PLATFORM_BARE_METAL

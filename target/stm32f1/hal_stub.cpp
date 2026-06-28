@@ -69,3 +69,7 @@ void HAL_GPIO_WritePin(GPIO_TypeDef*, uint16_t, uint32_t) { GPIOC->BSRR = 0; }
 
 // UART SR 标志位
 #define USART_SR_TXE   0x80
+
+// POU 注册表占位（当 Java 编译器尚未生成时）
+namespace rt_plc { class POURegistry; }
+void registerAllPOUs(rt_plc::POURegistry&) {}
