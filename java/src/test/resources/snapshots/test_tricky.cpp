@@ -349,62 +349,82 @@ struct STATE_MACHINE {
 		RUNNING = TRUE;
 	switch(CMD){
 		case 0:
+		{
 			MODE = 0;
 			ACCUM = 0;
 			SPEED = 0;
 			DIR = DIRECTION::NORTH;
 			RUNNING = FALSE;
 		break;
+		}
 		case 1:
+		{
 			MODE = 10;
 			ACCUM = 0;
 			DIR = DIRECTION::EAST;
 		break;
+		}
 		case 2:
+		{
 			MODE = 20;
 			ACCUM = 0;
 			DIR = DIRECTION::WEST;
 		break;
+		}
 		case 3:
+		{
 			MODE = 30;
 			DIR = DIRECTION::SOUTH;
 		break;
+		}
 		case 10:
+		{
 			MODE = 0;
 			FAULT = TRUE;
 		break;
+		}
 		default:
+		{
 			MODE = 99;
 			FAULT = TRUE;
 		break;
+		}
 	}
 		if(RUNNING){
 	switch(MODE){
 		case 10:
+		{
 			ACCUM = ACCUM + POSITION;
 			if(ACCUM >= 1000){
 			MODE = 11;
 			}
 		break;
+		}
 		case 20:
+		{
 			ACCUM = ACCUM - POSITION;
 			if(ACCUM <= -1000){
 			MODE = 21;
 			}
 		break;
+		}
 		case 30:
+		{
 			SPEED = 0;
 			RETRY = RETRY + 1;
 			if(RETRY >= 3){
 			MODE = 31;
 			}
 		break;
+		}
 		case 11:
 		case 21:
 		case 31:
+		{
 			SPEED = 0;
 			RUNNING = FALSE;
 		break;
+		}
 	}
 		}
     }
@@ -455,10 +475,10 @@ void PROGRAM_test_tricky_TRICKY_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt)
 	DINT ARR_VAL = gvl.read<DINT>(128);
 		printf("=== TRICKY TEST START ===");
 		printf("\n");
-		INT I = 0;
+		I = 0;
 		for( ; I <= 2;I = I + 1){
 		(MATRIX[I].TAG) = I * 100;
-		INT J = 0;
+		J = 0;
 		for( ; J <= 3;J = J + 1){
 		(MATRIX[I].VALUES[J]) = (I * 10) + J;
 		TOTAL = TOTAL + MATRIX[I].VALUES[J];

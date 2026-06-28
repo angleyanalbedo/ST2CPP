@@ -307,7 +307,7 @@ void PROGRAM_test_P_pre(GVL& gvl, ProcessImage& io) {
 void PROGRAM_test_P_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 	INT A = gvl.read<INT>(0);
 	INT B = gvl.read<INT>(2);
-		INT A = 1;
+		A = 1;
 		for( ; A <= 5;A = A + 1){
 		B = ADD_TEN(A);
 		}

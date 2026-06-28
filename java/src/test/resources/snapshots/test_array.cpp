@@ -310,7 +310,7 @@ void PROGRAM_test_array_P_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 	INT I = gvl.read<INT>(10);
 	INT SUM = gvl.read<INT>(12);
 		SUM = 0;
-		INT I = 0;
+		I = 0;
 		for( ; I <= 4;I++){
 		(ARR[I]) = I * 10;
 		SUM = SUM + ARR[I];

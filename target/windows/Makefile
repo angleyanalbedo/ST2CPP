@@ -43,7 +43,7 @@ CXXFLAGS  = $(OPT) -std=c++17 \
             -DRT_PLATFORM_WINDOWS \
             -I$(RT_DIR)/include \
             -Wall -Wextra -Wno-unused-parameter
-LDFLAGS   = $(OPT) -lwinmm
+LDFLAGS   = $(OPT) -lwinmm -lws2_32
 
 TARGET   = plc_runtime_windows.exe
 

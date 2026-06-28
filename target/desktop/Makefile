@@ -44,7 +44,7 @@ ifeq ($(UNAME),Linux)
 LDFLAGS   = $(OPT) -lpthread
 EXE       =
 else
-LDFLAGS   = $(OPT) -lwinmm
+LDFLAGS   = $(OPT) -lwinmm -lws2_32
 EXE       = .exe
 endif
 

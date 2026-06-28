@@ -307,12 +307,12 @@ void PROGRAM_test_struct_MAIN_init(GVL& gvl, ProcessImage& io) {
 void PROGRAM_test_struct_MAIN_pre(GVL& gvl, ProcessImage& io) {
 }
 void PROGRAM_test_struct_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
-	PLC_Struct_Value<2938> P = gvl.read<PLC_Struct_Value<2938>>(0);
+	MY_POINT P = gvl.read<MY_POINT>(0);
 	INT SUM = gvl.read<INT>(4);
 		(P.X) = 10;
 		(P.Y) = 20;
 		SUM = P.X + P.Y;
-	gvl.write<PLC_Struct_Value<2938>>(0, P);
+	gvl.write<MY_POINT>(0, P);
 	gvl.write<INT>(4, SUM);
 }
 void PROGRAM_test_struct_MAIN_post(GVL& gvl, ProcessImage& io) {

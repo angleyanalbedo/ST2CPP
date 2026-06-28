@@ -316,7 +316,7 @@ void PROGRAM_test_arr_struct_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 	P_ARR[4] = gvl.read<MY_POINT>(16);
 	INT I = gvl.read<INT>(20);
 	INT SUM_X = gvl.read<INT>(22);
-		INT I = 0;
+		I = 0;
 		for( ; I <= 4;I = I + 1){
 		(P_ARR[I].X) = I * 10;
 		(P_ARR[I].Y) = I * 20;
