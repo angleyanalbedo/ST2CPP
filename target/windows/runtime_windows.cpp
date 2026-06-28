@@ -209,6 +209,10 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    // 禁用 stdout/stderr 缓冲（pipe 重定向时输出立即可见）
+    setvbuf(stdout, nullptr, _IONBF, 0);
+    setvbuf(stderr, nullptr, _IONBF, 0);
+
     // 高精度计时初始化
     QueryPerformanceFrequency(&qpcFreq);
 
