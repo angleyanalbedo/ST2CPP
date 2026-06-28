@@ -13,4 +13,5 @@ tmp_output/
 target/rpi/pou_registry.gen.cpp
 *.exe
 *.o
+*.jar
 

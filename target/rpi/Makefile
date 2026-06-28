@@ -97,7 +97,7 @@ clean:
 	-rm -f $(TARGET) $(STUB_TARGET) $(ECAT_TARGET) $(REGISTRY)
 
 # ═══ EtherCAT (SOEM) 构建 — 共享 SOEM 子模块 ═══
-SOEM_DIR  = ../soem
+SOEM_DIR  = ../lib/soem
 ECAT_SRC  = ethercat_tci.cpp
 SOEM_CFLAGS = -O2 -D_GNU_SOURCE -DRT_PLATFORM_LINUX -DSOEM_LINUX \
               -I$(SOEM_DIR)/include \

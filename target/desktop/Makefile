@@ -90,7 +90,7 @@ clean:
 	-rm -f $(TARGET) $(STUB_TARGET) $(ECAT_TARGET) $(REGISTRY)
 
 # ═══ EtherCAT (SOEM) 构建 — 共享 SOEM 子模块 ═══
-SOEM_DIR  = ../soem
+SOEM_DIR  = ../lib/soem
 ECAT_SRC  = ../rpi/ethercat_tci.cpp
 
 ifeq ($(UNAME),Linux)

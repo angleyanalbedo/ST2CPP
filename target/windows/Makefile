@@ -85,7 +85,7 @@ clean:
 
 # ═══ EtherCAT (SOEM) 构建 — 共享 SOEM 子模块 ═══
 # Windows 需要 Npcap SDK（或 WinPcap），SOEM 自带 wpcap 库文件
-SOEM_DIR  = ../soem
+SOEM_DIR  = ../lib/soem
 ECAT_SRC  = ../rpi/ethercat_tci.cpp
 SOEM_CFLAGS = -O2 -DRT_PLATFORM_WINDOWS -DSOEM_WIN32 \
               -I$(SOEM_DIR)/include \
