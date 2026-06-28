@@ -13,12 +13,18 @@ public class TranslateVariable_access {
             return cleanName.substring(0, hashIdx) + "::" + cleanName.substring(hashIdx + 1);
         }
 
+        if (t.inCyclic) {
+            return cleanName;
+        }
+
+        if (t.gvlCtx.isIOVariable(cleanName)) {
+            String ioRead = t.gvlCtx.emitIORead(cleanName);
+            if (ioRead != null) return ioRead;
+        }
+
         String type = t.gvlCtx.typeMap.get(cleanName);
         Integer offset = t.gvlCtx.offsetMap.get(cleanName);
         if (type != null && offset != null && !t.gvlCtx.shadowedGvlVars.contains(cleanName)) {
-            if (t.inCyclic) {
-                return cleanName;
-            }
             return "gvl.read<" + type + ">(" + offset + ")";
         }
 

@@ -27,15 +27,19 @@ public class TranslateProg_decl {
         sb.append("\n}");
 
         sb.append("\nvoid PROGRAM_").append(mangled).append("_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {");
-        // 开头：声明局部变量 + 从 GVL 加载
-        sb.append(emitCyclicPrologue(translatorNew));
-        // 设置 inCyclic 标志，让变量翻译直接使用变量名
-        translatorNew.inCyclic = true;
+        if (translatorNew.localCache) {
+            // 开头：声明局部变量 + 从 GVL 加载
+            sb.append(emitCyclicPrologue(translatorNew));
+            // 设置 inCyclic 标志，让变量翻译直接使用变量名
+            translatorNew.inCyclic = true;
+        }
         String result = translatorNew.visit(ctx.fb_body());
         translatorNew.inCyclic = false;
         sb.append(result);
-        // 结尾：将局部变量写回 GVL
-        sb.append(emitCyclicEpilogue(translatorNew));
+        if (translatorNew.localCache) {
+            // 结尾：将局部变量写回 GVL
+            sb.append(emitCyclicEpilogue(translatorNew));
+        }
         sb.append("\n}");
 
         sb.append("\nvoid PROGRAM_").append(mangled).append("_post(GVL& gvl, ProcessImage& io) {");

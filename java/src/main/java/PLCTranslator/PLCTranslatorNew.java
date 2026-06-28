@@ -72,6 +72,9 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     // 标记当前是否在 PROGRAM cyclic 函数体内（影响变量翻译方式）
     public boolean inCyclic = false;
 
+    // 是否启用 cyclic 局部变量缓存（prologue 加载 / epilogue 写回）
+    public boolean localCache = true;
+
     public PLCTranslatorNew(ParseTreeProperty<java.util.ArrayList<PLCSymbol>> properties) {
         PLCTranslatorNew.properties = properties;
         PLCTranslatorNew.gvlCtx = new GvlContext();
@@ -100,6 +103,10 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
 
     public void setEmitPOURegistration(boolean emitPOURegistration) {
         this.emitPOURegistration = emitPOURegistration;
+    }
+
+    public void setLocalCache(boolean localCache) {
+        this.localCache = localCache;
     }
 
     public boolean shouldEmitHeader() {
@@ -694,13 +701,5 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
         return translateFunc_call.translateNode(ctx, this);
     }
 
-    private String stripParens(String s) {
-        if (s == null) return "";
-        s = s.trim();
-        if (s.startsWith("(") && s.endsWith(")")) {
-            return s.substring(1, s.length() - 1).trim();
-        }
-        return s;
-    }
 
 }

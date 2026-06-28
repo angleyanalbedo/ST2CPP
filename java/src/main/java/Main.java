@@ -36,6 +36,7 @@ public class Main {
         boolean noStdlib = false;
         String customStdlib = null;
         boolean verbose = false;
+        boolean localCache = true;
 
         // 解析命令行参数
         for (int i = 0; i < args.length; i++) {
@@ -77,6 +78,9 @@ public class Main {
                     break;
                 case "--verbose":
                     verbose = true;
+                    break;
+                case "--no-local-cache":
+                    localCache = false;
                     break;
                 default:
                     System.err.println("Unknown option: " + arg);
@@ -148,6 +152,7 @@ public class Main {
         ParseTreeProperty<ArrayList<PLCSymbol>> property = new ParseTreeProperty<>();
         PLCVisitor plcVisitor = new PLCVisitor(property);
         PLCTranslatorNew translatorNew = new PLCTranslatorNew(property, gvlCtx);
+        translatorNew.setLocalCache(localCache);
 
         StringBuilder fullCodeBuilder = new StringBuilder();
         int fileIndex = 0;
@@ -245,6 +250,8 @@ public class Main {
         System.out.println("  --file-id <id>       POU registration ID (default: output stem)");
         System.out.println("  --no-stdlib          Disable built-in standard library");
         System.out.println("  --stdlib <file>      Override built-in standard library with custom file");
+        System.out.println("  --no-local-cache     Disable cyclic local variable caching (prologue/epilogue)");
+        System.out.println("                       All variable access goes through gvl.read/write directly");
         System.out.println("  --verbose            Print detailed translation statistics");
         System.out.println();
         System.out.println("Examples:");
