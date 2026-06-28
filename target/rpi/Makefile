@@ -74,7 +74,7 @@ $(STUB_TARGET): $(STUB_SRCS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	@echo "=== Build (stub): $@ ==="
 
-SRCS = $(RT_SRCS) $(PLAT_SRC) $(MAIN_SRC) $(HAL_SRC) $(POU_SRCS) $(REGISTRY)
+SRCS = $(RT_SRCS) $(PLAT_SRC) $(MAIN_SRC) $(HAL_SRC) $(POU_SRCS) $(REGISTRY) ../network_tci.cpp
 
 $(TARGET): $(SRCS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
