@@ -1,3 +1,6 @@
 [submodule "target/lib/soem"]
 	path = target/lib/soem
 	url = https://github.com/OpenEtherCATsociety/SOEM.git
+[submodule "target/lib/STM32CubeF1"]
+	path = target/lib/STM32CubeF1
+	url = https://github.com/STMicroelectronics/STM32CubeF1

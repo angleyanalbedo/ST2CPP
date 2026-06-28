@@ -257,7 +257,7 @@ public class TranslateProg_decl {
             if (type.startsWith("ARRAY[")) {
                 int[][] bounds = gvlCtx.arrayBoundsMap.get(varName);
                 String elemType = gvlCtx.arrayElemTypeMap.getOrDefault(varName, "INT");
-                int totalCount = (bounds != null) ? bounds[0][2] : 0; // 一维数组
+                int totalCount = (bounds != null) ? bounds[0][2] : 0;
                 if (totalCount > 0) {
                     int elemSize = gvlCtx.getTypeSize(elemType);
                     sb.append("\n\t").append(elemType).append(" ")
@@ -273,6 +273,19 @@ public class TranslateProg_decl {
             }
             sb.append("\n\t").append(type).append(" ").append(varName).append(" = gvl.read<")
               .append(type).append(">(").append(offset).append(");");
+        }
+        for (java.util.Map.Entry<String, GvlContext.IOInfo> ioEntry : gvlCtx.ioVarMap.entrySet()) {
+            String varName = ioEntry.getKey();
+            GvlContext.IOInfo info = ioEntry.getValue();
+            if (info.bitOffset >= 0) {
+                sb.append("\n\tBOOL ").append(varName).append(" = io.");
+                sb.append(info.dir == GvlContext.IODirection.INPUT ? "readInputBit(" : "readOutputBit(");
+                sb.append(info.byteOffset).append(", ").append(info.bitOffset).append(");");
+            } else {
+                sb.append("\n\t").append(info.typeName).append(" ").append(varName).append(" = io.");
+                sb.append(info.dir == GvlContext.IODirection.INPUT ? "readInput<" : "readOutput<");
+                sb.append(info.typeName).append(">(").append(info.byteOffset).append(");");
+            }
         }
         return sb.toString();
     }
@@ -306,6 +319,19 @@ public class TranslateProg_decl {
             }
             sb.append("\n\tgvl.write<").append(type).append(">(").append(offset)
               .append(", ").append(varName).append(");");
+        }
+        for (java.util.Map.Entry<String, GvlContext.IOInfo> ioEntry : gvlCtx.ioVarMap.entrySet()) {
+            String varName = ioEntry.getKey();
+            GvlContext.IOInfo info = ioEntry.getValue();
+            if (info.dir == GvlContext.IODirection.OUTPUT) {
+                if (info.bitOffset >= 0) {
+                    sb.append("\n\tio.writeOutputBit(").append(info.byteOffset)
+                      .append(", ").append(info.bitOffset).append(", ").append(varName).append(");");
+                } else {
+                    sb.append("\n\tio.writeOutput<").append(info.typeName).append(">(")
+                      .append(info.byteOffset).append(", ").append(varName).append(");");
+                }
+            }
         }
         return sb.toString();
     }

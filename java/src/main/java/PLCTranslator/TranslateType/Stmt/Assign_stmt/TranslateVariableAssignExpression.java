@@ -31,35 +31,27 @@ public class TranslateVariableAssignExpression {
         }
 
         if (!inFC) {
-            // 查 GVL offsetMap 决定输出形式
             String varName = varSymbol.getName();
             if (varName.startsWith("*")) varName = varName.substring(1);
 
-            // AT 地址 I/O 变量 → io.writeOutput / io.writeOutputBit
-            if (translatorNew.gvlCtx.isIOVariable(varName)) {
+            if (translatorNew.inCyclic) {
+                sb.append("\n\t\t").append(varName).append(" = ").append(rhs).append(";");
+            } else if (translatorNew.gvlCtx.isIOVariable(varName)) {
                 String ioWrite = translatorNew.gvlCtx.emitIOWrite(varName, rhs);
                 if (ioWrite != null) {
                     sb.append("\n\t\t").append(ioWrite).append(";");
-                    return sb.toString();
-                }
-            }
-
-            // 查 GVL offsetMap 决定输出形式
-            Integer offset = translatorNew.gvlCtx.offsetMap.get(varName);
-            String type = translatorNew.gvlCtx.typeMap.get(varName);
-
-            if (offset != null && type != null) {
-                if (translatorNew.inCyclic) {
-                    // cyclic 内直接赋值局部变量（epilogue 会统一写回 GVL）
-                    sb.append("\n\t\t").append(varName).append(" = ").append(rhs).append(";");
                 } else {
-                    // 非 cyclic → gvl.write
-                    sb.append("\n\t\tgvl.write<").append(type).append(">(")
-                      .append(offset).append(", ").append(rhs).append(");");
+                    sb.append("\n\t\t").append(varName).append(" = ").append(rhs).append(";");
                 }
             } else {
-                // 非 GVL 变量（FC 局部变量等）→ 直接赋值
-                sb.append("\n\t\t").append(varName).append(" = ").append(rhs).append(";");
+                Integer offset = translatorNew.gvlCtx.offsetMap.get(varName);
+                String type = translatorNew.gvlCtx.typeMap.get(varName);
+                if (offset != null && type != null) {
+                    sb.append("\n\t\tgvl.write<").append(type).append(">(")
+                      .append(offset).append(", ").append(rhs).append(");");
+                } else {
+                    sb.append("\n\t\t").append(varName).append(" = ").append(rhs).append(";");
+                }
             }
         }else{
             sb.append("\n\t\treturn ").append(rhs).append(";");
