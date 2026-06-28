@@ -11,3 +11,6 @@ output/test/
 tmp_output/
 .mimocode/
 target/rpi/pou_registry.gen.cpp
+*.exe
+*.o
+
