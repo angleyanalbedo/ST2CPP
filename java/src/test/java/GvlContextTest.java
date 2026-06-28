@@ -51,8 +51,8 @@ public class GvlContextTest {
             Arrays.asList(new GvlContext.StructField("X", "INT", 0)),
             2
         );
-        g.registerStructType("MyStruct", "PLC_Struct_Value<123>", layout);
-        assertEquals("MyStruct", g.toNativeType("PLC_Struct_Value<123>"));
+        g.registerStructType("MyStruct", layout);
+        assertEquals("MyStruct", g.toNativeType("MyStruct"));
     }
 
     // ─── getTypeSize ───
@@ -81,7 +81,7 @@ public class GvlContextTest {
                 new GvlContext.StructField("Y", "INT", 2)
             ), 4
         );
-        g.registerStructType("Point", "PLC_Struct_Value<99>", layout);
+        g.registerStructType("Point", layout);
         assertEquals(4, g.getTypeSize("Point"));
     }
 
@@ -128,7 +128,7 @@ public class GvlContextTest {
                 new GvlContext.StructField("Y", "INT", 2)
             ), 4
         );
-        g.registerStructType("Point", "PLC_Struct_Value<99>", layout);
+        g.registerStructType("Point", layout);
         assertEquals(Integer.valueOf(0), g.getStructFieldOffset("Point", "X"));
         assertEquals(Integer.valueOf(2), g.getStructFieldOffset("Point", "Y"));
     }

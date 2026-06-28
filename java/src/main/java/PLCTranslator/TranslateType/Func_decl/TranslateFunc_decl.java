@@ -138,8 +138,7 @@ public class TranslateFunc_decl {
 
     /**
      * 将运行时类型名映射为原生 C++ 类型名
-     * 先委托 codeGen.toNativeType（处理 PLC_Struct_Value<ID> 等映射），
-     * 再用 switch 映射 PLC_*_Value 包装类型名
+     * 先委托 codeGen.toNativeType，再用 switch 映射 PLC_*_Value 包装类型名
      */
     static String mapToNativeType(String runtimeTypeName, PLCTranslatorNew translatorNew) {
         if (runtimeTypeName == null) return "int";

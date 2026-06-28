@@ -17,13 +17,9 @@ public class GvlContext {
 
     // ─── Struct 类型支持 ───
     public final Map<String, StructLayout> structLayoutMap = new HashMap<>();
-    // 运行时结构体类型名 → struct 名（如 "PLC_Struct_Value<2939>" → "MY_STRUCT"）
-    public final Map<String, String> structTypeToName = new HashMap<>();
 
     // ─── Enum 类型支持 ───
-    // 枚举名 → 底层 C++ 类型（如 "DIRECTION" → "INT"）
     public final Map<String, String> enumNameToUnderlying = new HashMap<>();
-    // 运行时枚举类型名 → 底层 C++ 类型（如 "PLC_Enum_Value<2938>" → "INT"）
     public final Map<String, String> enumRuntimeToUnderlying = new HashMap<>();
 
     // ─── I/O 映射变量支持 ───
@@ -102,9 +98,8 @@ public class GvlContext {
         }
     }
 
-    public void registerStructType(String typeName, String runtimeTypeName, StructLayout layout) {
+    public void registerStructType(String typeName, StructLayout layout) {
         structLayoutMap.put(typeName, layout);
-        structTypeToName.put(runtimeTypeName, typeName);
         SIZE_MAP.put(typeName, layout.totalSize);
     }
 
@@ -197,13 +192,8 @@ public class GvlContext {
 
     public String toNativeType(String typeName) {
         if (typeName == null) return typeName;
-        // 1) ST 基础类型映射
         String mapped = TYPE_MAP.get(typeName);
         if (mapped != null) return mapped;
-        // 2) 运行时结构体类型名 → struct 名
-        mapped = structTypeToName.get(typeName);
-        if (mapped != null) return mapped;
-        // 3) 运行时枚举类型名 → 保持原样（getTypeSize 会查 enumRuntimeToUnderlying）
         return typeName;
     }
 
