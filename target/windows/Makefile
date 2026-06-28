@@ -86,7 +86,7 @@ clean:
 # ═══ EtherCAT (SOEM) 构建 — 共享 SOEM 子模块 ═══
 # Windows 需要 Npcap SDK（或 WinPcap），SOEM 自带 wpcap 库文件
 SOEM_DIR  = ../lib/soem
-ECAT_SRC  = ../rpi/ethercat_tci.cpp
+ECAT_SRC  = ethercat_tci.cpp
 SOEM_CFLAGS = -O2 -DRT_PLATFORM_WINDOWS -DSOEM_WIN32 \
               -I$(SOEM_DIR)/include \
               -I$(SOEM_DIR)/oshw/win32 \
@@ -104,23 +104,23 @@ ECAT_CXXFLAGS = -DRT_ETHERCAT_ENABLED \
                 -I$(SOEM_DIR)/oshw/win32/wpcap/Include
 ECAT_TARGET = plc_runtime_windows_ecat.exe
 
-SOEM_C_OBJS = $(patsubst $(SOEM_DIR)/src/%.c,/tmp/soem_win_%.o,$(wildcard $(SOEM_DIR)/src/*.c)) \
-              /tmp/soem_win_oshw.o /tmp/soem_win_osal.o /tmp/soem_win_nicdrv.o
+SOEM_C_OBJS = $(patsubst $(SOEM_DIR)/src/%.c,build/soem_win_%.o,$(wildcard $(SOEM_DIR)/src/*.c)) \
+              build/soem_win_oshw.o build/soem_win_osal.o build/soem_win_nicdrv.o
 
 ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(ECAT_SRC) ../pou_stub.cpp
 
 SOEM_WINPCAP_LIB = -L$(SOEM_DIR)/oshw/win32/wpcap/Lib -lwpcap -lpacket
 
-/tmp/soem_win_%.o: $(SOEM_DIR)/src/%.c
+build/soem_win_%.o: $(SOEM_DIR)/src/%.c
 	$(CC) $(SOEM_CFLAGS) -c $< -o $@
 
-/tmp/soem_win_oshw.o: $(SOEM_DIR)/oshw/win32/oshw.c
+build/soem_win_oshw.o: $(SOEM_DIR)/oshw/win32/oshw.c
 	$(CC) $(SOEM_CFLAGS) -c $< -o $@
 
-/tmp/soem_win_osal.o: $(SOEM_DIR)/osal/win32/osal.c
+build/soem_win_osal.o: $(SOEM_DIR)/osal/win32/osal.c
 	$(CC) $(SOEM_CFLAGS) -c $< -o $@
 
-/tmp/soem_win_nicdrv.o: $(SOEM_DIR)/oshw/win32/nicdrv.c
+build/soem_win_nicdrv.o: $(SOEM_DIR)/oshw/win32/nicdrv.c
 	$(CC) $(SOEM_CFLAGS) -c $< -o $@
 
 ethercat: $(ECAT_TARGET)

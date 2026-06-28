@@ -115,23 +115,23 @@ ECAT_CXXFLAGS = -DRT_ETHERCAT_ENABLED \
 ECAT_TARGET = plc_runtime_ecat
 
 # SOEM C 文件（Linux 平台，用 gcc 编译）
-SOEM_C_OBJS = $(patsubst $(SOEM_DIR)/src/%.c,/tmp/soem_%.o,$(wildcard $(SOEM_DIR)/src/*.c)) \
-              /tmp/soem_oshw.o /tmp/soem_osal.o /tmp/soem_nicdrv.o
+SOEM_C_OBJS = $(patsubst $(SOEM_DIR)/src/%.c,build/soem_%.o,$(wildcard $(SOEM_DIR)/src/*.c)) \
+              build/soem_oshw.o build/soem_osal.o build/soem_nicdrv.o
 
 # EtherCAT stub 模式（无 POU + SOEM）
 ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(MAIN_SRC) $(HAL_SRC) $(ECAT_SRC) pou_stub.cpp
 
 # 编译 SOEM C 文件
-/tmp/soem_%.o: $(SOEM_DIR)/src/%.c
+build/soem_%.o: $(SOEM_DIR)/src/%.c
 	$(CC) $(SOEM_CFLAGS) -c $< -o $@
 
-/tmp/soem_oshw.o: $(SOEM_DIR)/oshw/linux/oshw.c
+build/soem_oshw.o: $(SOEM_DIR)/oshw/linux/oshw.c
 	$(CC) $(SOEM_CFLAGS) -c $< -o $@
 
-/tmp/soem_osal.o: $(SOEM_DIR)/osal/linux/osal.c
+build/soem_osal.o: $(SOEM_DIR)/osal/linux/osal.c
 	$(CC) $(SOEM_CFLAGS) -c $< -o $@
 
-/tmp/soem_nicdrv.o: $(SOEM_DIR)/oshw/linux/nicdrv.c
+build/soem_nicdrv.o: $(SOEM_DIR)/oshw/linux/nicdrv.c
 	$(CC) $(SOEM_CFLAGS) -c $< -o $@
 
 ethercat: $(ECAT_TARGET)

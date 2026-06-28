@@ -83,7 +83,7 @@ clean:
 
 # ═══ EtherCAT (SOEM) 构建 — 共享 SOEM 子模块 ═══
 SOEM_DIR  = ../lib/soem
-ECAT_SRC  = ../rpi/ethercat_tci.cpp
+ECAT_SRC  = ethercat_tci.cpp
 SOEM_CFLAGS = -O2 -D_GNU_SOURCE -DRT_PLATFORM_LINUX -DSOEM_LINUX \
               -I$(SOEM_DIR)/include \
               -I$(SOEM_DIR)/oshw/linux \
@@ -99,21 +99,21 @@ ECAT_CXXFLAGS = -DRT_ETHERCAT_ENABLED \
                 -I$(SOEM_DIR)/osal
 ECAT_TARGET = plc_runtime_linux_ecat
 
-SOEM_C_OBJS = $(patsubst $(SOEM_DIR)/src/%.c,/tmp/soem_linux_%.o,$(wildcard $(SOEM_DIR)/src/*.c)) \
-              /tmp/soem_linux_oshw.o /tmp/soem_linux_osal.o /tmp/soem_linux_nicdrv.o
+SOEM_C_OBJS = $(patsubst $(SOEM_DIR)/src/%.c,build/soem_linux_%.o,$(wildcard $(SOEM_DIR)/src/*.c)) \
+              build/soem_linux_oshw.o build/soem_linux_osal.o build/soem_linux_nicdrv.o
 
 ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(ECAT_SRC) ../pou_stub.cpp
 
-/tmp/soem_linux_%.o: $(SOEM_DIR)/src/%.c
+build/soem_linux_%.o: $(SOEM_DIR)/src/%.c
 	$(CC) $(SOEM_CFLAGS) -c $< -o $@
 
-/tmp/soem_linux_oshw.o: $(SOEM_DIR)/oshw/linux/oshw.c
+build/soem_linux_oshw.o: $(SOEM_DIR)/oshw/linux/oshw.c
 	$(CC) $(SOEM_CFLAGS) -c $< -o $@
 
-/tmp/soem_linux_osal.o: $(SOEM_DIR)/osal/linux/osal.c
+build/soem_linux_osal.o: $(SOEM_DIR)/osal/linux/osal.c
 	$(CC) $(SOEM_CFLAGS) -c $< -o $@
 
-/tmp/soem_linux_nicdrv.o: $(SOEM_DIR)/oshw/linux/nicdrv.c
+build/soem_linux_nicdrv.o: $(SOEM_DIR)/oshw/linux/nicdrv.c
 	$(CC) $(SOEM_CFLAGS) -c $< -o $@
 
 ethercat: $(ECAT_TARGET)

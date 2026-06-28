@@ -21,6 +21,10 @@
 #include "rt_runtime.h"
 #include "rt_plc.h"
 
+#if defined(RT_ETHERCAT_ENABLED)
+#include "ethercat_tci.h"
+#endif
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -46,7 +50,13 @@ static bool      jitterOnly    = false;
 static bool      running       = true;
 
 static Scheduler sched;
+static CompositeTCI compositeTCI;
 static bool      initialized   = false;
+
+// TCI 配置
+enum class TciMode { NONE, ETHERCAT };
+static TciMode tciMode = TciMode::NONE;
+static char ecatIfname[32] = "eth0";
 
 // ═══ 抖动统计 ═══
 static struct {
@@ -101,8 +111,28 @@ extern void registerAllPOUs(POURegistry& reg);
 static void plcInit() {
     POURegistry reg;
     registerAllPOUs(reg);
+
     sched.setBaseCycle(T_us(cycleUs));
     sched.gvl.errorMgr = &sched.errorMgr;
+
+    // ─── 初始化 TCI ───
+#if defined(RT_ETHERCAT_ENABLED)
+    if (tciMode == TciMode::ETHERCAT) {
+        static EthercatTCI ecatTCI;
+        if (ecatTCI.init(ecatIfname) == 0) {
+            compositeTCI.add(&ecatTCI);
+            platform::logInfo("EtherCAT TCI registered on %s\n", ecatIfname);
+        } else {
+            platform::logErr("EtherCAT TCI init failed on %s\n", ecatIfname);
+        }
+    }
+#endif
+
+    if (compositeTCI.count() > 0) {
+        sched.setTCI(&compositeTCI);
+        platform::logInfo("TCI: %d backend(s) active\n", compositeTCI.count());
+    }
+
     int mainTask = sched.addCyclicTask("Main", 5, T_us(cycleUs));
     if (mainTask < 0) { platform::logErr("FATAL: addCyclicTask failed\n"); return; }
     for (int i = 0; i < reg.count(); i++) {
@@ -138,12 +168,21 @@ int main(int argc, char* argv[]) {
             diagIntervalS = atoi(argv[++i]);
         } else if (strcmp(argv[i], "--jitter-only") == 0) {
             jitterOnly = true;
+        } else if (strcmp(argv[i], "--tci") == 0 && i + 1 < argc) {
+            i++;
+            if (strcmp(argv[i], "ethercat") == 0) tciMode = TciMode::ETHERCAT;
+            else fprintf(stderr, "Unknown TCI mode: %s (use ethercat)\n", argv[i]);
+        } else if (strcmp(argv[i], "--ecat-if") == 0 && i + 1 < argc) {
+            strncpy(ecatIfname, argv[i + 1], sizeof(ecatIfname) - 1);
+            i++;
         } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             printf("Usage: %s [options]\n", argv[0]);
             printf("  --cycle-us <us>        周期（微秒，默认 1000）\n");
             printf("  --rt-prio <1-99>       SCHED_FIFO 优先级（默认 90）\n");
             printf("  --diag-interval <s>    诊断间隔（秒，默认 5）\n");
             printf("  --jitter-only          纯定时器抖动测试（不跑 PLC）\n");
+            printf("  --tci <mode>           I/O 模式: ethercat\n");
+            printf("  --ecat-if <name>       EtherCAT 网卡接口 (默认 eth0)\n");
             return 0;
         }
     }

@@ -12,6 +12,9 @@
  * Runtime fully owns scheduling policy and configuration loading.
  */
 #include "rt_runtime.h"
+#if defined(RT_ETHERCAT_ENABLED)
+#include "ethercat_tci.h"
+#endif
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -198,6 +201,28 @@ void registerAllPOUs(POURegistry& reg) {}
 int main(int argc, char* argv[]) {
     RT_LOG_INFO("=== ST2C++ Flat Runtime ===\n\n");
 
+    // TCI 配置
+    enum class TciMode { NONE, ETHERCAT };
+    TciMode tciMode = TciMode::NONE;
+    char ecatIfname[32] = "eth0";
+
+    for (int i = 1; i < argc; i++) {
+        if (argv[i][0] != '-') continue;
+        if (strcmp(argv[i], "--tci") == 0 && i + 1 < argc) {
+            i++;
+            if (strcmp(argv[i], "ethercat") == 0) tciMode = TciMode::ETHERCAT;
+            else fprintf(stderr, "Unknown TCI mode: %s (use ethercat)\n", argv[i]);
+        } else if (strcmp(argv[i], "--ecat-if") == 0 && i + 1 < argc) {
+            strncpy(ecatIfname, argv[i + 1], sizeof(ecatIfname) - 1);
+            i++;
+        } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
+            printf("Usage: %s [options] [tasks.json]\n", argv[0]);
+            printf("  --tci <mode>      I/O 模式: ethercat\n");
+            printf("  --ecat-if <name>  EtherCAT 网卡接口 (默认 eth0)\n");
+            return 0;
+        }
+    }
+
     // ── Step 1: Register all compiled POUs ──
     POURegistry reg;
     registerAllPOUs(reg);
@@ -209,17 +234,36 @@ int main(int argc, char* argv[]) {
     RT_LOG_INFO("\n");
 
     // ── Step 2: Load configuration ──
-    const char* cfgPath = (argc > 1) ? argv[1] : "tasks.json";
+    const char* cfgPath = (argc > 1 && argv[1][0] != '-') ? argv[1] : "tasks.json";
     json_cfg::Config cfg = json_cfg::Config::loadOrDefault(cfgPath);
     RT_LOG_INFO("Config: base_cycle=%dus  tasks=%zu\n\n",
                 cfg.baseCycleUs, cfg.tasks.size());
 
     // ── Step 3: Create Scheduler ──
     Scheduler sched;
+    CompositeTCI compositeTCI;
     sched.setBaseCycle(T_us(cfg.baseCycleUs));
     sched.watchdog.setDefault(T_ms(10));
     sched.gvl.clear();
     sched.gvl.errorMgr = &sched.errorMgr;
+
+    // ─── 初始化 TCI ───
+#if defined(RT_ETHERCAT_ENABLED)
+    if (tciMode == TciMode::ETHERCAT) {
+        static EthercatTCI ecatTCI;
+        if (ecatTCI.init(ecatIfname) == 0) {
+            compositeTCI.add(&ecatTCI);
+            RT_LOG_INFO("EtherCAT TCI registered on %s\n", ecatIfname);
+        } else {
+            RT_LOG_INFO("EtherCAT TCI init failed on %s\n", ecatIfname);
+        }
+    }
+#endif
+
+    if (compositeTCI.count() > 0) {
+        sched.setTCI(&compositeTCI);
+        RT_LOG_INFO("TCI: %d backend(s) active\n", compositeTCI.count());
+    }
 
     bool anyPouScheduled = false;
 

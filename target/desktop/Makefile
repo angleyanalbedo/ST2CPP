@@ -91,7 +91,7 @@ clean:
 
 # ═══ EtherCAT (SOEM) 构建 — 共享 SOEM 子模块 ═══
 SOEM_DIR  = ../lib/soem
-ECAT_SRC  = ../rpi/ethercat_tci.cpp
+ECAT_SRC  = ethercat_tci.cpp
 
 ifeq ($(UNAME),Linux)
 SOEM_OSHWDIR = linux
@@ -102,9 +102,9 @@ SOEM_CFLAGS  = -O2 -D_GNU_SOURCE -DRT_PLATFORM_LINUX -DSOEM_LINUX \
                -I$(SOEM_DIR)/osal/linux \
                -I$(SOEM_DIR)/osal
 ECAT_LIBS    = -lpcap
-SOEM_OBJ_OSHW = /tmp/soem_desk_oshw.o
-SOEM_OBJ_OSAL = /tmp/soem_desk_osal.o
-SOEM_OBJ_NIC  = /tmp/soem_desk_nicdrv.o
+SOEM_OBJ_OSHW = build/soem_desk_oshw.o
+SOEM_OBJ_OSAL = build/soem_desk_osal.o
+SOEM_OBJ_NIC  = build/soem_desk_nicdrv.o
 OSHW_SRC      = $(SOEM_DIR)/oshw/linux/oshw.c
 OSAL_SRC      = $(SOEM_DIR)/osal/linux/osal.c
 NIC_SRC       = $(SOEM_DIR)/oshw/linux/nicdrv.c
@@ -118,9 +118,9 @@ SOEM_CFLAGS  = -O2 -DRT_PLATFORM_WINDOWS -DSOEM_WIN32 \
                -I$(SOEM_DIR)/osal \
                -I$(SOEM_DIR)/oshw/win32/wpcap/Include
 ECAT_LIBS    = -L$(SOEM_DIR)/oshw/win32/wpcap/Lib -lwpcap -lpacket
-SOEM_OBJ_OSHW = /tmp/soem_desk_oshw.o
-SOEM_OBJ_OSAL = /tmp/soem_desk_osal.o
-SOEM_OBJ_NIC  = /tmp/soem_desk_nicdrv.o
+SOEM_OBJ_OSHW = build/soem_desk_oshw.o
+SOEM_OBJ_OSAL = build/soem_desk_osal.o
+SOEM_OBJ_NIC  = build/soem_desk_nicdrv.o
 OSHW_SRC      = $(SOEM_DIR)/oshw/win32/oshw.c
 OSAL_SRC      = $(SOEM_DIR)/osal/win32/osal.c
 NIC_SRC       = $(SOEM_DIR)/oshw/win32/nicdrv.c
@@ -133,14 +133,17 @@ ECAT_CXXFLAGS = -DRT_ETHERCAT_ENABLED \
                 -I$(SOEM_DIR)/oshw \
                 -I$(SOEM_DIR)/osal/$(SOEM_OSHWDIR) \
                 -I$(SOEM_DIR)/osal
+ifeq ($(SOEM_OSHWDIR),win32)
+ECAT_CXXFLAGS += -I$(SOEM_DIR)/oshw/win32/wpcap/Include
+endif
 ECAT_TARGET = plc_runtime_desktop_ecat$(EXE)
 
-SOEM_C_OBJS = $(patsubst $(SOEM_DIR)/src/%.c,/tmp/soem_desk_%.o,$(wildcard $(SOEM_DIR)/src/*.c)) \
+SOEM_C_OBJS = $(patsubst $(SOEM_DIR)/src/%.c,build/soem_desk_%.o,$(wildcard $(SOEM_DIR)/src/*.c)) \
               $(SOEM_OBJ_OSHW) $(SOEM_OBJ_OSAL) $(SOEM_OBJ_NIC)
 
 ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(ECAT_SRC) ../pou_stub.cpp
 
-/tmp/soem_desk_%.o: $(SOEM_DIR)/src/%.c
+build/soem_desk_%.o: $(SOEM_DIR)/src/%.c
 	$(CC) $(SOEM_CFLAGS) -c $< -o $@
 
 $(SOEM_OBJ_OSHW): $(OSHW_SRC)
