@@ -1,0 +1,151 @@
+# target/stm32f1/Makefile — STM32F103C8T6 裸机 PLC 运行时
+#
+# 依赖：
+#   - arm-none-eabi-gcc (gcc-arm-none-eabi)
+#   - STM32CubeF1 HAL（或手动管理的 CMSIS + HAL 源文件）
+#   - OpenOCD 或 ST-Link 工具（用于烧录）
+#
+# 用法：
+#   make               # 编译 + 链接
+#   make flash         # 烧录到目标板
+#   make clean         # 清理
+#   make openocd       # 启动 OpenOCD 调试
+
+CROSS   ?= arm-none-eabi-
+CC       = $(CROSS)gcc
+CXX      = $(CROSS)g++
+LD       = $(CROSS)g++
+OBJCOPY  = $(CROSS)objcopy
+SIZE     = $(CROSS)size
+
+ROOT     = ../..
+RT_DIR   = $(ROOT)/runtime-flat
+BUILD    = build
+
+# STM32 HAL 路径（用户需根据 CubeMX 项目修改）
+HAL_DIR ?= ../lib/STM32CubeF1
+CMSIS_DIR = $(HAL_DIR)/Drivers/CMSIS
+HAL_DRV   = $(HAL_DIR)/Drivers/STM32F1xx_HAL_Driver
+
+# 芯片型号
+MCU       = STM32F103C8
+LD_SCRIPT = STM32F103C8T6.ld
+
+OPT      ?= -Os
+CSTANDARD = -std=c11
+CXXSTANDARD = -std=c++17
+
+# 芯片特定标志
+MCUFLAGS  = -mcpu=cortex-m3 -mthumb -msoft-float
+
+DEFINES   = -DRT_PLATFORM_BARE_METAL \
+            -DSTM32F1xx \
+            -DUSE_HAL_DRIVER \
+            -DHSE_VALUE=8000000 \
+            -D$(MCU)
+
+CFLAGS    = $(OPT) $(MCUFLAGS) $(CSTANDARD) $(DEFINES) \
+            -I$(RT_DIR)/include \
+            -I$(CMSIS_DIR)/Include \
+            -I$(CMSIS_DIR)/Device/ST/STM32F1xx/Include \
+            -I$(HAL_DRV)/Inc \
+            -Wall -Wextra -Wno-unused-parameter \
+            -fdata-sections -ffunction-sections
+
+CXXFLAGS  = $(OPT) $(MCUFLAGS) $(CXXSTANDARD) $(DEFINES) \
+            -I$(RT_DIR)/include \
+            -I$(CMSIS_DIR)/Include \
+            -I$(CMSIS_DIR)/Device/ST/STM32F1xx/Include \
+            -I$(HAL_DRV)/Inc \
+            -Wall -Wextra -Wno-unused-parameter \
+            -fdata-sections -ffunction-sections \
+            -fno-exceptions -fno-rtti -fno-use-cxa-atexit
+
+LDFLAGS   = $(OPT) $(MCUFLAGS) \
+            -T$(LD_SCRIPT) \
+            -Wl,--gc-sections \
+            -Wl,-Map=$(BUILD)/plc_f1.map \
+            -specs=nano.specs -specs=nosys.specs \
+            -lc -lm -lnosys
+
+# 源文件
+RT_SRCS   = $(wildcard $(RT_DIR)/src/*.cpp)
+PLAT_SRC  = platform_stm32f1.cpp runtime_stm32f1.cpp
+POU_SRCS  = $(wildcard $(ROOT)/output/flat/build/*.cpp)
+REGISTRY  = $(ROOT)/output/flat/build/pou_registry.gen.cpp
+
+# HAL 源文件（从 CubeF1 包中添加需要的 HAL 驱动）
+HAL_SRCS  = \
+    $(HAL_DRV)/Src/stm32f1xx_hal.c \
+    $(HAL_DRV)/Src/stm32f1xx_hal_rcc.c \
+    $(HAL_DRV)/Src/stm32f1xx_hal_gpio.c \
+    $(HAL_DRV)/Src/stm32f1xx_hal_uart.c \
+    $(HAL_DRV)/Src/stm32f1xx_hal_tim.c \
+    $(HAL_DRV)/Src/stm32f1xx_hal_cortex.c
+
+# 如果 HAL 不存在，使用 stub 占位
+HAL_STUB :=
+ifneq ("$(wildcard $(HAL_DRV)/Src/stm32f1xx_hal.c)","")
+    HAL_STUB :=
+else
+    HAL_STUB := hal_stub.cpp
+endif
+
+SRCS      = $(RT_SRCS) $(PLAT_SRC) $(HAL_SRCS) $(HAL_STUB) startup_stm32f103.s system_stm32f1xx.c
+OBJS      = $(patsubst %.cpp,$(BUILD)/%.o,$(notdir $(SRCS))) \
+            $(patsubst %.c,$(BUILD)/%.o,$(notdir $(SRCS))) \
+            $(patsubst %.s,$(BUILD)/%.o,$(notdir $(SRCS)))
+
+TARGET    = plc_f1
+
+.PHONY: all flash clean openocd
+
+all: $(BUILD)/$(TARGET).elf $(BUILD)/$(TARGET).bin $(BUILD)/$(TARGET).hex
+
+$(BUILD)/%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(BUILD)/%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/%.o: %.s
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# 从 RT_DIR/src/ 编译
+$(BUILD)/diag.o: $(RT_DIR)/src/diag.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+$(BUILD)/event.o: $(RT_DIR)/src/event.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+$(BUILD)/gvl.o: $(RT_DIR)/src/gvl.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+$(BUILD)/program.o: $(RT_DIR)/src/program.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+$(BUILD)/scheduler.o: $(RT_DIR)/src/scheduler.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+$(BUILD)/task.o: $(RT_DIR)/src/task.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+$(BUILD)/watchdog.o: $(RT_DIR)/src/watchdog.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(BUILD)/$(TARGET).elf: $(OBJS)
+	$(LD) $(LDFLAGS) -o $@ $^
+	$(SIZE) $@
+
+$(BUILD)/$(TARGET).bin: $(BUILD)/$(TARGET).elf
+	$(OBJCOPY) -O binary $< $@
+
+$(BUILD)/$(TARGET).hex: $(BUILD)/$(TARGET).elf
+	$(OBJCOPY) -O ihex $< $@
+
+flash: $(BUILD)/$(TARGET).bin
+	openocd -f interface/stlink.cfg -f target/stm32f1x.cfg \
+		-c "program $(BUILD)/$(TARGET).bin 0x08000000 reset exit"
+
+openocd:
+	openocd -f interface/stlink.cfg -f target/stm32f1x.cfg
+
+clean:
+	rm -rf $(BUILD)
+
+$(BUILD):
+	mkdir -p $(BUILD)
