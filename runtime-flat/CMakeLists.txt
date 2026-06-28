@@ -58,19 +58,6 @@ target_link_libraries(rt_scheduler PUBLIC rt_core)
 
 message(STATUS "[rt_plc] Static libraries: rt_core, rt_scheduler")
 
-# ═══ 可选的 NetworkTCI 库（桌面/服务器平台，需要 socket 支持） ═══
-option(RT_BUILD_NETWORK "Build network_tci library (TCP client/server TCI)" OFF)
-
-if(RT_BUILD_NETWORK)
-    add_library(rt_network STATIC ${RT_SRC_DIR}/network_tci.cpp)
-    target_include_directories(rt_network PUBLIC ${RT_INCLUDE_DIR})
-    target_link_libraries(rt_network PUBLIC rt_core)
-    if(WIN32)
-        target_link_libraries(rt_network PUBLIC ws2_32)
-    endif()
-    message(STATUS "[rt_plc] Optional library: rt_network (TCP TCI)")
-endif()
-
 # ═══ 测试（仅开发时启用） ═══
 option(RT_BUILD_TESTS "Build test executables" OFF)
 

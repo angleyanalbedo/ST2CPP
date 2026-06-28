@@ -54,7 +54,7 @@ TARGET   = plc_runtime_desktop$(EXE)
 
 all: $(REGISTRY) $(TARGET)
 
-STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) ../pou_stub.cpp
+STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) ../pou_stub.cpp ../network_tci.cpp
 STUB_TARGET = plc_runtime_desktop_stub$(EXE)
 
 stub: $(STUB_TARGET)
@@ -131,7 +131,7 @@ ECAT_TARGET = plc_runtime_desktop_ecat$(EXE)
 SOEM_C_OBJS = $(patsubst $(SOEM_DIR)/src/%.c,build/soem_desk_%.o,$(wildcard $(SOEM_DIR)/src/*.c)) \
               $(SOEM_OBJ_OSHW) $(SOEM_OBJ_OSAL) $(SOEM_OBJ_NIC)
 
-ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(ECAT_SRC) ../pou_stub.cpp
+ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(ECAT_SRC) ../pou_stub.cpp ../network_tci.cpp
 
 build/soem_desk_%.o: $(SOEM_DIR)/src/%.c
 	$(CC) $(SOEM_CFLAGS) -c $< -o $@

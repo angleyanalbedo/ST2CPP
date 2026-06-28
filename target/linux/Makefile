@@ -44,7 +44,7 @@ TARGET   = plc_runtime_linux
 
 all: $(REGISTRY) $(TARGET)
 
-STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) ../pou_stub.cpp
+STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) ../pou_stub.cpp ../network_tci.cpp
 STUB_TARGET = plc_runtime_linux_stub
 
 stub: $(STUB_TARGET)
@@ -92,7 +92,7 @@ ECAT_TARGET = plc_runtime_linux_ecat
 SOEM_C_OBJS = $(patsubst $(SOEM_DIR)/src/%.c,build/soem_linux_%.o,$(wildcard $(SOEM_DIR)/src/*.c)) \
               build/soem_linux_oshw.o build/soem_linux_osal.o build/soem_linux_nicdrv.o
 
-ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(ECAT_SRC) ../pou_stub.cpp
+ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(ECAT_SRC) ../pou_stub.cpp ../network_tci.cpp
 
 build/soem_linux_%.o: $(SOEM_DIR)/src/%.c
 	$(CC) $(SOEM_CFLAGS) -c $< -o $@

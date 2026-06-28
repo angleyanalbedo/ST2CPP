@@ -51,7 +51,7 @@ TARGET   = plc_runtime_windows.exe
 
 all: $(REGISTRY) $(TARGET)
 
-STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) ../pou_stub.cpp
+STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) ../pou_stub.cpp ../network_tci.cpp
 STUB_TARGET = plc_runtime_windows_stub.exe
 
 stub: $(STUB_TARGET)
@@ -102,7 +102,7 @@ ECAT_TARGET = plc_runtime_windows_ecat.exe
 SOEM_C_OBJS = $(patsubst $(SOEM_DIR)/src/%.c,build/soem_win_%.o,$(wildcard $(SOEM_DIR)/src/*.c)) \
               build/soem_win_oshw.o build/soem_win_osal.o build/soem_win_nicdrv.o
 
-ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(ECAT_SRC) ../pou_stub.cpp
+ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(ECAT_SRC) ../pou_stub.cpp ../network_tci.cpp
 
 SOEM_WINPCAP_LIB = -Llib -lwpcap -lpacket
 

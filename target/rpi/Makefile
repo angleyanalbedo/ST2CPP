@@ -65,7 +65,7 @@ TARGET   = plc_runtime_rpi
 all: $(REGISTRY) $(TARGET)
 
 # 无 POU 模式：用 pou_stub.cpp 替代编译器输出
-STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) $(MAIN_SRC) $(HAL_SRC) pou_stub.cpp
+STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) $(MAIN_SRC) $(HAL_SRC) pou_stub.cpp ../network_tci.cpp
 STUB_TARGET = plc_runtime_stub
 
 stub: $(STUB_TARGET)
@@ -119,7 +119,7 @@ SOEM_C_OBJS = $(patsubst $(SOEM_DIR)/src/%.c,build/soem_%.o,$(wildcard $(SOEM_DI
               build/soem_oshw.o build/soem_osal.o build/soem_nicdrv.o
 
 # EtherCAT stub 模式（无 POU + SOEM）
-ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(MAIN_SRC) $(HAL_SRC) $(ECAT_SRC) pou_stub.cpp
+ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(MAIN_SRC) $(HAL_SRC) $(ECAT_SRC) pou_stub.cpp ../network_tci.cpp
 
 # 编译 SOEM C 文件
 build/soem_%.o: $(SOEM_DIR)/src/%.c
