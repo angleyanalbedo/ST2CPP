@@ -225,7 +225,7 @@ public class TranslateProg_decl {
         gvlCtx.allocateOffset(name, nativeType);
         String assignVar = varSymbol.getAssignVar();
         if (assignVar != null && !assignVar.isEmpty() && !"0".equals(assignVar) && !"\"\"".equals(assignVar)) {
-            String initValue = stripParens(assignVar);
+            String initValue = assignVar.contains(":=") ? toAggregateInit(assignVar) : stripParens(assignVar);
             String type = gvlCtx.typeMap.get(name);
             Integer offset = gvlCtx.offsetMap.get(name);
             if (type != null && offset != null) {
@@ -244,6 +244,30 @@ public class TranslateProg_decl {
             return s.substring(1, s.length() - 1).trim();
         }
         return s;
+    }
+
+    /**
+     * 将 ST 命名参数初始化转为 C++ 聚合初始化。
+     * 例: (KP:=2.0,KI:=0.5) → {2.0, 0.5}
+     * 非命名参数保持原样。
+     */
+    private String toAggregateInit(String initExpr) {
+        if (initExpr == null) return "";
+        String inner = stripParens(initExpr);
+        if (inner.isEmpty()) return "{}";
+        String[] parts = inner.split(",");
+        StringBuilder sb = new StringBuilder("{");
+        for (int i = 0; i < parts.length; i++) {
+            String part = parts[i].trim();
+            int colonEq = part.indexOf(":=");
+            if (colonEq >= 0) {
+                part = part.substring(colonEq + 2).trim();
+            }
+            if (i > 0) sb.append(", ");
+            sb.append(part);
+        }
+        sb.append("}");
+        return sb.toString();
     }
 
     /**
@@ -277,6 +301,7 @@ public class TranslateProg_decl {
             }
             sb.append("\n\t").append(type).append(" ").append(varName).append(" = gvl.read<")
               .append(type).append(">(").append(offset).append(");");
+            gvlCtx.locallyDeclaredGvlVars.add(varName);
         }
         for (java.util.Map.Entry<String, GvlContext.IOInfo> ioEntry : gvlCtx.ioVarMap.entrySet()) {
             String varName = ioEntry.getKey();
@@ -290,6 +315,7 @@ public class TranslateProg_decl {
                 sb.append(info.dir == GvlContext.IODirection.INPUT ? "readInput<" : "readOutput<");
                 sb.append(info.typeName).append(">(").append(info.byteOffset).append(");");
             }
+            gvlCtx.locallyDeclaredGvlVars.add(varName);
         }
         return sb.toString();
     }
