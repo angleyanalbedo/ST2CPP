@@ -7,28 +7,13 @@
  * 精度指标（PREEMPT_RT 内核）：
  *   - timerfd + SCHED_FIFO：抖动 < 20us
  *   - 标准内核：抖动 < 500us
- *
- * 编译：
- *   g++ -O2 -std=c++17 -I../../runtime-flat/include \
- *       -lpthread ../../runtime-flat/src/*.cpp runtime_linux.cpp \
- *       -o plc_runtime_linux
- *
- * 运行：
- *   sudo ./plc_runtime_linux              # 1ms 周期
- *   sudo ./plc_runtime_linux --cycle-us 500  # 500us
- *   sudo chrt -f 99 ./plc_runtime_linux
  */
 #include "rt_runtime.h"
 #include "rt_plc.h"
 
-#if defined(RT_ETHERCAT_ENABLED)
-#include "ethercat_tci.h"
-#endif
-
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <cerrno>
 #include <cmath>
 #include <algorithm>
 
@@ -42,7 +27,7 @@
 
 using namespace rt_plc;
 
-// ═══ 配置默认值 ═══
+// ═══ 配置 ═══
 static int64_t   cycleUs       = 1000;
 static int       rtPriority    = 90;
 static int       diagIntervalS = 5;
@@ -52,11 +37,6 @@ static bool      running       = true;
 static Scheduler sched;
 static CompositeTCI compositeTCI;
 static bool      initialized   = false;
-
-// TCI 配置
-enum class TciMode { NONE, ETHERCAT };
-static TciMode tciMode = TciMode::NONE;
-static char ecatIfname[32] = "eth0";
 
 // ═══ 抖动统计 ═══
 static struct {
@@ -105,49 +85,17 @@ static void printJitterStats() {
     platform::logInfo("==========================\n");
 }
 
-// ═══ PLC ═══
-extern void registerAllPOUs(POURegistry& reg);
+// ═── PLC ═──
+extern void configureRuntime(Scheduler& sched, CompositeTCI& tci);
 
 static void plcInit() {
-    POURegistry reg;
-    registerAllPOUs(reg);
-
-    sched.setBaseCycle(T_us(cycleUs));
+    configureRuntime(sched, compositeTCI);
+    if (cycleUs != sched.baseCycleTime)
+        sched.setBaseCycle(T_us(cycleUs));
     sched.gvl.errorMgr = &sched.errorMgr;
-
-    // ─── 初始化 TCI ───
-#if defined(RT_ETHERCAT_ENABLED)
-    if (tciMode == TciMode::ETHERCAT) {
-        static EthercatTCI ecatTCI;
-        if (ecatTCI.init(ecatIfname) == 0) {
-            compositeTCI.add(&ecatTCI);
-            platform::logInfo("EtherCAT TCI registered on %s\n", ecatIfname);
-        } else {
-            platform::logErr("EtherCAT TCI init failed on %s\n", ecatIfname);
-        }
-    }
-#endif
-
-    if (compositeTCI.count() > 0) {
-        sched.setTCI(&compositeTCI);
-        platform::logInfo("TCI: %d backend(s) active\n", compositeTCI.count());
-    }
-
-    int mainTask = sched.addCyclicTask("Main", 5, T_us(cycleUs));
-    if (mainTask < 0) { platform::logErr("FATAL: addCyclicTask failed\n"); return; }
-    for (int i = 0; i < reg.count(); i++) {
-        const auto& e = reg.entries()[i];
-        if (e.cbs.cyclic) {
-            int progIdx = sched.addProgram(e.name, e.cbs.init, e.cbs.cyclic,
-                                           e.cbs.pre, e.cbs.post);
-            if (progIdx >= 0) sched.addProgramToTask(mainTask, progIdx);
-        }
-    }
-    sched.setTaskWatchdog(mainTask, T_us(cycleUs * 5));
     sched.start(StartupMode::COLD);
     initialized = true;
-    platform::logInfo("PLC Runtime: %d POU(s), cycle=%lldus\n",
-                      reg.count(), (long long)cycleUs);
+    platform::logInfo("PLC Runtime: cycle=%lldus\n", (long long)cycleUs);
 }
 
 static void plcTick() {
@@ -168,21 +116,13 @@ int main(int argc, char* argv[]) {
             diagIntervalS = atoi(argv[++i]);
         } else if (strcmp(argv[i], "--jitter-only") == 0) {
             jitterOnly = true;
-        } else if (strcmp(argv[i], "--tci") == 0 && i + 1 < argc) {
-            i++;
-            if (strcmp(argv[i], "ethercat") == 0) tciMode = TciMode::ETHERCAT;
-            else fprintf(stderr, "Unknown TCI mode: %s (use ethercat)\n", argv[i]);
-        } else if (strcmp(argv[i], "--ecat-if") == 0 && i + 1 < argc) {
-            strncpy(ecatIfname, argv[i + 1], sizeof(ecatIfname) - 1);
-            i++;
         } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             printf("Usage: %s [options]\n", argv[0]);
-            printf("  --cycle-us <us>        周期（微秒，默认 1000）\n");
-            printf("  --rt-prio <1-99>       SCHED_FIFO 优先级（默认 90）\n");
-            printf("  --diag-interval <s>    诊断间隔（秒，默认 5）\n");
-            printf("  --jitter-only          纯定时器抖动测试（不跑 PLC）\n");
-            printf("  --tci <mode>           I/O 模式: ethercat\n");
-            printf("  --ecat-if <name>       EtherCAT 网卡接口 (默认 eth0)\n");
+            printf("  --cycle-us <us>        PLC cycle (us, default 1000)\n");
+            printf("  --rt-prio <1-99>       SCHED_FIFO priority (default 90)\n");
+            printf("  --diag-interval <s>    Diagnostics interval (s, default 5)\n");
+            printf("  --jitter-only          Timer jitter test only\n");
+            printf("\nNote: Linux realtime requires PREEMPT_RT kernel\n");
             return 0;
         }
     }
@@ -190,21 +130,18 @@ int main(int argc, char* argv[]) {
     signal(SIGINT, sigHandler);
     signal(SIGTERM, sigHandler);
 
-    // 实时优先级
     struct sched_param sp = {};
     sp.sched_priority = rtPriority;
     if (sched_setscheduler(0, SCHED_FIFO, &sp) == 0) {
         mlockall(MCL_CURRENT | MCL_FUTURE);
         platform::logInfo("RT priority: SCHED_FIFO/%d\n", rtPriority);
     } else {
-        platform::logInfo("Warning: sched_setscheduler failed (%s), run as root?\n",
-                          strerror(errno));
+        platform::logInfo("Warning: sched_setscheduler failed, run as root?\n");
     }
 
     if (!jitterOnly) plcInit();
     else platform::logInfo("Jitter-only mode\n");
 
-    // timerfd：高精度周期定时器
     int tfd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
     if (tfd < 0) {
         platform::logErr("timerfd_create failed: %s\n", strerror(errno));
@@ -217,8 +154,7 @@ int main(int argc, char* argv[]) {
     timerfd_settime(tfd, 0, &its, nullptr);
     jitterReset(cycleUs);
 
-    platform::logInfo("Timer started: %lldus, press Ctrl+C to stop\n",
-                      (long long)cycleUs);
+    platform::logInfo("Timer started: %lldus, press Ctrl+C to stop\n", (long long)cycleUs);
 
     struct pollfd pfd = {tfd, POLLIN, 0};
     int64_t lastDiag = 0;
@@ -237,7 +173,7 @@ int main(int argc, char* argv[]) {
 
             if (now - lastDiag > (int64_t)diagIntervalS * 1000000) {
                 lastDiag = now;
-                platform::logInfo("[DIAG] ticks=%llu uptime=%lldms\n",
+                platform::logInfo("[DIAG] ticks=%llu  uptime=%lldms\n",
                     (unsigned long long)tickCount,
                     (long long)((now - jitter.prevUs + jitter.intervalUs) / 1000));
                 if (jitter.count > 0) {
@@ -250,8 +186,6 @@ int main(int argc, char* argv[]) {
                         (unsigned long long)jitter.count);
                 }
             }
-        } else if (ret == 0) {
-            // timeout — 正常，继续循环
         } else if (ret < 0 && errno != EINTR) {
             platform::logErr("poll error: %s\n", strerror(errno));
             break;

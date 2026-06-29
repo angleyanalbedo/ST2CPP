@@ -1,0 +1,37 @@
+{
+    "base_cycle_us": 1000,
+    "tasks": [
+        {
+            "name": "Main",
+            "priority": 5,
+            "interval_us": 1000,
+            "watchdog_us": 5000,
+            "pous": ["MAIN"]
+        }
+    ],
+    "bindings": [
+        {
+            "driver": "gpio",
+            "inputs": [
+                {"addr": "IX0.0", "bcm": 5},
+                {"addr": "IX0.1", "bcm": 6},
+                {"addr": "IX0.2", "bcm": 13},
+                {"addr": "IX0.3", "bcm": 19},
+                {"addr": "IX0.4", "bcm": 26},
+                {"addr": "IX0.5", "bcm": 21},
+                {"addr": "IX0.6", "bcm": 20},
+                {"addr": "IX0.7", "bcm": 16}
+            ],
+            "outputs": [
+                {"addr": "QX0.0", "bcm": 17},
+                {"addr": "QX0.1", "bcm": 27},
+                {"addr": "QX0.2", "bcm": 22},
+                {"addr": "QX0.3", "bcm": 23},
+                {"addr": "QX0.4", "bcm": 24},
+                {"addr": "QX0.5", "bcm": 25},
+                {"addr": "QX0.6", "bcm": 12},
+                {"addr": "QX0.7", "bcm": 18}
+            ]
+        }
+    ]
+}

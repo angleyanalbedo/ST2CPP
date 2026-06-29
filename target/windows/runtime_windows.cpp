@@ -4,32 +4,9 @@
  * 使用 QueryPerformanceCounter 高精度计时 + WaitableTimer 周期触发。
  * 注意：Windows 非实时 OS，1ms 周期抖动约 100-500us。
  * 建议用于开发测试，生产部署请上 PREEMPT_RT Linux 或裸机。
- *
- * 精度指标：
- *   - QPC 分辨率：< 1us（硬件依赖）
- *   - WaitableTimer 周期：抖动 ~100-500us（1ms 周期）
- *   - timeBeginPeriod(1)：可降至 ~15ms 调度的 ~100us 抖动
- *
- * 编译（MinGW 或 MSVC）：
- *   g++ -O2 -std=c++17 -I../../runtime-flat/include
- *       ../../runtime-flat/src/ *.cpp runtime_windows.cpp
- *       -lwinmm -o plc_runtime_windows.exe
- *
- * 运行：
- *   plc_runtime_windows.exe              # 1ms 周期
- *   plc_runtime_windows.exe --cycle-us 5000  # 5ms（Windows 更稳）
- *
- * 注意：types.h（经 rt_plc.h 引入）必须在 <windows.h> 之前 include。
- * 避免 <windows.h> 的 ERROR/TRUE/FALSE 宏污染 enum 和 typedef。
- * using namespace rt_plc; 虽会引入 BOOL/DWORD/INT/UINT，但本文件
- * 未直接使用这些类型名，不产生歧义。
  */
 #include "rt_runtime.h"
 #include "rt_plc.h"
-
-#if defined(RT_ETHERCAT_ENABLED)
-#include "ethercat_tci.h"
-#endif
 
 #include <cstdio>
 #include <cstdlib>
@@ -54,11 +31,6 @@ static CompositeTCI compositeTCI;
 static bool      initialized   = false;
 
 static HANDLE    timerHandle   = NULL;
-
-// TCI 配置
-enum class TciMode { NONE, ETHERCAT };
-static TciMode tciMode = TciMode::NONE;
-static char ecatIfname[32] = "eth0";
 
 // ═══ 高精度计时（QPC） ═══
 static LARGE_INTEGER qpcFreq = {};
@@ -117,48 +89,15 @@ static void printJitterStats() {
 }
 
 // ═══ PLC ═══
-extern void registerAllPOUs(POURegistry& reg);
+extern void configureRuntime(Scheduler& sched, CompositeTCI& tci);
 
 static void plcInit() {
-    POURegistry reg;
-    registerAllPOUs(reg);
-
-    sched.setBaseCycle(T_us(cycleUs));
-    sched.gvl.errorMgr = &sched.errorMgr;
-
-    // ─── 初始化 TCI ───
-#if defined(RT_ETHERCAT_ENABLED)
-    if (tciMode == TciMode::ETHERCAT) {
-        static EthercatTCI ecatTCI;
-        if (ecatTCI.init(ecatIfname) == 0) {
-            compositeTCI.add(&ecatTCI);
-            platform::logInfo("EtherCAT TCI registered on %s\n", ecatIfname);
-        } else {
-            platform::logErr("EtherCAT TCI init failed on %s\n", ecatIfname);
-        }
-    }
-#endif
-
-    if (compositeTCI.count() > 0) {
-        sched.setTCI(&compositeTCI);
-        platform::logInfo("TCI: %d backend(s) active\n", compositeTCI.count());
-    }
-
-    int mainTask = sched.addCyclicTask("Main", 5, T_us(cycleUs));
-    if (mainTask < 0) { platform::logErr("FATAL: addCyclicTask failed\n"); return; }
-    for (int i = 0; i < reg.count(); i++) {
-        const auto& e = reg.entries()[i];
-        if (e.cbs.cyclic) {
-            int progIdx = sched.addProgram(e.name, e.cbs.init, e.cbs.cyclic,
-                                           e.cbs.pre, e.cbs.post);
-            if (progIdx >= 0) sched.addProgramToTask(mainTask, progIdx);
-        }
-    }
-    sched.setTaskWatchdog(mainTask, T_us(cycleUs * 5));
+    configureRuntime(sched, compositeTCI);
+    if (cycleUs != sched.baseCycleTime)
+        sched.setBaseCycle(T_us(cycleUs));
     sched.start(StartupMode::COLD);
     initialized = true;
-    platform::logInfo("PLC Runtime: %d POU(s), cycle=%lldus\n",
-                      reg.count(), (long long)cycleUs);
+    platform::logInfo("PLC Runtime: cycle=%lldus\n", (long long)cycleUs);
 }
 
 static void plcTick() {
@@ -190,56 +129,36 @@ int main(int argc, char* argv[]) {
             diagIntervalS = atoi(argv[++i]);
         } else if (strcmp(argv[i], "--jitter-only") == 0) {
             jitterOnly = true;
-        } else if (strcmp(argv[i], "--tci") == 0 && i + 1 < argc) {
-            i++;
-            if (strcmp(argv[i], "ethercat") == 0) tciMode = TciMode::ETHERCAT;
-            else fprintf(stderr, "Unknown TCI mode: %s (use ethercat)\n", argv[i]);
-        } else if (strcmp(argv[i], "--ecat-if") == 0 && i + 1 < argc) {
-            strncpy(ecatIfname, argv[i + 1], sizeof(ecatIfname) - 1);
-            i++;
         } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             printf("Usage: %s [options]\n", argv[0]);
-            printf("  --cycle-us <us>       PLC 周期（微秒，默认 1000）\n");
-            printf("  --diag-interval <s>   诊断间隔（秒，默认 5）\n");
-            printf("  --jitter-only         纯定时器抖动测试\n");
-            printf("  --tci <mode>          I/O 模式: ethercat\n");
-            printf("  --ecat-if <name>      EtherCAT 网卡接口 (默认 eth0)\n");
-            printf("\n注意：Windows 非实时 OS，1ms 周期抖动 ~100-500us\n");
+            printf("  --cycle-us <us>       PLC cycle (us, default 1000)\n");
+            printf("  --diag-interval <s>   Diagnostics interval (s, default 5)\n");
+            printf("  --jitter-only         Timer jitter test only\n");
             return 0;
         }
     }
 
-    // 禁用 stdout/stderr 缓冲（pipe 重定向时输出立即可见）
     setvbuf(stdout, nullptr, _IONBF, 0);
     setvbuf(stderr, nullptr, _IONBF, 0);
 
-    // 高精度计时初始化
     QueryPerformanceFrequency(&qpcFreq);
-
-    // 提高定时器精度
     timeBeginPeriod(1);
-
-    // 提升进程/线程优先级 + 固定 CPU 核心（降低抖动）
     SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-    SetThreadAffinityMask(GetCurrentThread(), 1);  // 锁定到 CPU 0
-
-    // Ctrl+C 处理
+    SetThreadAffinityMask(GetCurrentThread(), 1);
     SetConsoleCtrlHandler(consoleHandler, TRUE);
 
     if (!jitterOnly) plcInit();
     else printf("Jitter-only mode\n");
 
-    // 创建 WaitableTimer
     timerHandle = CreateWaitableTimer(NULL, FALSE, NULL);
     if (!timerHandle) {
         fprintf(stderr, "CreateWaitableTimer failed\n");
         return 1;
     }
 
-    // 转换微秒到 100ns 间隔
     LARGE_INTEGER due;
-    due.QuadPart = -(cycleUs * 10LL);  // 负值 = 相对时间
+    due.QuadPart = -(cycleUs * 10LL);
     if (!SetWaitableTimer(timerHandle, &due, (LONG)cycleUs / 1000,
                           timerAPC, NULL, FALSE)) {
         fprintf(stderr, "SetWaitableTimer failed\n");
@@ -247,8 +166,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Windows 的 WaitableTimer 最小精度是毫秒
-    // 如果 cycleUs < 1000，降级为忙等模式
     bool useTimer = (cycleUs >= 1000);
 
     if (!useTimer) {
@@ -264,18 +181,14 @@ int main(int argc, char* argv[]) {
 
     while (running) {
         if (useTimer) {
-            // APCs 只在可告警等待中执行
             SleepEx(100, TRUE);
         } else {
-            // 忙等模式（<1ms 周期）
             int64_t now = qpcUs();
             jitterSample(now);
             plcTick();
             tickCount++;
-            // 自旋等待到下一个周期
             int64_t next = now + cycleUs;
             while (qpcUs() < next) {
-                // busy wait
             }
         }
 
