@@ -90,13 +90,30 @@ public class CheckFuncCall {
         //进行检查以及Assign Var
         try{
             HashMap<String, String> paramList = new HashMap<>();
+            ArrayList<PLCVariable> accessVars = function.getAccessVars();
+            int positionalIdx = 0;
 
             for (PLCVariable param : params) {
                 String paramName = param.getName();
+                PLCVariable accessVar;
+
                 if(paramName == null){
-                    throw new PLCSemanticException("Irregular calls are not supported");
+                    // 位置参数调用：按声明顺序绑定
+                    if(positionalIdx >= accessVars.size()){
+                        throw new PLCSemanticException("too many arguments in function call");
+                    }
+                    accessVar = accessVars.get(positionalIdx);
+                    paramName = accessVar.getName();
+                    positionalIdx++;
+                } else {
+                    // 命名参数调用
+                    accessVar = function.getAccessVar(paramName);
+                    if(accessVar == null){
+                        throw new PLCSemanticException(paramName + " param name error or var section error: " + paramName);
+                    }
+                    positionalIdx = -1; // 混合调用不允许
                 }
-                PLCVariable accessVar = function.getAccessVar(paramName);
+
                 //名称检查
                 if(accessVar == null){
                     throw new PLCSemanticException(paramName + " param name error or var section error: " + paramName);
@@ -120,7 +137,6 @@ public class CheckFuncCall {
 
 
             //数量检查
-            ArrayList<PLCVariable> accessVars = function.getAccessVars();
             for (PLCVariable accessVar : accessVars) {
                 String accessVarName = accessVar.getName();
                 String assignment = paramList.get(accessVarName);
