@@ -32,13 +32,11 @@ TCI_SRCS = $(TCI_DIR)/network_tci.cpp $(TCI_DIR)/tcp_tci.cpp
 config: $(CONFIG_GEN)
 
 $(CONFIG_GEN): $(CONFIG_JSON) | build
-	python3 ../scripts/gen_config.py --target bananapif3 --input $(CONFIG_JSON) --output $(CONFIG_GEN) || \
-	python  ../scripts/gen_config.py --target bananapif3 --input $(CONFIG_JSON) --output $(CONFIG_GEN) || \
+	python3 ../scripts/gen_config.py --target bananapif3 --input $(CONFIG_JSON) --output $(CONFIG_GEN) 2>/dev/null || \
 	echo "Warning: gen_config.py failed" 1>&2
 
 $(CONFIG_GEN_STUB): $(CONFIG_JSON) | build
-	python3 ../scripts/gen_config.py --target bananapif3 --stub --input $(CONFIG_JSON) --output $(CONFIG_GEN_STUB) || \
-	python  ../scripts/gen_config.py --target bananapif3 --stub --input $(CONFIG_JSON) --output $(CONFIG_GEN_STUB) || \
+	python3 ../scripts/gen_config.py --target bananapif3 --stub --input $(CONFIG_JSON) --output $(CONFIG_GEN_STUB) 2>/dev/null || \
 	echo "Warning: gen_config.py --stub failed" 1>&2
 
 OPT      ?= -O2

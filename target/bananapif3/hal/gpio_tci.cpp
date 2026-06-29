@@ -25,24 +25,35 @@ int BpiGpioTCI::init() {
         fprintf(stderr, "[GPIO-TCI] GPIO HAL init failed\n");
         return -1;
     }
-    loadDefaultMapping();
+
+    // 如果外部（gen_config.py）已添加映射，跳过默认映射
+    if (m_inputCount == 0 && m_outputCount == 0) {
+        loadDefaultMapping();
+    }
+
     dumpMapping();
     return 0;
 }
 
 void BpiGpioTCI::loadDefaultMapping() {
-    addInputMapping(63,  0, 0);
-    addInputMapping(67,  0, 1);
-    addInputMapping(80,  0, 2);
-    addInputMapping(96,  0, 3);
-    addInputMapping(97,  0, 4);
-    addInputMapping(110, 0, 5);
-    addInputMapping(115, 0, 6);
-    addInputMapping(116, 0, 7);
+    // 默认仅使用 40-pin 排针上安全的用户 GPIO
+    // 输入（排针左侧）: Pin 11, 15, 16, 18, 19, 23, 24, 26
+    addInputMapping(109, 0, 0);  // Pin 11
+    addInputMapping(111, 0, 1);  // Pin 15
+    addInputMapping(112, 0, 2);  // Pin 16
+    addInputMapping(113, 0, 3);  // Pin 18
+    addInputMapping(114, 0, 4);  // Pin 19
+    addInputMapping(117, 0, 5);  // Pin 23
+    addInputMapping(118, 0, 6);  // Pin 24
+    addInputMapping(119, 0, 7);  // Pin 26
 
-    addOutputMapping(123, 0, 0);
-    addOutputMapping(124, 0, 1);
-    addOutputMapping(127, 0, 2);
+    // 输出（排针右侧）: Pin 29, 31, 12, 33, 40, 38
+    addOutputMapping(63,  0, 0);  // Pin 29
+    addOutputMapping(67,  0, 1);  // Pin 31
+    addOutputMapping(77,  0, 2);  // Pin 12
+    addOutputMapping(80,  0, 3);  // Pin 33
+    addOutputMapping(126, 0, 4);  // Pin 40
+    addOutputMapping(127, 0, 5);  // Pin 38
 
     for (int i = 0; i < m_inputCount; i++)
         gpio_set_mode(m_inputs[i].gpioLine, 0);

@@ -14,6 +14,7 @@ static bool g_initialized = false;
 static char g_chip_label[64] = {};
 
 static void gpio_sysfs_write(const char* path, const char* value) {
+    if (!path || !value) return;
     int fd = open(path, O_WRONLY);
     if (fd < 0) return;
     write(fd, value, strlen(value));
@@ -35,7 +36,6 @@ static int gpio_export(int line) {
     struct stat st;
     if (stat(path, &st) == 0) return 0;
 
-    gpio_sysfs_write(GPIO_SYSFS "/export", nullptr);
     int fd = open(GPIO_SYSFS "/export", O_WRONLY);
     if (fd < 0) return -1;
     char buf[8];
@@ -44,16 +44,6 @@ static int gpio_export(int line) {
     close(fd);
 
     usleep(10000);
-    return 0;
-}
-
-static int gpio_unexport(int line) {
-    int fd = open(GPIO_SYSFS "/unexport", O_WRONLY);
-    if (fd < 0) return -1;
-    char buf[8];
-    int n = snprintf(buf, sizeof(buf), "%d", line);
-    write(fd, buf, n);
-    close(fd);
     return 0;
 }
 

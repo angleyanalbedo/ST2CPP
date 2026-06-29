@@ -61,12 +61,13 @@ extern "C" int plc_bpi_set_rt_priority(int priority) {
     param.sched_priority = priority;
 
     if (sched_setscheduler(0, SCHED_FIFO, &param) != 0) {
-        logErr("sched_setscheduler failed: %s (need root?)\n", strerror(errno));
-        return -1;
+        logInfo("[WARN] RT priority unavailable: %s (continuing without RT)\n", strerror(errno));
+        // SCHED_FIFO 可能被 CONFIG_RT_GROUP_SCHED 限制
+        // clock_nanosleep 在无 RT 优先级下仍能提供 ~μs 级抖动
+    } else {
+        mlockall(MCL_CURRENT | MCL_FUTURE);
+        logInfo("RT priority set: SCHED_FIFO/%d\n", priority);
     }
-
-    mlockall(MCL_CURRENT | MCL_FUTURE);
-    logInfo("RT priority set: SCHED_FIFO/%d\n", priority);
     return 0;
 }
 

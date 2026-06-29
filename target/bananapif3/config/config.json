@@ -13,19 +13,22 @@
         {
             "driver": "gpio",
             "inputs": [
-                {"addr": "IX0.0", "chip": 0, "line": 63},
-                {"addr": "IX0.1", "chip": 0, "line": 67},
-                {"addr": "IX0.2", "chip": 0, "line": 80},
-                {"addr": "IX0.3", "chip": 0, "line": 96},
-                {"addr": "IX0.4", "chip": 0, "line": 97},
-                {"addr": "IX0.5", "chip": 0, "line": 110},
-                {"addr": "IX0.6", "chip": 0, "line": 115},
-                {"addr": "IX0.7", "chip": 0, "line": 116}
+                {"addr": "IX0.0", "line": 109},
+                {"addr": "IX0.1", "line": 111},
+                {"addr": "IX0.2", "line": 112},
+                {"addr": "IX0.3", "line": 113},
+                {"addr": "IX0.4", "line": 114},
+                {"addr": "IX0.5", "line": 117},
+                {"addr": "IX0.6", "line": 118},
+                {"addr": "IX0.7", "line": 119}
             ],
             "outputs": [
-                {"addr": "QX0.0", "chip": 0, "line": 123},
-                {"addr": "QX0.1", "chip": 0, "line": 124},
-                {"addr": "QX0.2", "chip": 0, "line": 127}
+                {"addr": "QX0.0", "line": 63},
+                {"addr": "QX0.1", "line": 67},
+                {"addr": "QX0.2", "line": 77},
+                {"addr": "QX0.3", "line": 80},
+                {"addr": "QX0.4", "line": 126},
+                {"addr": "QX0.5", "line": 127}
             ]
         }
     ]

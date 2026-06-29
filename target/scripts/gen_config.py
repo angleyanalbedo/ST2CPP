@@ -12,7 +12,7 @@ Usage:
     python gen_config.py --target windows --input config/config.json
     python gen_config.py --target stm32f1 --input config/config.json --build-dir ../../output/flat/build
 
-Supported targets: windows, desktop, linux, rpi, stm32f1
+Supported targets: windows, desktop, linux, rpi, stm32f1, bananapif3
 Supported drivers: gpio, ethercat, tcp, network
 """
 import json
@@ -96,6 +96,7 @@ TARGET_INCLUDES = {
     'desktop': [],
     'linux': [],
     'rpi': ['"hal/gpio_tci.h"'],
+    'bananapif3': ['"hal/gpio_tci.h"'],
     'stm32f1': [],
 }
 
@@ -105,29 +106,31 @@ ETHERCAT_CONDITIONAL = True
 def generate_gpio_code(binding, target):
     """Generate GPIO TCI setup code."""
     lines = []
-    if target != 'rpi':
-        lines.append(f"    // WARNING: gpio driver only supported on rpi target\n")
+    if target == 'bananapif3':
+        lines.append('    static BpiGpioTCI gpio;')
+    elif target == 'rpi':
+        lines.append('    static RpiGpioTCI gpio;')
+    else:
+        lines.append(f"    // WARNING: gpio driver only supported on rpi/bananapif3 targets\n")
         return lines
-
-    lines.append('    static RpiGpioTCI gpio;')
 
     for inp in binding.get('inputs', []):
         addr = inp['addr']
         _, byte_off, bit_off = parse_addr(addr)
-        bcm = inp['bcm']
+        pin = inp.get('bcm') or inp.get('line') or inp.get('gpio') or 0
         if bit_off >= 0:
-            lines.append(f'    gpio.addInputMapping({bcm}, {byte_off}, {bit_off});  // {addr}')
+            lines.append(f'    gpio.addInputMapping({pin}, {byte_off}, {bit_off});  // {addr}')
         else:
-            lines.append(f'    gpio.addInputMapping({bcm}, {byte_off}, 0);  // {addr}')
+            lines.append(f'    gpio.addInputMapping({pin}, {byte_off}, 0);  // {addr}')
 
     for out in binding.get('outputs', []):
         addr = out['addr']
         _, byte_off, bit_off = parse_addr(addr)
-        bcm = out['bcm']
+        pin = out.get('bcm') or out.get('line') or out.get('gpio') or 0
         if bit_off >= 0:
-            lines.append(f'    gpio.addOutputMapping({bcm}, {byte_off}, {bit_off});  // {addr}')
+            lines.append(f'    gpio.addOutputMapping({pin}, {byte_off}, {bit_off});  // {addr}')
         else:
-            lines.append(f'    gpio.addOutputMapping({bcm}, {byte_off}, 0);  // {addr}')
+            lines.append(f'    gpio.addOutputMapping({pin}, {byte_off}, 0);  // {addr}')
 
     lines.append('    if (gpio.init() == 0) { tci.add(&gpio); }')
     lines.append('    else { platform::logErr("GPIO TCI init failed\\n"); }')
@@ -349,7 +352,7 @@ def generate(config, target, build_dir, stub=False):
 def main():
     parser = argparse.ArgumentParser(description="Generate runtime_config.gen.cpp from config.json")
     parser.add_argument("--target", required=True,
-                        choices=['windows', 'desktop', 'linux', 'rpi', 'stm32f1'],
+                        choices=['windows', 'desktop', 'linux', 'rpi', 'stm32f1', 'bananapif3'],
                         help="Target platform")
     parser.add_argument("--input", default=None,
                         help="Path to config.json (default: config/config.json relative to target dir)")
