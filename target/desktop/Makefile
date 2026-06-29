@@ -54,7 +54,7 @@ TARGET   = plc_runtime_desktop$(EXE)
 
 all: $(REGISTRY) $(TARGET)
 
-STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) ../pou_stub.cpp ../network_tci.cpp
+STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) ../pou_stub.cpp ../network_tci.cpp ../tcp_tci.cpp
 STUB_TARGET = plc_runtime_desktop_stub$(EXE)
 
 stub: $(STUB_TARGET)
@@ -63,7 +63,7 @@ $(STUB_TARGET): $(STUB_SRCS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	@echo "=== Build (stub): $@ ==="
 
-SRCS = $(RT_SRCS) $(PLAT_SRC) $(POU_SRCS) $(REGISTRY) ../network_tci.cpp
+SRCS = $(RT_SRCS) $(PLAT_SRC) $(POU_SRCS) $(REGISTRY) ../network_tci.cpp ../tcp_tci.cpp
 
 $(TARGET): $(SRCS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
@@ -131,7 +131,7 @@ ECAT_TARGET = plc_runtime_desktop_ecat$(EXE)
 SOEM_C_OBJS = $(patsubst $(SOEM_DIR)/src/%.c,build/soem_desk_%.o,$(wildcard $(SOEM_DIR)/src/*.c)) \
               $(SOEM_OBJ_OSHW) $(SOEM_OBJ_OSAL) $(SOEM_OBJ_NIC)
 
-ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(ECAT_SRC) ../pou_stub.cpp ../network_tci.cpp
+ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(ECAT_SRC) ../pou_stub.cpp ../network_tci.cpp ../tcp_tci.cpp
 
 build/soem_desk_%.o: $(SOEM_DIR)/src/%.c
 	$(CC) $(SOEM_CFLAGS) -c $< -o $@
@@ -165,7 +165,7 @@ ethercat-run: ethercat
 
 # ═══ NetworkTCI 测试 ═══
 NET_TEST_TARGET = network_test$(EXE)
-NET_TEST_SRCS   = ../network_test.cpp ../network_tci.cpp
+NET_TEST_SRCS   = ../network_test.cpp ../network_tci.cpp ../tcp_tci.cpp
 
 $(NET_TEST_TARGET): $(NET_TEST_SRCS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
