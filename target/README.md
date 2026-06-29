@@ -8,6 +8,7 @@
 | `windows/` | Windows | MinGW 专用，QPC + WaitableTimer |
 | `linux/` | Linux 通用 | timerfd + SCHED_FIFO |
 | `rpi/` | Raspberry Pi | GPIO + POSIX timer |
+| `bananapif3/` | Banana Pi BPI-F3 | Spacemit X60, 8× RV64, GPIO sysfs, RVV 1.0 |
 | `stm32f1/` | STM32F103C8T6 | 裸机，20KB RAM / 64KB Flash |
 | `stm32h7/` | STM32H7 | 裸机，DWT + FPU |
 
