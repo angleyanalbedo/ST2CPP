@@ -7,131 +7,133 @@ TEST_CASE("TON on-delay timer") {
     TON t;
 
     SUBCASE("initial state") {
-        CHECK(t.output == FALSE);
-        CHECK(t.elapsed == 0);
+        CHECK(t.Q == FALSE);
+        CHECK(t.ET == 0);
     }
 
-    SUBCASE("input=TRUE starts timing") {
-        t.update(TRUE, T_ms(100), T_ms(1));
-        CHECK(t.output == FALSE);
-        CHECK(t.elapsed > 0);
+    SUBCASE("IN=TRUE starts timing") {
+        t.IN = TRUE; t.PT = T_ms(100); t.update(T_ms(1));
+        CHECK(t.Q == FALSE);
+        CHECK(t.ET > 0);
     }
 
-    SUBCASE("reaches PT sets output") {
-        for (int i = 0; i < 100; i++) t.update(TRUE, T_ms(100), T_ms(1));
-        CHECK(t.output == TRUE);
-        CHECK(t.elapsed == T_ms(100));
+    SUBCASE("reaches PT sets Q") {
+        t.IN = TRUE; t.PT = T_ms(100);
+        for (int i = 0; i < 100; i++) t.update(T_ms(1));
+        CHECK(t.Q == TRUE);
+        CHECK(t.ET == T_ms(100));
     }
 
-    SUBCASE("input=FALSE resets") {
-        for (int i = 0; i < 100; i++) t.update(TRUE, T_ms(100), T_ms(1));
-        t.update(FALSE, T_ms(100), T_ms(1));
-        CHECK(t.output == FALSE);
-        CHECK(t.elapsed == 0);
+    SUBCASE("IN=FALSE resets") {
+        t.IN = TRUE; t.PT = T_ms(100);
+        for (int i = 0; i < 100; i++) t.update(T_ms(1));
+        t.IN = FALSE; t.update(T_ms(1));
+        CHECK(t.Q == FALSE);
+        CHECK(t.ET == 0);
     }
 }
 
 TEST_CASE("TOF off-delay basic") {
     TOF t;
-    t.update(TRUE, T_ms(100), T_ms(1));
-    CHECK(t.output == TRUE);
+    t.IN = TRUE; t.PT = T_ms(100); t.update(T_ms(1));
+    CHECK(t.Q == TRUE);
 }
 
 TEST_CASE("TOF off-delay keep output") {
     TOF t;
-    t.update(TRUE, T_ms(100), T_ms(1));
-    t.update(FALSE, T_ms(100), T_ms(1));
-    CHECK(t.output == TRUE);
-    CHECK(t.elapsed > 0);
+    t.IN = TRUE; t.PT = T_ms(100); t.update(T_ms(1));
+    t.IN = FALSE; t.update(T_ms(1));
+    CHECK(t.Q == TRUE);
+    CHECK(t.ET > 0);
 }
 
 TEST_CASE("TOF off-delay clears output") {
     TOF t;
-    for (int i = 0; i < 100; i++) t.update(FALSE, T_ms(100), T_ms(1));
-    CHECK(t.output == FALSE);
+    t.IN = FALSE; t.PT = T_ms(100);
+    for (int i = 0; i < 100; i++) t.update(T_ms(1));
+    CHECK(t.Q == FALSE);
 }
 
 TEST_CASE("TP pulse timer") {
     TP t;
 
     SUBCASE("rising edge triggers pulse") {
-        t.update(TRUE, T_ms(50), T_ms(1));
-        CHECK(t.output == TRUE);
+        t.IN = TRUE; t.PT = T_ms(50); t.update(T_ms(1));
+        CHECK(t.Q == TRUE);
     }
 
     SUBCASE("pulse ends after PT") {
-        for (int i = 0; i < 50; i++) t.update(TRUE, T_ms(50), T_ms(1));
-        CHECK(t.output == FALSE);
+        t.IN = TRUE; t.PT = T_ms(50);
+        for (int i = 0; i < 50; i++) t.update(T_ms(1));
+        CHECK(t.Q == FALSE);
     }
 
     SUBCASE("no re-trigger during pulse") {
-        t.update(TRUE, T_ms(50), T_ms(1));
-        t.update(FALSE, T_ms(50), T_ms(1));
-        t.update(TRUE, T_ms(50), T_ms(1));
-        CHECK(t.output == TRUE);
+        t.IN = TRUE; t.PT = T_ms(50); t.update(T_ms(1));
+        t.IN = FALSE; t.update(T_ms(1));
+        t.IN = TRUE; t.update(T_ms(1));
+        CHECK(t.Q == TRUE);
     }
 }
 
 TEST_CASE("CTU up counter") {
     CTU c;
 
-    SUBCASE("initial count is 0") {
-        CHECK(c.count == 0);
+    SUBCASE("initial CV is 0") {
+        CHECK(c.CV == 0);
     }
 
     SUBCASE("counts rising edges") {
-        c.update(TRUE, FALSE, 5);
-        c.update(FALSE, FALSE, 5);
-        c.update(TRUE, FALSE, 5);
-        CHECK(c.count == 2);
+        c.CU = TRUE; c.R = FALSE; c.PV = 5; c.update(0);
+        c.CU = FALSE; c.update(0);
+        c.CU = TRUE; c.update(0);
+        CHECK(c.CV == 2);
     }
 
-    SUBCASE("output when count >= PV") {
-        c.update(TRUE, FALSE, 5); c.update(FALSE, FALSE, 5);
-        c.update(TRUE, FALSE, 5); c.update(FALSE, FALSE, 5);
-        c.update(TRUE, FALSE, 5); c.update(FALSE, FALSE, 5);
-        c.update(TRUE, FALSE, 5); c.update(FALSE, FALSE, 5);
-        c.update(TRUE, FALSE, 5);
-        CHECK(c.count == 5);
-        CHECK(c.output == TRUE);
+    SUBCASE("Q when CV >= PV") {
+        c.CU = TRUE; c.R = FALSE; c.PV = 5;
+        c.update(0); c.CU = FALSE; c.update(0);
+        c.CU = TRUE; c.update(0); c.CU = FALSE; c.update(0);
+        c.CU = TRUE; c.update(0); c.CU = FALSE; c.update(0);
+        c.CU = TRUE; c.update(0); c.CU = FALSE; c.update(0);
+        c.CU = TRUE; c.update(0);
+        CHECK(c.CV == 5);
+        CHECK(c.Q == TRUE);
     }
 
-    SUBCASE("RESET clears count") {
-        c.update(TRUE, FALSE, 5);
-        c.update(TRUE, FALSE, 5);
-        c.update(FALSE, TRUE, 5);
-        CHECK(c.count == 0);
-        CHECK(c.output == FALSE);
+    SUBCASE("RESET clears CV") {
+        c.CU = TRUE; c.R = FALSE; c.PV = 5; c.update(0);
+        c.CU = TRUE; c.update(0);
+        c.R = TRUE; c.CU = FALSE; c.update(0);
+        CHECK(c.CV == 0);
+        CHECK(c.Q == FALSE);
     }
 }
 
 TEST_CASE("CTD down counter") {
     CTD c;
 
-    SUBCASE("LOAD sets count") {
-        c.update(FALSE, TRUE, 5);
-        CHECK(c.count == 5);
+    SUBCASE("LOAD sets CV") {
+        c.LD = TRUE; c.PV = 5; c.update(0);
+        CHECK(c.CV == 5);
     }
 
     SUBCASE("counts down") {
-        c.update(FALSE, TRUE, 5);
-        c.update(TRUE, FALSE, 5);
-        c.update(FALSE, FALSE, 5);
-        c.update(TRUE, FALSE, 5);
-        c.update(FALSE, FALSE, 5);
-        CHECK(c.count == 3);
+        c.LD = TRUE; c.PV = 5; c.update(0);
+        c.LD = FALSE; c.CD = TRUE; c.update(0);
+        c.CD = FALSE; c.update(0);
+        c.CD = TRUE; c.update(0);
+        c.CD = FALSE; c.update(0);
+        CHECK(c.CV == 3);
     }
 
-    SUBCASE("output when count <= 0") {
-        c.update(FALSE, TRUE, 3);
-        c.update(TRUE, FALSE, 3);
-        c.update(FALSE, FALSE, 3);
-        c.update(TRUE, FALSE, 3);
-        c.update(FALSE, FALSE, 3);
-        c.update(TRUE, FALSE, 3);
-        c.update(FALSE, FALSE, 3);
-        CHECK(c.count == 0);
-        CHECK(c.output == TRUE);
+    SUBCASE("Q when CV <= 0") {
+        c.LD = TRUE; c.PV = 3; c.update(0);
+        c.LD = FALSE; c.CD = TRUE; c.update(0); c.CD = FALSE; c.update(0);
+        c.CD = TRUE; c.update(0); c.CD = FALSE; c.update(0);
+        c.CD = TRUE; c.update(0); c.CD = FALSE; c.update(0);
+        CHECK(c.CV == 0);
+        CHECK(c.Q == TRUE);
     }
 }
 
@@ -139,28 +141,30 @@ TEST_CASE("CTUD up-down counter") {
     CTUD c;
 
     SUBCASE("initial state") {
-        CHECK(c.count == 0);
+        CHECK(c.CV == 0);
         CHECK(c.QU == FALSE);
         CHECK(c.QD == FALSE);
     }
 
     SUBCASE("counts up then down") {
-        c.update(TRUE, FALSE, FALSE, FALSE, 3); c.update(FALSE, FALSE, FALSE, FALSE, 3);
-        c.update(TRUE, FALSE, FALSE, FALSE, 3); c.update(FALSE, FALSE, FALSE, FALSE, 3);
-        c.update(FALSE, TRUE, FALSE, FALSE, 3); c.update(FALSE, FALSE, FALSE, FALSE, 3);
-        CHECK(c.count == 1);
+        c.PV = 3;
+        c.CU = TRUE; c.update(0); c.CU = FALSE; c.update(0);
+        c.CU = TRUE; c.update(0); c.CU = FALSE; c.update(0);
+        c.CD = TRUE; c.CU = FALSE; c.update(0); c.CD = FALSE; c.update(0);
+        CHECK(c.CV == 1);
     }
 
     SUBCASE("RESET clears") {
-        c.update(TRUE, FALSE, FALSE, FALSE, 3);
-        c.update(TRUE, FALSE, FALSE, FALSE, 3);
-        c.update(FALSE, FALSE, TRUE, FALSE, 3);
-        CHECK(c.count == 0);
+        c.PV = 3;
+        c.CU = TRUE; c.update(0);
+        c.CU = TRUE; c.update(0);
+        c.R = TRUE; c.CU = FALSE; c.update(0);
+        CHECK(c.CV == 0);
     }
 
     SUBCASE("LOAD sets PV") {
-        c.update(FALSE, FALSE, FALSE, TRUE, 5);
-        CHECK(c.count == 5);
+        c.LD = TRUE; c.PV = 5; c.R = FALSE; c.update(0);
+        CHECK(c.CV == 5);
     }
 }
 
@@ -168,22 +172,26 @@ TEST_CASE("R_TRIG rising edge") {
     R_TRIG rt;
 
     SUBCASE("no edge on FALSE") {
-        CHECK(rt(FALSE) == FALSE);
+        rt.CLK = FALSE; rt.update(0);
+        CHECK(rt.Q == FALSE);
     }
 
     SUBCASE("rising edge detected") {
-        CHECK(rt(TRUE) == TRUE);
+        rt.CLK = TRUE; rt.update(0);
+        CHECK(rt.Q == TRUE);
     }
 
     SUBCASE("no edge on sustained TRUE") {
-        rt(TRUE);
-        CHECK(rt(TRUE) == FALSE);
+        rt.CLK = TRUE; rt.update(0);
+        rt.update(0);
+        CHECK(rt.Q == FALSE);
     }
 
     SUBCASE("second rising edge") {
-        rt(TRUE);
-        rt(FALSE);
-        CHECK(rt(TRUE) == TRUE);
+        rt.CLK = TRUE; rt.update(0);
+        rt.CLK = FALSE; rt.update(0);
+        rt.CLK = TRUE; rt.update(0);
+        CHECK(rt.Q == TRUE);
     }
 }
 
@@ -191,15 +199,51 @@ TEST_CASE("F_TRIG falling edge") {
     F_TRIG ft;
 
     SUBCASE("no edge on TRUE") {
-        CHECK(ft(TRUE) == FALSE);
+        ft.CLK = TRUE; ft.update(0);
+        CHECK(ft.Q == FALSE);
     }
 
     SUBCASE("falling edge detected") {
-        CHECK(ft(FALSE) == TRUE);
+        ft.CLK = FALSE; ft.update(0);
+        CHECK(ft.Q == TRUE);
     }
 
     SUBCASE("no edge on sustained FALSE") {
-        ft(FALSE);
-        CHECK(ft(FALSE) == FALSE);
+        ft.CLK = FALSE; ft.update(0);
+        ft.update(0);
+        CHECK(ft.Q == FALSE);
+    }
+}
+
+TEST_CASE("SR set-dominant flip-flop") {
+    SR sr;
+
+    SUBCASE("initial Q1 is FALSE") {
+        CHECK(sr.Q1 == FALSE);
+    }
+
+    SUBCASE("S1 sets Q1") {
+        sr.S1 = TRUE; sr.R = FALSE; sr.update(0);
+        CHECK(sr.Q1 == TRUE);
+    }
+
+    SUBCASE("R resets Q1") {
+        sr.S1 = TRUE; sr.update(0);
+        sr.S1 = FALSE; sr.R = TRUE; sr.update(0);
+        CHECK(sr.Q1 == FALSE);
+    }
+
+    SUBCASE("R dominates S1") {
+        sr.S1 = TRUE; sr.R = TRUE; sr.update(0);
+        CHECK(sr.Q1 == FALSE);
+    }
+}
+
+TEST_CASE("RS reset-dominant flip-flop") {
+    RS rs;
+
+    SUBCASE("S sets Q1") {
+        rs.S = TRUE; rs.R1 = FALSE; rs.update(0);
+        CHECK(rs.Q1 == TRUE);
     }
 }

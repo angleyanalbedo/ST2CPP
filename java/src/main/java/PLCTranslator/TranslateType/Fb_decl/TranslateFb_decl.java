@@ -21,25 +21,31 @@ public class TranslateFb_decl {
         // 收集所有成员变量
         List<FBField> fields = collectFields(ctx, translatorNew.gvlCtx);
 
-        // 生成 C++ struct 定义
-        sb.append("\nstruct ").append(fbName).append(" {\n");
-        for (FBField f : fields) {
-            sb.append("    ").append(f.typeName).append(" ").append(f.name).append(";");
-            if (f.initValue != null && !f.initValue.isEmpty()) {
-                sb.append(" // = ").append(f.initValue);
-            }
-            sb.append("\n");
-        }
+        // Has body only when there are actual statements (stmt_list matches zero tokens for empty FBs)
+        boolean hasBody = ctx.fb_body() != null
+            && ctx.fb_body().stmt_list() != null
+            && ctx.fb_body().stmt_list().stmt() != null
+            && !ctx.fb_body().stmt_list().stmt().isEmpty();
 
-        // 生成 update() 方法
-        sb.append("\n    void update() {\n");
-        if (ctx.fb_body() != null) {
+        if (hasBody) {
+            // 有 body → 生成完整 struct（用户定义 FB）
+            sb.append("\nstruct ").append(fbName).append(" {\n");
+            for (FBField f : fields) {
+                sb.append("    ").append(f.typeName).append(" ").append(f.name).append(";");
+                if (f.initValue != null && !f.initValue.isEmpty()) {
+                    sb.append(" // = ").append(f.initValue);
+                }
+                sb.append("\n");
+            }
+            sb.append("\n    void update(TIME dt) {\n");
             String body = translatorNew.visit(ctx.fb_body());
             if (body != null) sb.append(body);
+            sb.append("\n    }\n");
+            sb.append("};\n");
+        } else {
+            // 无 body → 前向声明（运行时提供定义）
+            sb.append("\nstruct ").append(fbName).append(";\n");
         }
-        sb.append("\n    }\n");
-
-        sb.append("};\n");
 
         // 注册 struct 布局（用于字段偏移计算）
         List<GvlContext.StructField> structFields = new ArrayList<>();

@@ -140,8 +140,8 @@ int main() {
         R_TRIG rising;
         BOOL signal[] = {FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE};
         for (int i = 0; i < 8; i++) {
-            BOOL result = rising(signal[i]);
-            printf("signal=%d -> R_TRIG=%d\n", signal[i], result);
+            rising.CLK = signal[i]; rising.update(0);
+            printf("signal=%d -> R_TRIG=%d\n", signal[i], rising.Q);
         }
     }
 
@@ -337,24 +337,24 @@ int main() {
         // 上升沿触发，PT=3ms
         printf("[IN=TRUE 上升沿]\n");
         for (int i = 0; i < 5; i++) {
-            pulse.update(TRUE, T_ms(3), cycleTime);
-            printf("  cycle %d: Q=%d, ET=%lld us\n", i, pulse.output, pulse.elapsed);
+            pulse.IN = TRUE; pulse.PT = T_ms(3); pulse.update(cycleTime);
+            printf("  cycle %d: Q=%d, ET=%lld us\n", i, pulse.Q, pulse.ET);
         }
         // IN 保持 TRUE，但脉冲已过期，不应重新触发
         printf("[IN 保持 TRUE, 不应重新触发]\n");
         for (int i = 0; i < 2; i++) {
-            pulse.update(TRUE, T_ms(3), cycleTime);
-            printf("  cycle %d: Q=%d, ET=%lld us\n", i + 5, pulse.output, pulse.elapsed);
+            pulse.update(cycleTime);
+            printf("  cycle %d: Q=%d, ET=%lld us\n", i + 5, pulse.Q, pulse.ET);
         }
         // IN 回到 FALSE
         printf("[IN=FALSE 复位]\n");
-        pulse.update(FALSE, T_ms(3), cycleTime);
-        printf("  Q=%d, ET=%lld us\n", pulse.output, pulse.elapsed);
+        pulse.IN = FALSE; pulse.update(cycleTime);
+        printf("  Q=%d, ET=%lld us\n", pulse.Q, pulse.ET);
         // IN 再次上升沿 → 重新触发
         printf("[IN=TRUE 再次上升沿]\n");
         for (int i = 0; i < 3; i++) {
-            pulse.update(TRUE, T_ms(3), cycleTime);
-            printf("  cycle %d: Q=%d, ET=%lld us\n", i, pulse.output, pulse.elapsed);
+            pulse.IN = TRUE; pulse.update(cycleTime);
+            printf("  cycle %d: Q=%d, ET=%lld us\n", i, pulse.Q, pulse.ET);
         }
     }
 
@@ -362,13 +362,13 @@ int main() {
     printf("\n--- CTD 递减计数器测试 ---\n");
     {
         CTD counter;
-        counter.update(FALSE, TRUE, 3);  // LOAD, PV=3
-        printf("CDT load 3: count=%d, Q=%d\n", counter.count, counter.output);
+        counter.LD = TRUE; counter.PV = 3; counter.update(0); counter.LD = FALSE;  // LOAD, PV=3
+        printf("CDT load 3: CV=%d, Q=%d\n", counter.CV, counter.Q);
 
         for (int i = 0; i < 4; i++) {
-            counter.update(TRUE, FALSE, 3);
-            counter.update(FALSE, FALSE, 3);  // 模拟边沿
-            printf("CDT tick %d: count=%d, Q=%d\n", i + 1, counter.count, counter.output);
+            counter.CD = TRUE; counter.update(0);
+            counter.CD = FALSE; counter.update(0);  // 模拟边沿
+            printf("CDT tick %d: CV=%d, Q=%d\n", i + 1, counter.CV, counter.Q);
         }
     }
 

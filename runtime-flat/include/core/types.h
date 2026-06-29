@@ -665,20 +665,24 @@ inline T MUX(INT selector, T val0, T val1, T val2, T val3) {
 // ═══════════════════════════════════════════════════════
 
 struct R_TRIG {
-    BOOL lastState = FALSE;
-    BOOL operator()(BOOL input) {
-        BOOL result = (input && !lastState) ? TRUE : FALSE;
-        lastState = input;
-        return result;
+    BOOL  CLK;
+    BOOL  Q       = FALSE;
+    BOOL  lastCLK = FALSE;
+
+    void update(TIME dt) {
+        Q = (CLK && !lastCLK) ? TRUE : FALSE;
+        lastCLK = CLK;
     }
 };
 
 struct F_TRIG {
-    BOOL lastState = TRUE;
-    BOOL operator()(BOOL input) {
-        BOOL result = (!input && lastState) ? TRUE : FALSE;
-        lastState = input;
-        return result;
+    BOOL  CLK;
+    BOOL  Q;
+    BOOL  lastCLK = TRUE;
+
+    void update(TIME dt) {
+        Q = (!CLK && lastCLK) ? TRUE : FALSE;
+        lastCLK = CLK;
     }
 };
 
@@ -688,125 +692,146 @@ struct F_TRIG {
 // ═══════════════════════════════════════════════════════
 
 struct TON {
-    BOOL  input   = FALSE;
-    TIME  preset  = 0;
-    TIME  elapsed = 0;
-    BOOL  output  = FALSE;
+    BOOL  IN  = FALSE;
+    TIME  PT  = 0;
+    BOOL  Q   = FALSE;
+    TIME  ET  = 0;
 
-    void update(BOOL IN, TIME PT, TIME cycleTimeUs) {
-        input  = IN;
-        preset = PT;
+    void update(TIME dt) {
         if (IN) {
-            elapsed += cycleTimeUs;
-            if (elapsed >= preset) {
-                elapsed = preset;
-                output = TRUE;
-            }
+            ET += dt;
+            if (ET >= PT) { ET = PT; Q = TRUE; }
         } else {
-            elapsed = 0;
-            output  = FALSE;
+            ET = 0; Q = FALSE;
         }
     }
 };
 
 struct TOF {
-    BOOL  input   = TRUE;
-    TIME  preset  = 0;
-    TIME  elapsed = 0;
-    BOOL  output  = FALSE;
+    BOOL  IN  = TRUE;
+    TIME  PT  = 0;
+    BOOL  Q   = FALSE;
+    TIME  ET  = 0;
 
-    void update(BOOL IN, TIME PT, TIME cycleTimeUs) {
-        preset = PT;
+    void update(TIME dt) {
         if (IN) {
-            elapsed = 0;
-            output  = TRUE;
+            ET = 0; Q = TRUE;
         } else {
-            elapsed += cycleTimeUs;
-            if (elapsed >= preset) {
-                elapsed = preset;
-                output = FALSE;
-            }
+            ET += dt;
+            if (ET >= PT) { ET = PT; Q = FALSE; }
         }
     }
 };
 
 struct TP {
+    BOOL  IN        = FALSE;
+    TIME  PT        = 0;
+    BOOL  Q         = FALSE;
+    TIME  ET        = 0;
     BOOL  lastInput = FALSE;
-    TIME  preset    = 0;
-    TIME  elapsed   = 0;
-    BOOL  output    = FALSE;
 
-    void update(BOOL IN, TIME PT, TIME cycleTimeUs) {
-        preset = PT;
-        if (IN && !lastInput && !output) {
-            output  = TRUE;
-            elapsed = 0;
-        }
+    void update(TIME dt) {
+        if (IN && !lastInput && !Q) { Q = TRUE; ET = 0; }
         lastInput = IN;
-        if (output) {
-            elapsed += cycleTimeUs;
-            if (elapsed >= PT) {
-                elapsed = PT;
-                output  = FALSE;
-            }
+        if (Q) {
+            ET += dt;
+            if (ET >= PT) { ET = PT; Q = FALSE; }
         } else if (!IN) {
-            elapsed = 0;
+            ET = 0;
         }
     }
 };
 
 struct CTU {
+    BOOL  CU;
+    BOOL  R;
+    INT   PV;
+    BOOL  Q       = FALSE;
+    INT   CV      = 0;
     BOOL  lastCU  = FALSE;
-    INT   count   = 0;
-    BOOL  output  = FALSE;
 
-    void update(BOOL CU, BOOL RESET, INT PV) {
-        if (RESET) {
-            count = 0;
+    void update(TIME dt) {
+        if (R) {
+            CV = 0;
         } else if (CU && !lastCU) {
-            count++;
+            CV++;
         }
         lastCU = CU;
-        output = (count >= PV) ? TRUE : FALSE;
+        Q = (CV >= PV) ? TRUE : FALSE;
     }
 };
 
 struct CTD {
+    BOOL  CD;
+    BOOL  LD;
+    INT   PV;
+    BOOL  Q       = FALSE;
+    INT   CV      = 0;
     BOOL  lastCD  = FALSE;
-    INT   count   = 0;
-    BOOL  output  = FALSE;
 
-    void update(BOOL CD, BOOL LOAD, INT PV) {
-        if (LOAD) {
-            count = PV;
+    void update(TIME dt) {
+        if (LD) {
+            CV = PV;
         } else if (CD && !lastCD) {
-            count--;
+            CV--;
         }
         lastCD = CD;
-        output = (count <= 0) ? TRUE : FALSE;
+        Q = (CV <= 0) ? TRUE : FALSE;
     }
 };
 
 struct CTUD {
-    BOOL  lastCU  = FALSE;
-    BOOL  lastCD  = FALSE;
-    INT   count   = 0;
+    BOOL  CU;
+    BOOL  CD;
+    BOOL  R;
+    BOOL  LD;
+    INT   PV;
     BOOL  QU      = FALSE;
     BOOL  QD      = FALSE;
+    INT   CV      = 0;
+    BOOL  lastCU  = FALSE;
+    BOOL  lastCD  = FALSE;
 
-    void update(BOOL CU, BOOL CD, BOOL RESET, BOOL LOAD, INT PV) {
-        if (RESET) {
-            count = 0;
-        } else if (LOAD) {
-            count = PV;
+    void update(TIME dt) {
+        if (R) {
+            CV = 0;
+        } else if (LD) {
+            CV = PV;
         } else {
-            if (CU && !lastCU) count++;
-            if (CD && !lastCD) count--;
+            if (CU && !lastCU) CV++;
+            if (CD && !lastCD) CV--;
         }
         lastCU = CU;
         lastCD = CD;
-        QU = (count >= PV) ? TRUE : FALSE;
-        QD = (count <= 0)  ? TRUE : FALSE;
+        QU = (CV >= PV) ? TRUE : FALSE;
+        QD = (CV <= 0)  ? TRUE : FALSE;
+    }
+};
+
+
+// ═══════════════════════════════════════════════════════
+// 双稳功能块
+// ═══════════════════════════════════════════════════════
+
+struct SR {
+    BOOL S1;
+    BOOL R;
+    BOOL Q1 = FALSE;
+
+    void update(TIME dt) {
+        if (R) Q1 = FALSE;
+        else if (S1) Q1 = TRUE;
+    }
+};
+
+struct RS {
+    BOOL S;
+    BOOL R1;
+    BOOL Q1 = FALSE;
+
+    void update(TIME dt) {
+        if (S) Q1 = TRUE;
+        else if (R1) Q1 = FALSE;
     }
 };
 

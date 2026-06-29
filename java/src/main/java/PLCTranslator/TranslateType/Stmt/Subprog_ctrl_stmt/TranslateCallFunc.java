@@ -80,22 +80,29 @@ public class TranslateCallFunc {
                                      List<String> paramNames, List<String> paramValues,
                                      GvlContext gvlCtx) {
         StringBuilder sb = new StringBuilder();
+        Integer fbBase = gvlCtx.offsetMap.get(fbInstanceName);
         for (int i = 0; i < paramNames.size(); i++) {
             String paramName = paramNames.get(i);
             String paramValue = paramValues.get(i);
             Integer offset = gvlCtx.offsetMap.get(paramName);
             String type = gvlCtx.typeMap.get(paramName);
+            if (offset == null && fbBase != null) {
+                Integer fieldOff = gvlCtx.getStructFieldOffset(fbTypeName, paramName);
+                if (fieldOff != null) {
+                    offset = fbBase + fieldOff;
+                    type = gvlCtx.getStructFieldType(fbTypeName, paramName);
+                }
+            }
             if (offset != null && type != null) {
                 sb.append("\n\t\tgvl.write<").append(type).append(">(")
                   .append(offset).append(", ").append(paramValue).append(");");
             }
         }
-        Integer fbOffset = gvlCtx.offsetMap.get(fbInstanceName);
-        if (fbOffset != null) {
+        if (fbBase != null) {
             sb.append("\n\t\tgvl.ptr<").append(fbTypeName).append(">(")
-              .append(fbOffset).append(")->update();");
+              .append(fbBase).append(")->update(dt);");
         } else {
-            sb.append("\n\t\t").append(fbInstanceName).append(".update();");
+            sb.append("\n\t\t").append(fbInstanceName).append(".update(dt);");
         }
         return sb.toString();
     }

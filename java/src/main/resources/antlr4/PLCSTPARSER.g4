@@ -30,6 +30,7 @@ identifier
             |'T'
             |'L'
             |'D'
+            |'LD'
             |'I'
             |'Q'
             |'M'
