@@ -107,9 +107,14 @@ fragment IdentifierStart
 fragment IdentifierPart
   : [A-Za-z0-9$_]+ ;
 
+HEX_PREFIX : '16#';
+BIN_PREFIX : '2#';
+OCT_PREFIX : '8#';
+HEX_LITERAL : '16#' ( '_'? [0-9A-Fa-f] )+;
+BIN_LITERAL : '2#' ( '_'? [01] )+;
+OCT_LITERAL : '8#' ( '_'? [0-7] )+;
 Digit : '0'..'9';
 Bit : '0'..'1';
-
 Octal_Digit : '0'..'7';
 Hex_Digit : '0'..'9' | 'A'..'F';
 Comment : ('//' ~( '\n' | '\r' )* '\r' ? '\n' | '(*' .*? '*)' | '/*' .*? '*/') -> skip;

@@ -88,13 +88,13 @@ signed_int
             ;
 
 binary_int
-            : '2#' ( '_' ? Bit )+;
+            : BIN_LITERAL;
 
 octal_int
-            : '8#' ( '_' ? Octal_Digit )+;
+            : OCT_LITERAL;
 
 hex_int
-            : '16#' ( '_' ? Hex_Digit )+;
+            : HEX_LITERAL;
 
 real_literal                                            //SC DONE
             : ( Real_Type_Name '#' )?
