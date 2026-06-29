@@ -22,6 +22,10 @@ struct alignas(64) GVL {
     size_t retainStart = 0;
     size_t retainEnd   = 0;
 
+    // RETAIN 备份缓冲区：saveRetain() 拷贝到这里，loadRetain() 从这里恢复
+    uint8_t retainBackup[GVL_SIZE];
+    bool    retainDirty = false;
+
     // 高水位标记：记录最大写入位置，O(1) usedBytes()
     size_t highWaterMark = 0;
 
@@ -35,6 +39,12 @@ struct alignas(64) GVL {
 
     // 设置 RETAIN 区域范围（编译器在 Memory Layout Pass 中计算）
     void setRetainRegion(size_t start, size_t end);
+
+    // 保存 RETAIN 区域到备份缓冲区（_post 中自动调用）
+    void saveRetain();
+
+    // 从备份缓冲区恢复 RETAIN 区域（暖启动时调用）
+    void loadRetain();
 
     template<typename T>
     T read(size_t offset) const {

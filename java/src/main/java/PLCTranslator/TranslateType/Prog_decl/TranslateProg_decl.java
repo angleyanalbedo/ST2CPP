@@ -24,6 +24,9 @@ public class TranslateProg_decl {
         sb.append("\n}");
 
         sb.append("\nvoid PROGRAM_").append(mangled).append("_pre(GVL& gvl, ProcessImage& io) {");
+        if (!translatorNew.localCache) {
+            sb.append(emitPreIoRead(translatorNew));
+        }
         sb.append("\n}");
 
         sb.append("\nvoid PROGRAM_").append(mangled).append("_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {");
@@ -43,6 +46,7 @@ public class TranslateProg_decl {
         sb.append("\n}");
 
         sb.append("\nvoid PROGRAM_").append(mangled).append("_post(GVL& gvl, ProcessImage& io) {");
+        sb.append(emitPostRetainSave(ctx, translatorNew));
         sb.append("\n}");
 
         return sb.toString();
@@ -316,6 +320,56 @@ public class TranslateProg_decl {
                 sb.append(info.typeName).append(">(").append(info.byteOffset).append(");");
             }
             gvlCtx.locallyDeclaredGvlVars.add(varName);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * _pre：非 localCache 模式下，从 ProcessImage 读取输入到 GVL
+     */
+    private String emitPreIoRead(PLCTranslatorNew translatorNew) {
+        StringBuilder sb = new StringBuilder();
+        GvlContext gvlCtx = translatorNew.gvlCtx;
+        for (java.util.Map.Entry<String, GvlContext.IOInfo> ioEntry : gvlCtx.ioVarMap.entrySet()) {
+            String varName = ioEntry.getKey();
+            GvlContext.IOInfo info = ioEntry.getValue();
+            if (info.dir == GvlContext.IODirection.INPUT) {
+                Integer offset = gvlCtx.offsetMap.get(varName);
+                if (offset == null) continue;
+                if (info.bitOffset >= 0) {
+                    sb.append("\n\tgvl.write<BOOL>(").append(offset)
+                      .append(", io.readInputBit(").append(info.byteOffset)
+                      .append(", ").append(info.bitOffset).append("));");
+                } else {
+                    sb.append("\n\tgvl.write<").append(info.typeName).append(">(")
+                      .append(offset).append(", io.readInput<").append(info.typeName)
+                      .append(">(").append(info.byteOffset).append("));");
+                }
+            }
+        }
+        return sb.toString();
+    }
+
+    /**
+     * _post：自动保存 RETAIN 变量到非易失存储
+     */
+    private String emitPostRetainSave(PLCSTPARSERParser.Prog_declContext ctx, PLCTranslatorNew translatorNew) {
+        StringBuilder sb = new StringBuilder();
+        ArrayList<PLCVariable> retainVars = new ArrayList<>();
+
+        for (PLCSTPARSERParser.Other_var_declsContext other_var_decl : ctx.other_var_decls()) {
+            ArrayList<PLCSymbol> otherVarDecl = PLCTranslatorNew.properties.get(other_var_decl);
+            for (PLCSymbol symbol : otherVarDecl) {
+                if (symbol instanceof PLCVariable varSymbol) {
+                    if (varSymbol.getRetainQualifiers() == PLCModifierEnum.RetainModifier.RETAIN) {
+                        retainVars.add(varSymbol);
+                    }
+                }
+            }
+        }
+
+        if (!retainVars.isEmpty()) {
+            sb.append("\n\tgvl.saveRetain();");
         }
         return sb.toString();
     }

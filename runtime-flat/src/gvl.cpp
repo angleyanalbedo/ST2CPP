@@ -24,4 +24,17 @@ void GVL::setRetainRegion(size_t start, size_t end) {
     retainEnd   = end;
 }
 
+void GVL::saveRetain() {
+    if (retainStart >= retainEnd) return;
+    size_t size = retainEnd - retainStart;
+    memcpy(retainBackup + retainStart, memory + retainStart, size);
+    retainDirty = true;
+}
+
+void GVL::loadRetain() {
+    if (retainStart >= retainEnd) return;
+    size_t size = retainEnd - retainStart;
+    memcpy(memory + retainStart, retainBackup + retainStart, size);
+}
+
 } // namespace rt_plc
