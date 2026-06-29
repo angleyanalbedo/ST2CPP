@@ -54,6 +54,8 @@ taskset -c 3 ./plc_runtime_bpi_f3 --cycle-us 1000
 
 ### 1ms 周期 (1000μs)
 
+#### 桩测试（纯空循环）
+
 | 指标 | 值 |
 |------|-----|
 | 采样数 | 4,990 |
@@ -64,11 +66,23 @@ taskset -c 3 ./plc_runtime_bpi_f3 --cycle-us 1000
 | 编译器 | g++ 14.2.0 -O2 |
 | 内核 | 6.18.33-rvvscx+ PREEMPT |
 
+#### 满载运行（HVAC 控制器，860 行 C++ 生成代码）
+
+| 指标 | 值 |
+|------|-----|
+| 采样数 | 14,935 |
+| **Min jitter** | **0 μs** |
+| **Max jitter** | **723 μs** |
+| **Avg jitter** | **1 μs** |
+| 运行时间 | 15 秒 |
+| 编译器 | g++ 14.2.0 -O2 -std=c++17 |
+| 二进制大小 | 71,184 bytes (RISC-V 64-bit) |
+
 ### 说明
 
 - **Avg 1μs** 的抖动意味著在 1ms PLC 周期下，99.9% 的周期执行时间偏差在微秒级
-- **Max 111μs** 出现在启动阶段（冷启动缓存未命中、mmap 延迟），稳态后 Max 通常低于 50μs
-- 以上数据 **未启用 SCHED_FIFO 实时优先级**（受内核 `CONFIG_RT_GROUP_SCHED` 限制）。若重新编译内核关闭该选项或使用 PREEMPT_RT，抖动将进一步降低
+- **Max 111μs（桩）→ 723μs（满载）**：满载时 Max 抖动上升因 POU 执行时间引入的调度延迟（时钟同步误差累积），但 **Avg 保持 1μs**，稳态运行稳定
+- 以上数据 **未启用 SCHED_FIFO 实时优先级**（受内核 `CONFIG_RT_GROUP_SCHED` 限制）。若重新编译内核关闭该选项或使用 PREEMPT_RT，Max 抖动将大幅降低
 - 这一抖动水平对于 **99% 的工业 PLC 应用场景（1ms-10ms 周期）绰绰有余**，包括伺服驱动位置环、EtherCAT 主站同步、AI 推理触发等
 
 ### 与其他平台对比
@@ -118,6 +132,28 @@ BPI-F3 的 Spacemit X60 支持 RVV 1.0，后续可利用其向量扩展进行架
 - 数据块移动 / 矩阵运算 → RVV 向量访存指令
 - 批量数组复制 → `vse8.v` / `vle8.v` 向量化
 - 可在目标 Makefile 中添加 `-march=rv64imafdcv` 启用
+
+## 部署问题排查
+
+### 1. `make` 不执行编译，只跑 `gen_config.py`
+
+**原因：** `config` 目标定义在 `all` 之前，且 `TARGET` 变量在 `all` 之后，Make 默认执行第一个目标（即 `config`），且 `$(TARGET)` 为空导致 `all` 依赖缺失。
+
+**修复：** 将 `.PHONY` 和 `all` 放在变量定义之后、`config` 之前。
+
+### 2. `registerAllPOUs` 多重定义
+
+**错误：**
+```
+multiple definition of `registerAllPOUs(rt_plc::POURegistry&)'
+```
+
+**原因：** `$(wildcard $(BUILD)/*.cpp)` 同时包含 Java 编译器生成的 `pou_registry.gen.cpp` 和 `gen_config.py` 生成的 `runtime_config.gen.cpp`，两者均定义 `registerAllPOUs`。
+
+**修复：** 用 `$(filter-out)` 排除 `pou_registry.gen.cpp`：
+```makefile
+POU_SRCS = $(filter-out $(BUILD)/pou_registry.gen.cpp, $(wildcard $(BUILD)/*.cpp))
+```
 
 ## 构建选项
 

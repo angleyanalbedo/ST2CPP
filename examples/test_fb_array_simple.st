@@ -1,0 +1,15 @@
+FUNCTION_BLOCK MY_FB
+    VAR_INPUT X : INT; END_VAR
+    VAR_OUTPUT Y : INT; END_VAR
+    Y := X + 1;
+END_FUNCTION_BLOCK
+
+PROGRAM TEST_FB_ARR
+    VAR
+        Fbs : ARRAY[0..2] OF MY_FB;
+        I : INT;
+    END_VAR
+    FOR I := 0 TO 2 DO
+        Fbs[I](X := I);
+    END_FOR;
+END_PROGRAM

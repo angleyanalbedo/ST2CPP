@@ -164,6 +164,7 @@ public class VisitFunc_access implements Strategy {
                 if(function != null && validFuncSorts.contains(function.getSort())){
                     basicFunc = (PLCBaseFUNDeclSymbol) function;
                 }else if(function != null && function.getSort() == PLCModifierEnum.Sort.FB){
+                    // 普通 FB 实例调用：Srv(...)
                     PLCVariable fbVar = (PLCVariable) function;
                     PLCTypeDeclSymbol typeSym = PLCTotalSymbolTable.getTypeByTypeID(fbVar.getTypeId());
                     if(typeSym instanceof PLCFBDeclSymbol){
@@ -177,6 +178,37 @@ public class VisitFunc_access implements Strategy {
                     }else{
                         throw new PLCSemanticException("can not find method or function : " + funcName + "  from : " + ctx.getText());
                     }
+                }else if(function != null && function.getSort() == PLCModifierEnum.Sort.ARRAY){
+                    // 数组 FB 实例调用：Fbs[I](...)
+                    // 检查是否有数组索引
+                    if(!ctx.array_index().isEmpty()){
+                        PLCVariable arrayVar = (PLCVariable) function;
+                        PLCTypeDeclSymbol arrayType = PLCTotalSymbolTable.getTypeByTypeID(arrayVar.getTypeId());
+                        if(arrayType instanceof PLCArrayDeclSymbol arrDecl){
+                            int elemTypeId = arrDecl.getElementTypeId();
+                            PLCTypeDeclSymbol elemType = PLCTotalSymbolTable.getTypeByTypeID(elemTypeId);
+                            if(elemType instanceof PLCFBDeclSymbol){
+                                // 构建索引表达式
+                                PLCSTPARSERParser.Array_indexContext idxCtx = ctx.array_index(0);
+                                StringBuilder idxExpr = new StringBuilder();
+                                for(int si = 0; si < idxCtx.subscript().size(); si++){
+                                    if(si > 0) idxExpr.append(",");
+                                    idxExpr.append(idxCtx.subscript(si).expression().getText());
+                                }
+
+                                PLCFBCallSymbol fbCallSym = new PLCFBCallSymbol();
+                                fbCallSym.setFbInstanceName(arrayVar.getName());
+                                fbCallSym.setFbTypeId(elemTypeId);
+                                fbCallSym.setName(arrayVar.getName());
+                                fbCallSym.setRuntimeName(arrayVar.getName());
+                                fbCallSym.setSymbolId(arrayVar.getSymbolId());
+                                fbCallSym.setArrayElement(true);
+                                fbCallSym.setArrayIndexExpr(idxExpr.toString());
+                                return visitor.packSymbols(fbCallSym);
+                            }
+                        }
+                    }
+                    throw new PLCSemanticException("can not find method or function : " + funcName + "  from : " + ctx.getText());
                 }else{
                     throw new PLCSemanticException("can not find method or function : " + funcName + "  from : " + ctx.getText());
                 }

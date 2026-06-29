@@ -34,7 +34,11 @@ public class TranslateCallFunc {
                         paramValues.add(param_assignContext.getText());
                     }
                 }
-                sb.append(emitFBCall(fbInstanceName, fbTypeName, paramNames, paramValues, translatorNew.gvlCtx));
+                if(fbCallSym.isArrayElement()){
+                    sb.append(emitFBArrayCall(fbCallSym, fbTypeName, paramNames, paramValues, translatorNew));
+                } else {
+                    sb.append(emitFBCall(fbInstanceName, fbTypeName, paramNames, paramValues, translatorNew.gvlCtx));
+                }
             }else if(firstSym instanceof PLCVariable funcVar){
                 // 普通函数调用（独立语句）
                 // assignVar 格式: *FUNC_NAME(&PARAM1, )
@@ -104,6 +108,58 @@ public class TranslateCallFunc {
         } else {
             sb.append("\n\t\t").append(fbInstanceName).append(".update(dt);");
         }
+        return sb.toString();
+    }
+
+    /**
+     * 数组元素 FB 调用：Fbs[I](X := value)
+     * 计算 baseOffset + index * elementSize
+     */
+    private String emitFBArrayCall(PLCFBCallSymbol fbCallSym, String fbTypeName,
+                                    List<String> paramNames, List<String> paramValues,
+                                    PLCTranslatorNew translatorNew) {
+        StringBuilder sb = new StringBuilder();
+        GvlContext gvlCtx = translatorNew.gvlCtx;
+        String arrayName = fbCallSym.getFbInstanceName();
+        String indexExpr = fbCallSym.getArrayIndexExpr();
+
+        // 获取数组基地址
+        Integer arrayBase = gvlCtx.offsetMap.get(arrayName);
+        if(arrayBase == null){
+            sb.append("\n\t\t// TODO: array FB call for ").append(arrayName).append("[")
+              .append(indexExpr).append("]");
+            return sb.toString();
+        }
+
+        // 提取元素类型名（从 "ARRAY[3] OF MY_FB" → "MY_FB"）
+        String elemTypeName = fbTypeName;
+        if(fbTypeName != null && fbTypeName.startsWith("ARRAY[")){
+            int ofIdx = fbTypeName.indexOf(" OF ");
+            if(ofIdx >= 0){
+                elemTypeName = fbTypeName.substring(ofIdx + 4).trim();
+            }
+        }
+
+        // 计算元素大小
+        int elemSize = gvlCtx.getTypeSize(elemTypeName);
+        if(elemSize == 0) elemSize = 64; // fallback
+
+        // 计算参数偏移（数组元素内部）
+        for (int i = 0; i < paramNames.size(); i++) {
+            String paramName = paramNames.get(i);
+            String paramValue = paramValues.get(i);
+            Integer fieldOff = gvlCtx.getStructFieldOffset(elemTypeName, paramName);
+            String type = gvlCtx.getStructFieldType(elemTypeName, paramName);
+            if(fieldOff != null && type != null){
+                sb.append("\n\t\tgvl.write<").append(type).append(">(")
+                  .append(arrayBase).append(" + (").append(indexExpr).append(") * ").append(elemSize)
+                  .append(" + ").append(fieldOff).append(", ").append(paramValue).append(");");
+            }
+        }
+        // 调用 update — 使用元素类型
+        sb.append("\n\t\tgvl.ptr<").append(elemTypeName).append(">(")
+          .append(arrayBase).append(" + (").append(indexExpr).append(") * ").append(elemSize)
+          .append(")->update(dt);");
         return sb.toString();
     }
 }
