@@ -33,7 +33,9 @@ public class VisitCase_stmt implements Strategy {
             throw new RuntimeException("ST2C: unsupported construct");
         }
 
-        for(int i=1; i<=ctx.getChildCount()-1; ++i){
+        // 跳过 'CASE' (index 0)，跳过 'END_CASE' (last child)
+        // else_stmt 在 END_CASE 之前，需要被访问
+        for(int i=1; i<ctx.getChildCount()-1; ++i){
             visitor.visit(ctx.getChild(i));
         }
 

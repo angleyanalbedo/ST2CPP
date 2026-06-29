@@ -3,6 +3,7 @@ package staticCheckVisitor.strategy.type_access;
 import PLCException.PLCSemanticException;
 import PLCSymbolAndScope.PLCScope.PLCScope;
 import PLCSymbolAndScope.PLCScopeStack;
+import PLCSymbolAndScope.PLCSymbolTables.PLCTotalSymbolTable;
 import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCTypeDeclSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCVariable;
@@ -52,6 +53,15 @@ public class VisitSimple_type_access implements Strategy {
         //获取变量名称
         String typeName = ctx.simple_type_name().getText();
         PLCTypeDeclSymbol basicType = (PLCTypeDeclSymbol) npScope.deepFindSymbol(typeName);
+        if(basicType == null){
+            // fallback: 在全局类型表中按名称查找（支持跨文件 FB 类型引用）
+            for(PLCTypeDeclSymbol t : PLCTotalSymbolTable.totalTypeMap.values()){
+                if(t.getName().equals(typeName)){
+                    basicType = t;
+                    break;
+                }
+            }
+        }
         if(basicType == null){
             throw new PLCSemanticException("\ncan not find type : " + typeName);
         }
