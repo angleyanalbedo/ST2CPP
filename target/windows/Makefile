@@ -2,20 +2,14 @@
 #
 # 用法：
 #   make                     # 编译（含 POU）
-#   make stub                # 最小编译（无 POU）
+#   make stub                # 最小编译（无 POU，无配置）
 #   make ethercat            # EtherCAT 编译（需要 Npcap SDK）
 #   make run                 # 编译 + 运行
 #   make clean               # 清理
-#   make registry            # 仅生成 POU 注册桥接
+#   make config              # 仅生成运行时配置代码
 #
 # 注意：
 #   - SOEM 在 Windows 下需要 Npcap 运行时（已安装）或 SDK
-#   - SOEM 的 ec_options.h 由 CMake configure_file 生成，Makefile 不自生成；
-#     若缺失则从 ec_options.h.in 手动生成（参见 target/lib/soem/CMakeLists.txt）
-#   - x64 MinGW 可链接 Npcap DLL（C:\Windows\System32\Npcap\*.dll），方法：
-#       gendef - wpcap.dll | Set-Content lib/wpcap.def
-#       dlltool -d lib/wpcap.def -D wpcap.dll -l lib/libwpcap.a -k -m i386:x86-64
-#   - 默认使用 MinGW64（g++），MSVC 请设置 CROSS=
 #   - Windows 非实时 OS，1ms 周期抖动约 100-500us
 
 CROSS   ?=
@@ -29,14 +23,22 @@ BUILD    = $(ROOT)/output/flat/build
 RT_SRCS  = $(wildcard $(RT_DIR)/src/*.cpp)
 PLAT_SRC = runtime_windows.cpp
 POU_SRCS = $(wildcard $(BUILD)/*.cpp)
+CONFIG_JSON = config/config.json
+CONFIG_GEN      = build/runtime_config.gen.cpp
+CONFIG_GEN_STUB = build/runtime_config_stub.gen.cpp
 
-REGISTRY = $(BUILD)/pou_registry.gen.cpp
+# ─── 生成运行时配置代码（绑定 + 任务 + POU 注册） ───
+config: $(CONFIG_GEN)
 
-registry: $(REGISTRY)
+$(CONFIG_GEN): $(CONFIG_JSON) | build
+	python3 ../scripts/gen_config.py --target windows --input $(CONFIG_JSON) --output $(CONFIG_GEN) || \
+	python  ../scripts/gen_config.py --target windows --input $(CONFIG_JSON) --output $(CONFIG_GEN) || \
+	echo "Warning: gen_config.py failed" 1>&2
 
-$(REGISTRY): $(POU_SRCS)
-	python3 $(CURDIR)/../rpi/gen_registry.py --build-dir "$(BUILD)" --output "$@" 2>/dev/null || \
-	python  $(CURDIR)/../rpi/gen_registry.py --build-dir "$(BUILD)" --output "$@"
+$(CONFIG_GEN_STUB): $(CONFIG_JSON) | build
+	python3 ../scripts/gen_config.py --target windows --stub --input $(CONFIG_JSON) --output $(CONFIG_GEN_STUB) || \
+	python  ../scripts/gen_config.py --target windows --stub --input $(CONFIG_JSON) --output $(CONFIG_GEN_STUB) || \
+	echo "Warning: gen_config.py --stub failed" 1>&2
 
 OPT      ?= -O2
 CXXFLAGS  = $(OPT) -std=c++17 \
@@ -47,20 +49,21 @@ LDFLAGS   = $(OPT) -lwinmm -lws2_32
 
 TARGET   = plc_runtime_windows.exe
 
-.PHONY: all stub run clean registry
+.PHONY: all stub run clean config
 
-all: $(REGISTRY) $(TARGET)
+all: $(CONFIG_GEN) $(TARGET)
 
-STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) ../pou_stub.cpp ../network_tci.cpp ../tcp_tci.cpp
+# Stub 模式：无 POU（gen_config --stub 生成空注册）
+STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) ../network_tci.cpp ../tcp_tci.cpp $(CONFIG_GEN_STUB)
 STUB_TARGET = plc_runtime_windows_stub.exe
 
-stub: $(STUB_TARGET)
+stub: $(CONFIG_GEN_STUB) $(STUB_TARGET)
 
 $(STUB_TARGET): $(STUB_SRCS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	@echo "=== Build (stub): $@ ==="
 
-SRCS = $(RT_SRCS) $(PLAT_SRC) $(POU_SRCS) $(REGISTRY) ../network_tci.cpp ../tcp_tci.cpp
+SRCS = $(RT_SRCS) $(PLAT_SRC) $(POU_SRCS) $(CONFIG_GEN) ../network_tci.cpp ../tcp_tci.cpp
 
 $(TARGET): $(SRCS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
@@ -74,11 +77,13 @@ run: all
 stub-run: stub
 	./$(STUB_TARGET) --cycle-us $(CYCLE_US)
 
+build:
+	mkdir -p build
+
 clean:
-	-rm -f $(TARGET) $(STUB_TARGET) $(ECAT_TARGET) $(REGISTRY)
+	-rm -f $(TARGET) $(STUB_TARGET) $(ECAT_TARGET) $(CONFIG_GEN) $(CONFIG_GEN_STUB)
 
 # ═══ EtherCAT (SOEM) 构建 — 共享 SOEM 子模块 ═══
-# Windows 需要 Npcap SDK（或 WinPcap），SOEM 自带 wpcap 库文件
 SOEM_DIR     = ../lib/soem
 SOEM_OPTIONS = $(SOEM_DIR)/include/soem/ec_options.h
 ECAT_SRC     = ethercat_tci.cpp
@@ -102,7 +107,7 @@ ECAT_TARGET = plc_runtime_windows_ecat.exe
 SOEM_C_OBJS = $(patsubst $(SOEM_DIR)/src/%.c,build/soem_win_%.o,$(wildcard $(SOEM_DIR)/src/*.c)) \
               build/soem_win_oshw.o build/soem_win_osal.o build/soem_win_nicdrv.o
 
-ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(ECAT_SRC) ../pou_stub.cpp ../network_tci.cpp ../tcp_tci.cpp
+ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(ECAT_SRC) $(CONFIG_GEN) ../network_tci.cpp ../tcp_tci.cpp
 
 SOEM_WINPCAP_LIB = -Llib -lwpcap -lpacket
 

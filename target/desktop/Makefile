@@ -2,14 +2,14 @@
 #
 # 用法：
 #   make                     # 编译（含 POU）
-#   make stub                # 最小编译（无 POU）
+#   make stub                # 最小编译（无 POU，无配置）
 #   make ethercat            # EtherCAT 编译（需要 SOEM，自动检测 OS）
 #   make run                 # 编译 + 运行
 #   make clean               # 清理
-#   make registry            # 仅生成 POU 注册桥接
+#   make config              # 仅生成运行时配置代码
 #
 # 特点：
-#   - 通用跨平台，使用 runtime_main.cpp（读取 tasks.json）
+#   - 通用跨平台
 #   - 没有 GPIO 或平台特定 HAL
 #   - EtherCAT 自动根据 OS 选择 Linux/Windows SOEM 驱动
 
@@ -24,14 +24,22 @@ BUILD    = $(ROOT)/output/flat/build
 RT_SRCS  = $(wildcard $(RT_DIR)/src/*.cpp)
 PLAT_SRC = runtime_main.cpp
 POU_SRCS = $(wildcard $(BUILD)/*.cpp)
+CONFIG_JSON = config/config.json
+CONFIG_GEN      = build/runtime_config.gen.cpp
+CONFIG_GEN_STUB = build/runtime_config_stub.gen.cpp
 
-REGISTRY = $(BUILD)/pou_registry.gen.cpp
+# ─── 生成运行时配置代码（绑定 + 任务 + POU 注册） ───
+config: $(CONFIG_GEN)
 
-registry: $(REGISTRY)
+$(CONFIG_GEN): $(CONFIG_JSON) | build
+	python3 ../scripts/gen_config.py --target desktop --input $(CONFIG_JSON) --output $(CONFIG_GEN) || \
+	python  ../scripts/gen_config.py --target desktop --input $(CONFIG_JSON) --output $(CONFIG_GEN) || \
+	echo "Warning: gen_config.py failed" 1>&2
 
-$(REGISTRY): $(POU_SRCS)
-	python3 $(CURDIR)/../rpi/gen_registry.py --build-dir "$(BUILD)" --output "$@" 2>/dev/null || \
-	python  $(CURDIR)/../rpi/gen_registry.py --build-dir "$(BUILD)" --output "$@"
+$(CONFIG_GEN_STUB): $(CONFIG_JSON) | build
+	python3 ../scripts/gen_config.py --target desktop --stub --input $(CONFIG_JSON) --output $(CONFIG_GEN_STUB) || \
+	python  ../scripts/gen_config.py --target desktop --stub --input $(CONFIG_JSON) --output $(CONFIG_GEN_STUB) || \
+	echo "Warning: gen_config.py --stub failed" 1>&2
 
 OPT      ?= -O2
 CXXFLAGS  = $(OPT) -std=c++17 \
@@ -50,20 +58,20 @@ endif
 
 TARGET   = plc_runtime_desktop$(EXE)
 
-.PHONY: all stub run clean registry
+.PHONY: all stub run clean config
 
-all: $(REGISTRY) $(TARGET)
+all: $(CONFIG_GEN) $(TARGET)
 
-STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) ../pou_stub.cpp ../network_tci.cpp ../tcp_tci.cpp
+STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) $(CONFIG_GEN_STUB) ../network_tci.cpp ../tcp_tci.cpp
 STUB_TARGET = plc_runtime_desktop_stub$(EXE)
 
-stub: $(STUB_TARGET)
+stub: $(CONFIG_GEN_STUB) $(STUB_TARGET)
 
 $(STUB_TARGET): $(STUB_SRCS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	@echo "=== Build (stub): $@ ==="
 
-SRCS = $(RT_SRCS) $(PLAT_SRC) $(POU_SRCS) $(REGISTRY) ../network_tci.cpp ../tcp_tci.cpp
+SRCS = $(RT_SRCS) $(PLAT_SRC) $(POU_SRCS) $(CONFIG_GEN) ../network_tci.cpp ../tcp_tci.cpp
 
 $(TARGET): $(SRCS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
@@ -75,8 +83,11 @@ run: all
 stub-run: stub
 	./$(STUB_TARGET)
 
+build:
+	mkdir -p build
+
 clean:
-	rm -f $(TARGET) $(STUB_TARGET) $(ECAT_TARGET) $(REGISTRY) 2>/dev/null || del /Q $(TARGET) $(STUB_TARGET) $(ECAT_TARGET) $(REGISTRY) 2>NUL
+	rm -f $(TARGET) $(STUB_TARGET) $(ECAT_TARGET) $(CONFIG_GEN) $(CONFIG_GEN_STUB) 2>/dev/null || del /Q $(TARGET) $(STUB_TARGET) $(ECAT_TARGET) $(CONFIG_GEN) $(CONFIG_GEN_STUB) 2>NUL
 
 # ═══ EtherCAT (SOEM) 构建 — 共享 SOEM 子模块 ═══
 SOEM_DIR     = ../lib/soem
@@ -131,7 +142,7 @@ ECAT_TARGET = plc_runtime_desktop_ecat$(EXE)
 SOEM_C_OBJS = $(patsubst $(SOEM_DIR)/src/%.c,build/soem_desk_%.o,$(wildcard $(SOEM_DIR)/src/*.c)) \
               $(SOEM_OBJ_OSHW) $(SOEM_OBJ_OSAL) $(SOEM_OBJ_NIC)
 
-ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(ECAT_SRC) ../pou_stub.cpp ../network_tci.cpp ../tcp_tci.cpp
+ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(ECAT_SRC) $(CONFIG_GEN) ../network_tci.cpp ../tcp_tci.cpp
 
 build/soem_desk_%.o: $(SOEM_DIR)/src/%.c
 	$(CC) $(SOEM_CFLAGS) -c $< -o $@

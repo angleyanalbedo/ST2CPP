@@ -9,7 +9,7 @@
 #   make               # 编译 + 链接
 #   make flash         # 烧录到目标板
 #   make clean         # 清理
-#   make openocd       # 启动 OpenOCD 调试
+#   make config        # 仅生成运行时配置代码
 
 CROSS   ?= arm-none-eabi-
 CC       = $(CROSS)gcc
@@ -22,7 +22,7 @@ ROOT     = ../..
 RT_DIR   = $(ROOT)/runtime-flat
 BUILD    = build
 
-# STM32 HAL 路径（用户需根据 CubeMX 项目修改）
+# STM32 HAL 路径
 HAL_DIR ?= ../lib/STM32CubeF1
 CMSIS_DIR = $(HAL_DIR)/Drivers/CMSIS
 HAL_DRV   = $(HAL_DIR)/Drivers/STM32F1xx_HAL_Driver
@@ -76,8 +76,9 @@ LDFLAGS   = $(OPT) $(MCUFLAGS) \
 # 源文件
 RT_SRCS   = $(wildcard $(RT_DIR)/src/*.cpp)
 PLAT_SRC  = platform_stm32f1.cpp runtime_stm32f1.cpp
-POU_SRCS  = $(wildcard $(ROOT)/output/flat/build/*.cpp)
-REGISTRY  = $(ROOT)/output/flat/build/pou_registry.gen.cpp
+CONFIG_JSON     = config/config.json
+CONFIG_GEN      = $(BUILD)/runtime_config.gen.cpp
+CONFIG_GEN_STUB = $(BUILD)/runtime_config_stub.gen.cpp
 
 # HAL 源文件（从 CubeF1 包中添加需要的 HAL 驱动）
 HAL_SRCS  = \
@@ -96,7 +97,21 @@ else
     HAL_STUB := hal_stub.cpp
 endif
 
-SRCS      = $(PLAT_SRC) $(HAL_SRCS) $(HAL_STUB) startup_stm32f103xb.s system_stm32f1xx.c pou_stub.cpp
+# ─── 生成运行时配置代码（绑定 + 任务 + POU 注册） ───
+config: $(CONFIG_GEN)
+
+$(CONFIG_GEN): $(CONFIG_JSON) | $(BUILD)
+	python3 ../scripts/gen_config.py --target stm32f1 --input $(CONFIG_JSON) --output $(CONFIG_GEN) || \
+	python  ../scripts/gen_config.py --target stm32f1 --input $(CONFIG_JSON) --output $(CONFIG_GEN) || \
+	echo "Warning: gen_config.py failed" 1>&2
+
+$(CONFIG_GEN_STUB): $(CONFIG_JSON) | $(BUILD)
+	python3 ../scripts/gen_config.py --target stm32f1 --stub --input $(CONFIG_JSON) --output $(CONFIG_GEN_STUB) || \
+	python  ../scripts/gen_config.py --target stm32f1 --stub --input $(CONFIG_JSON) --output $(CONFIG_GEN_STUB) || \
+	echo "Warning: gen_config.py --stub failed" 1>&2
+
+# 替换 pou_stub.cpp 为 runtime_config.gen.cpp
+SRCS      = $(PLAT_SRC) $(HAL_SRCS) $(HAL_STUB) startup_stm32f103xb.s system_stm32f1xx.c $(CONFIG_GEN)
 RT_OBJS   = $(addprefix $(BUILD)/,diag.o event.o gvl.o program.o scheduler.o task.o watchdog.o)
 OBJS      = $(RT_OBJS) \
             $(patsubst %.cpp,$(BUILD)/%.o,$(filter %.cpp,$(notdir $(SRCS)))) \
@@ -105,9 +120,9 @@ OBJS      = $(RT_OBJS) \
 
 TARGET    = plc_f1
 
-.PHONY: all flash clean openocd
+.PHONY: all flash clean config
 
-all: $(BUILD)/$(TARGET).elf $(BUILD)/$(TARGET).bin $(BUILD)/$(TARGET).hex
+all: $(CONFIG_GEN) $(BUILD)/$(TARGET).elf $(BUILD)/$(TARGET).bin $(BUILD)/$(TARGET).hex
 
 vpath %.c $(HAL_DRV)/Src
 
@@ -124,6 +139,10 @@ $(BUILD)/%.o: %.c | $(BUILD)
 
 $(BUILD)/%.o: %.s | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
+
+# runtime_config.gen.cpp 编译（在 build/ 下生成，从 build/ 编译）
+$(BUILD)/runtime_config.gen.o: $(CONFIG_GEN) | $(BUILD)
+	$(CXX) $(CXXFLAGS) -c $(CONFIG_GEN) -o $@
 
 # 从 RT_DIR/src/ 编译
 $(BUILD)/diag.o: $(RT_DIR)/src/diag.cpp | $(BUILD)

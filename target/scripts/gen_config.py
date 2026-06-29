@@ -217,9 +217,9 @@ DRIVER_GENERATORS = {
 }
 
 
-def generate(config, target, build_dir):
+def generate(config, target, build_dir, stub=False):
     """Generate runtime_config.gen.cpp content."""
-    reg_funcs = scan_pou_registrations(build_dir)
+    reg_funcs = [] if stub else scan_pou_registrations(build_dir)
 
     base_cycle = config.get('base_cycle_us', 1000)
     tasks = config.get('tasks', [])
@@ -357,6 +357,8 @@ def main():
                         help="Output .cpp file (default: build/runtime_config.gen.cpp)")
     parser.add_argument("--build-dir", default=None,
                         help="Compiler output directory for POU scanning (default: ../../output/flat/build)")
+    parser.add_argument("--stub", action="store_true",
+                        help="Generate empty POU registration (stub mode, no POU scanning)")
     args = parser.parse_args()
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -389,7 +391,7 @@ def main():
         print(f"Config not found: {config_path}, using defaults")
 
     # Generate
-    code = generate(config, args.target, build_dir)
+    code = generate(config, args.target, build_dir, args.stub)
 
     # Write
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
@@ -397,7 +399,8 @@ def main():
         f.write(code)
 
     print(f"Generated: {output_path}")
-    print(f"  POU registrations: {len(scan_pou_registrations(build_dir))}")
+    pou_count = 0 if args.stub else len(scan_pou_registrations(build_dir))
+    print(f"  POU registrations: {pou_count}")
     print(f"  Tasks: {len(config.get('tasks', []))}")
     print(f"  Bindings: {len(config.get('bindings', []))}")
     return 0
