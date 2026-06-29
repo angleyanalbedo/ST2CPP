@@ -54,7 +54,7 @@ public class PLCFBDeclSymbol extends PLCBaseClassDeclSymbol {
                 ", inOutVars=" + inOutVars +
                 ", interfaces=" + interfaces +
                 ", namespaces=" + namespaces +
-                ", baseClass=" + baseClass.getName() +
+                ", baseClass=" + (baseClass != null ? baseClass.getName() : "null") +
                 ", classModifier=" + classModifier +
                 ", initVar='" + initVar + '\'' +
                 ", varSort=" + varSort +

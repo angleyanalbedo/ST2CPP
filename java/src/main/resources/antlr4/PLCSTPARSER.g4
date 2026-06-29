@@ -42,6 +42,11 @@ identifier
             |'S'
             |'P'
             | 'TO'
+            | 'AND'
+            | 'OR'
+            | 'XOR'
+            | 'NOT'
+            | 'MOD'
             |Identifier
             ;
 

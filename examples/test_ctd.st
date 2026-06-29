@@ -1,7 +1,4 @@
-FUNCTION_BLOCK CTD
-    VAR_INPUT CD : BOOL; LD : BOOL; PV : INT; END_VAR
-    VAR_OUTPUT Q : BOOL; CV : INT; END_VAR
-END_FUNCTION_BLOCK
-
 PROGRAM main
+    VAR myCounter : CTD; cd : BOOL; ld : BOOL; pv : INT; END_VAR
+    myCounter(CD := cd, LD := ld, PV := pv);
 END_PROGRAM
