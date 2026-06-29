@@ -1121,8 +1121,8 @@ func_name
                 ;
 
 func_access     : (THIS_KW '.')?               //SC DONE
-                  ( scope_name '.' )*    
-                  func_name
+                  ( scope_name '.')
+                  * func_name (array_index)*
                 ;
 
 scope_name : identifier '^'*;
