@@ -285,6 +285,26 @@ REAL ATAN(REAL X);
 
 REAL ATAN2(REAL Y, REAL X);
 
+struct SR;
+
+struct RS;
+
+struct R_TRIG;
+
+struct F_TRIG;
+
+struct CTU;
+
+struct CTD;
+
+struct CTUD;
+
+struct TP;
+
+struct TON;
+
+struct TOF;
+
 REAL SEL(BOOL G, REAL IN0, REAL IN1);
 
 REAL MUX(INT K, REAL IN0, REAL IN1, REAL IN2, REAL IN3);
@@ -294,6 +314,34 @@ REAL LIMIT(REAL MN, REAL IN, REAL MX);
 REAL MAX(REAL IN0, REAL IN1);
 
 REAL MIN(REAL IN0, REAL IN1);
+
+SINT SHL(DWORD IN, INT N);
+
+SINT SHR(DWORD IN, INT N);
+
+SINT ROL(DWORD IN, INT N);
+
+SINT ROR(DWORD IN, INT N);
+
+SINT AND(DWORD A, DWORD B);
+
+SINT OR(DWORD A, DWORD B);
+
+SINT XOR(DWORD A, DWORD B);
+
+SINT NOT(DWORD IN);
+
+REAL MOVE(REAL IN);
+
+REAL TRUNC(REAL IN);
+
+INT BCD_TO_INT(BYTE IN);
+
+SINT INT_TO_BCD(INT IN);
+
+SINT GRAY_TO_BYTE(BYTE IN);
+
+INT FLOOR(REAL X);
 
 
 enum class DIRECTION : INT {
@@ -333,17 +381,17 @@ REAL AVERAGE(REAL A, REAL B) {
 		return (A + B) / 2.0;
 }
 struct STATE_MACHINE {
+    DINT ACCUM; // = (0)
+    BOOL RUNNING; // = FALSE
+    INT RETRY; // = (0)
     INT CMD; // = 0
     DINT POSITION; // = 0
     DIRECTION DIR;
     INT SPEED; // = 0
     BOOL FAULT; // = false
     INT MODE; // = (0)
-    DINT ACCUM; // = (0)
-    BOOL RUNNING; // = FALSE
-    INT RETRY; // = (0)
 
-    void update() {
+    void update(TIME dt) {
 
 		FAULT = FALSE;
 		RUNNING = TRUE;
@@ -506,11 +554,17 @@ void PROGRAM_test_tricky_TRICKY_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt)
 		printf("%d", (int)(gvl.read<DINT>(56)));
 		printf("\n");
 		PHASE = 1;
-		gvl.ptr<STATE_MACHINE>(72)->update();
+		gvl.write<INT>(80, PHASE);
+		gvl.write<DINT>(84, 500);
+		gvl.ptr<STATE_MACHINE>(72)->update(dt);
 		PHASE = 2;
-		gvl.ptr<STATE_MACHINE>(72)->update();
+		gvl.write<INT>(80, PHASE);
+		gvl.write<DINT>(84, 1200);
+		gvl.ptr<STATE_MACHINE>(72)->update(dt);
 		PHASE = 3;
-		gvl.ptr<STATE_MACHINE>(72)->update();
+		gvl.write<INT>(80, PHASE);
+		gvl.write<DINT>(84, -800);
+		gvl.ptr<STATE_MACHINE>(72)->update(dt);
 		K = 0;
 		do{
 		INT _X15=K * 10;

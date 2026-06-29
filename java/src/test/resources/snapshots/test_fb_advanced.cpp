@@ -285,6 +285,26 @@ REAL ATAN(REAL X);
 
 REAL ATAN2(REAL Y, REAL X);
 
+struct SR;
+
+struct RS;
+
+struct R_TRIG;
+
+struct F_TRIG;
+
+struct CTU;
+
+struct CTD;
+
+struct CTUD;
+
+struct TP;
+
+struct TON;
+
+struct TOF;
+
 REAL SEL(BOOL G, REAL IN0, REAL IN1);
 
 REAL MUX(INT K, REAL IN0, REAL IN1, REAL IN2, REAL IN3);
@@ -295,8 +315,37 @@ REAL MAX(REAL IN0, REAL IN1);
 
 REAL MIN(REAL IN0, REAL IN1);
 
+SINT SHL(DWORD IN, INT N);
+
+SINT SHR(DWORD IN, INT N);
+
+SINT ROL(DWORD IN, INT N);
+
+SINT ROR(DWORD IN, INT N);
+
+SINT AND(DWORD A, DWORD B);
+
+SINT OR(DWORD A, DWORD B);
+
+SINT XOR(DWORD A, DWORD B);
+
+SINT NOT(DWORD IN);
+
+REAL MOVE(REAL IN);
+
+REAL TRUNC(REAL IN);
+
+INT BCD_TO_INT(BYTE IN);
+
+SINT INT_TO_BCD(INT IN);
+
+SINT GRAY_TO_BYTE(BYTE IN);
+
+INT FLOOR(REAL X);
+
 
 struct ADVANCED_CTRL {
+    INT CMD; // = 0
     INT VALUE; // = 0
     BOOL RESET; // = false
     INT STATUS; // = 0
@@ -307,9 +356,8 @@ struct ADVANCED_CTRL {
     INT STATE; // = (0)
     INT ACCUM; // = (0)
     INT CYCLE_CNT; // = (0)
-    INT CMD; // = 0
 
-    void update() {
+    void update(TIME dt) {
 
 		BUSY = TRUE;
 		DONE = FALSE;

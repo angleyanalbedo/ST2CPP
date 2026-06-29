@@ -285,6 +285,26 @@ REAL ATAN(REAL X);
 
 REAL ATAN2(REAL Y, REAL X);
 
+struct SR;
+
+struct RS;
+
+struct R_TRIG;
+
+struct F_TRIG;
+
+struct CTU;
+
+struct CTD;
+
+struct CTUD;
+
+struct TP;
+
+struct TON;
+
+struct TOF;
+
 REAL SEL(BOOL G, REAL IN0, REAL IN1);
 
 REAL MUX(INT K, REAL IN0, REAL IN1, REAL IN2, REAL IN3);
@@ -295,16 +315,44 @@ REAL MAX(REAL IN0, REAL IN1);
 
 REAL MIN(REAL IN0, REAL IN1);
 
+SINT SHL(DWORD IN, INT N);
+
+SINT SHR(DWORD IN, INT N);
+
+SINT ROL(DWORD IN, INT N);
+
+SINT ROR(DWORD IN, INT N);
+
+SINT AND(DWORD A, DWORD B);
+
+SINT OR(DWORD A, DWORD B);
+
+SINT XOR(DWORD A, DWORD B);
+
+SINT NOT(DWORD IN);
+
+REAL MOVE(REAL IN);
+
+REAL TRUNC(REAL IN);
+
+INT BCD_TO_INT(BYTE IN);
+
+SINT INT_TO_BCD(INT IN);
+
+SINT GRAY_TO_BYTE(BYTE IN);
+
+INT FLOOR(REAL X);
+
 
 struct MY_TIMER {
+    BOOL START; // = false
     INT PT; // = 0
     BOOL Q; // = false
     INT ET; // = 0
     BOOL RUNNING; // = FALSE
     INT ELAPSED; // = (0)
-    BOOL START; // = false
 
-    void update() {
+    void update(TIME dt) {
 
 		if(START && ! RUNNING){
 		RUNNING = TRUE;
@@ -326,8 +374,10 @@ void PROGRAM_test_fb_instantiate_MAIN_pre(GVL& gvl, ProcessImage& io) {
 }
 void PROGRAM_test_fb_instantiate_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 	MY_TIMER timer1 = gvl.read<MY_TIMER>(0);
-		gvl.ptr<MY_TIMER>(0)->update();
-		gvl.ptr<MY_TIMER>(0)->update();
+		gvl.write<BOOL>(0, TRUE);
+		gvl.write<INT>(2, 5);
+		gvl.ptr<MY_TIMER>(0)->update(dt);
+		gvl.ptr<MY_TIMER>(0)->update(dt);
 	gvl.write<MY_TIMER>(0, timer1);
 }
 void PROGRAM_test_fb_instantiate_MAIN_post(GVL& gvl, ProcessImage& io) {
