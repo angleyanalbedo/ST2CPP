@@ -22,12 +22,23 @@ RT_SRCS  = $(wildcard $(RT_DIR)/src/*.cpp)
 PLAT_SRC = platform_bpi_f3.cpp
 MAIN_SRC = runtime_bpi_f3.cpp
 HAL_SRC  = hal/gpio_hal.cpp hal/gpio_tci.cpp
-POU_SRCS = $(wildcard $(BUILD)/*.cpp)
+POU_SRCS = $(filter-out $(BUILD)/pou_registry.gen.cpp, $(wildcard $(BUILD)/*.cpp))
 CONFIG_JSON     = config/config.json
 CONFIG_GEN      = build/runtime_config.gen.cpp
 CONFIG_GEN_STUB = build/runtime_config_stub.gen.cpp
 TCI_DIR  = ../lib/tci
 TCI_SRCS = $(TCI_DIR)/network_tci.cpp $(TCI_DIR)/tcp_tci.cpp
+
+OPT      ?= -O2
+CXXFLAGS  = $(OPT) -std=c++17 -D_GNU_SOURCE \
+            -DRT_PLATFORM_LINUX \
+            -I$(RT_DIR)/include \
+            -I$(TCI_DIR) -I. \
+            -Wall -Wextra -Wno-unused-parameter
+LDFLAGS   = $(OPT) -lpthread
+
+TARGET   = plc_runtime_bpi_f3
+STUB_TARGET = plc_runtime_stub
 
 .PHONY: all stub run clean config
 
@@ -43,18 +54,7 @@ $(CONFIG_GEN_STUB): $(CONFIG_JSON) | build
 	python3 ../scripts/gen_config.py --target bananapif3 --stub --input $(CONFIG_JSON) --output $(CONFIG_GEN_STUB) 2>/dev/null || \
 	echo "Warning: gen_config.py --stub failed" 1>&2
 
-OPT      ?= -O2
-CXXFLAGS  = $(OPT) -std=c++17 -D_GNU_SOURCE \
-            -DRT_PLATFORM_LINUX \
-            -I$(RT_DIR)/include \
-            -I$(TCI_DIR) -I. \
-            -Wall -Wextra -Wno-unused-parameter
-LDFLAGS   = $(OPT) -lpthread
-
-TARGET   = plc_runtime_bpi_f3
-
 STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) $(MAIN_SRC) $(HAL_SRC) $(CONFIG_GEN_STUB) $(TCI_SRCS)
-STUB_TARGET = plc_runtime_stub
 
 stub: $(CONFIG_GEN_STUB) $(STUB_TARGET)
 
