@@ -29,6 +29,10 @@ CONFIG_GEN_STUB = build/runtime_config_stub.gen.cpp
 TCI_DIR  = ../lib/tci
 TCI_SRCS = $(TCI_DIR)/network_tci.cpp $(TCI_DIR)/tcp_tci.cpp
 
+.PHONY: all stub run clean config
+
+all: $(CONFIG_GEN) $(TARGET)
+
 config: $(CONFIG_GEN)
 
 $(CONFIG_GEN): $(CONFIG_JSON) | build
@@ -48,10 +52,6 @@ CXXFLAGS  = $(OPT) -std=c++17 -D_GNU_SOURCE \
 LDFLAGS   = $(OPT) -lpthread
 
 TARGET   = plc_runtime_bpi_f3
-
-.PHONY: all stub run clean config
-
-all: $(CONFIG_GEN) $(TARGET)
 
 STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) $(MAIN_SRC) $(HAL_SRC) $(CONFIG_GEN_STUB) $(TCI_SRCS)
 STUB_TARGET = plc_runtime_stub
