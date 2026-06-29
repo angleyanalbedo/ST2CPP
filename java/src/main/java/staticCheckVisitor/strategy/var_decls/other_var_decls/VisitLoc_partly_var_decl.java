@@ -21,9 +21,9 @@ public class VisitLoc_partly_var_decl implements Strategy {
         PLCVariable varInfo = new PLCVariable();
         //'VAR'
         varInfo.setVarSections(PLCModifierEnum.VarSections.VAR);
-        //RETAINORNONRETAIN?
-        if(ctx.RETAINORNONRETAIN() != null){
-            varInfo.setRetainQualifiers(ctx.RETAINORNONRETAIN().getText());
+        //retNonRet?
+        if(ctx.retNonRet() != null){
+            varInfo.setRetainQualifiers(ctx.retNonRet().getText());
         }
 
         //vars

@@ -1,4 +1,4 @@
-// Generated from D:\source\Project\ST2C-master\java\src\main\resources\antlr4\PLCSTLEXER.g4 by ANTLR 4.10.1
+// Generated from src/main/resources/antlr4/PLCSTLEXER.g4 by ANTLR 4.10.1
 package antlr4;
 import org.antlr.v4.runtime.Lexer;
 import org.antlr.v4.runtime.CharStream;

@@ -1,4 +1,4 @@
-// Generated from D:\source\Project\ST2C-master\java\src\main\resources\antlr4\PLCSTPARSER.g4 by ANTLR 4.10.1
+// Generated from src/main/resources/antlr4/PLCSTPARSER.g4 by ANTLR 4.10.1
 package antlr4;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 
@@ -3353,4 +3353,14 @@ public interface PLCSTPARSERListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitReservedKeyword(PLCSTPARSERParser.ReservedKeywordContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link PLCSTPARSERParser#retNonRet}.
+	 * @param ctx the parse tree
+	 */
+	void enterRetNonRet(PLCSTPARSERParser.RetNonRetContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link PLCSTPARSERParser#retNonRet}.
+	 * @param ctx the parse tree
+	 */
+	void exitRetNonRet(PLCSTPARSERParser.RetNonRetContext ctx);
 }

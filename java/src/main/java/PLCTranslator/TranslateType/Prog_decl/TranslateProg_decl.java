@@ -21,12 +21,10 @@ public class TranslateProg_decl {
         sb.append("\nvoid PROGRAM_").append(mangled).append("_init(GVL& gvl, ProcessImage& io) {");
         sb.append(emitVarInit(ctx, translatorNew));
         sb.append(emitRetainRegion(ctx, translatorNew));
+        sb.append(emitInitRetainLoad(ctx, translatorNew));
         sb.append("\n}");
 
         sb.append("\nvoid PROGRAM_").append(mangled).append("_pre(GVL& gvl, ProcessImage& io) {");
-        if (!translatorNew.localCache) {
-            sb.append(emitPreIoRead(translatorNew));
-        }
         sb.append("\n}");
 
         sb.append("\nvoid PROGRAM_").append(mangled).append("_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {");
@@ -194,6 +192,25 @@ public class TranslateProg_decl {
         return sb.toString();
     }
 
+    /**
+     * _init：如果有 RETAIN 变量，从备份缓冲区恢复
+     */
+    private String emitInitRetainLoad(PLCSTPARSERParser.Prog_declContext ctx, PLCTranslatorNew translatorNew) {
+        StringBuilder sb = new StringBuilder();
+        for (PLCSTPARSERParser.Other_var_declsContext other_var_decl : ctx.other_var_decls()) {
+            ArrayList<PLCSymbol> otherVarDecl = PLCTranslatorNew.properties.get(other_var_decl);
+            for (PLCSymbol symbol : otherVarDecl) {
+                if (symbol instanceof PLCVariable varSymbol) {
+                    if (varSymbol.getRetainQualifiers() == PLCModifierEnum.RetainModifier.RETAIN) {
+                        sb.append("\n\tgvl.loadRetain();");
+                        return sb.toString();
+                    }
+                }
+            }
+        }
+        return sb.toString();
+    }
+
     private void emitVarDeclInline(StringBuilder sb, PLCVariable varSymbol, GvlContext gvlCtx) {
         String name = varSymbol.getName();
         String typeName = varSymbol.getRuntimeTypeName();
@@ -320,32 +337,6 @@ public class TranslateProg_decl {
                 sb.append(info.typeName).append(">(").append(info.byteOffset).append(");");
             }
             gvlCtx.locallyDeclaredGvlVars.add(varName);
-        }
-        return sb.toString();
-    }
-
-    /**
-     * _pre：非 localCache 模式下，从 ProcessImage 读取输入到 GVL
-     */
-    private String emitPreIoRead(PLCTranslatorNew translatorNew) {
-        StringBuilder sb = new StringBuilder();
-        GvlContext gvlCtx = translatorNew.gvlCtx;
-        for (java.util.Map.Entry<String, GvlContext.IOInfo> ioEntry : gvlCtx.ioVarMap.entrySet()) {
-            String varName = ioEntry.getKey();
-            GvlContext.IOInfo info = ioEntry.getValue();
-            if (info.dir == GvlContext.IODirection.INPUT) {
-                Integer offset = gvlCtx.offsetMap.get(varName);
-                if (offset == null) continue;
-                if (info.bitOffset >= 0) {
-                    sb.append("\n\tgvl.write<BOOL>(").append(offset)
-                      .append(", io.readInputBit(").append(info.byteOffset)
-                      .append(", ").append(info.bitOffset).append("));");
-                } else {
-                    sb.append("\n\tgvl.write<").append(info.typeName).append(">(")
-                      .append(offset).append(", io.readInput<").append(info.typeName)
-                      .append(">(").append(info.byteOffset).append("));");
-                }
-            }
         }
         return sb.toString();
     }

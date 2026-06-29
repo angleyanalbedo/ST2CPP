@@ -25,8 +25,8 @@ public class VisitOutput_decls implements Strategy {
         //section
         inputVarInfo.setVarSections(PLCModifierEnum.VarSections.VAR_OUTPUT);
         //retain
-        if(ctx.RETAINORNONRETAIN() != null){
-            inputVarInfo.setRetainQualifiers(visitor.visitorTool.getRetain(ctx.RETAINORNONRETAIN().getText()));
+        if(ctx.retNonRet() != null){
+            inputVarInfo.setRetainQualifiers(visitor.visitorTool.getRetain(ctx.retNonRet().getText()));
         }
         //output_decl
         ArrayList<PLCSymbol> vars = new ArrayList<>();

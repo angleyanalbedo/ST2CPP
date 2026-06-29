@@ -792,8 +792,8 @@ struct_elem_select
                 ;
 
 input_decls     : 'VAR_INPUT'               //SC DONE
-                  RETAINORNONRETAIN ?
-                  ( input_decl ';' )* 
+                  retNonRet ?
+                  ( input_decl ';' )*
                   'END_VAR'
                 ;
 
@@ -919,7 +919,7 @@ fb_instance_name
 
 output_decls                    //SC DONE
                 : 'VAR_OUTPUT'
-                  RETAINORNONRETAIN?
+                  retNonRet?
                   ( output_decl ';' )*
                   'END_VAR'
                 ;
@@ -1097,7 +1097,7 @@ d_byte_str_spec
                 ;
 
 loc_partly_var_decl                     //SC DONE
-                : 'VAR' RETAINORNONRETAIN? 
+                : 'VAR' retNonRet?
                   loc_partly_var *
                   'END_VAR'
                 ;
@@ -2381,10 +2381,7 @@ OVERRIDE        :
                   'OVERRIDE'
                 ;
 
-RETAINORNONRETAIN
-                :
-                  'RETAIN' | 'NON_RETAIN'
-                ;
+retNonRet : RETAIN | NON_RETAIN ;
 CONSTANT
                 :
                   'CONSTANT'
