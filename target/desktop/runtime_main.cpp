@@ -94,6 +94,7 @@ static void plcTick() {
 
 // ═══ 主函数 ═══
 int main(int argc, char* argv[]) {
+    setbuf(stdout, NULL);
     RT_LOG_INFO("=== ST2C++ Flat Runtime ===\n\n");
 
     for (int i = 1; i < argc; i++) {
