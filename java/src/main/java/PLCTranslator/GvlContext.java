@@ -206,7 +206,7 @@ public class GvlContext {
      * @return 该类型占用的字节数，未知时默认返回 4
      */
     public int getTypeSize(String typeName) {
-        if (typeName == null) return 4;
+        if (typeName == null)  throw new IllegalArgumentException("typeName cannot be null");
         // 先统一转换为 C++ 原生类型名（例如 "TIME" → "UINT"）
         String nativeType = toNativeType(typeName);
         Integer size = SIZE_MAP.get(nativeType);
@@ -222,7 +222,7 @@ public class GvlContext {
         if (arrayInfo != null) {
             return arrayInfo.count * getTypeSize(arrayInfo.elemType);
         }
-        return 4;
+        throw new IllegalArgumentException("Unknown type: " + typeName);
     }
 
     public int allocateOffset(String varName, String nativeType) {
