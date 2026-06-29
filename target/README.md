@@ -127,3 +127,18 @@ uint32_t recon = net.reconnectCount();
 - **后台线程**：`select()` 100ms 超时检查退出标志
 - **线程安全**：`syncInputs/syncOutputs` 与后台线程用 `std::mutex` 保护
 - **平台**：`#ifdef _WIN32` 处理 WinSock2 / POSIX 差异，跨平台可用
+
+### 测试
+
+```bash
+# Windows
+cd target/windows && make network-test
+
+# Desktop
+cd target/desktop && make network-test
+
+# Linux
+cd target/linux && make network-test
+```
+
+测试启动 echo server，NetworkTCI 客户端连接后发送 `0123456789ABCDEF`，验证回显一致。

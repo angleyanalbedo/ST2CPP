@@ -162,3 +162,16 @@ ECAT_IF     ?= eth0
 
 ethercat-run: ethercat
 	./$(ECAT_TARGET) --cycle-us $(ECAT_CYCLES) --tci ethercat --ecat-if $(ECAT_IF)
+
+# ═══ NetworkTCI 测试 ═══
+NET_TEST_TARGET = network_test$(EXE)
+NET_TEST_SRCS   = ../network_test.cpp ../network_tci.cpp
+
+$(NET_TEST_TARGET): $(NET_TEST_SRCS)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+	@echo "=== Build: $@ ==="
+
+network-test: $(NET_TEST_TARGET)
+	./$(NET_TEST_TARGET)
+
+.PHONY: network-test
