@@ -21,13 +21,12 @@ SIZE     = $(CROSS)size
 ROOT     = ../..
 RT_DIR   = $(ROOT)/runtime-flat
 BUILD    = build
+TCI_DIR  = ../lib/tci
 
-# STM32 HAL 路径
 HAL_DIR ?= ../lib/STM32CubeF1
 CMSIS_DIR = $(HAL_DIR)/Drivers/CMSIS
 HAL_DRV   = $(HAL_DIR)/Drivers/STM32F1xx_HAL_Driver
 
-# 芯片型号
 MCU       = STM32F103C8
 LD_SCRIPT = STM32F103C8T6.ld
 
@@ -35,7 +34,6 @@ OPT      ?= -Os
 CSTANDARD = -std=c11
 CXXSTANDARD = -std=c++17
 
-# 芯片特定标志
 MCUFLAGS  = -mcpu=cortex-m3 -mthumb -msoft-float
 
 DEFINES   = -DRT_PLATFORM_BARE_METAL \
@@ -50,6 +48,7 @@ DEFINES   = -DRT_PLATFORM_BARE_METAL \
 CFLAGS    = $(OPT) $(MCUFLAGS) $(CSTANDARD) $(DEFINES) \
             -I$(RT_DIR)/include \
             -I. \
+            -I$(TCI_DIR) \
             -I$(CMSIS_DIR)/Include \
             -I$(CMSIS_DIR)/Device/ST/STM32F1xx/Include \
             -I$(HAL_DRV)/Inc \
@@ -59,6 +58,7 @@ CFLAGS    = $(OPT) $(MCUFLAGS) $(CSTANDARD) $(DEFINES) \
 CXXFLAGS  = $(OPT) $(MCUFLAGS) $(CXXSTANDARD) $(DEFINES) \
             -I$(RT_DIR)/include \
             -I. \
+            -I$(TCI_DIR) \
             -I$(CMSIS_DIR)/Include \
             -I$(CMSIS_DIR)/Device/ST/STM32F1xx/Include \
             -I$(HAL_DRV)/Inc \
@@ -73,14 +73,12 @@ LDFLAGS   = $(OPT) $(MCUFLAGS) \
             -specs=nano.specs -specs=nosys.specs \
             -lc -lm -lnosys
 
-# 源文件
 RT_SRCS   = $(wildcard $(RT_DIR)/src/*.cpp)
 PLAT_SRC  = platform_stm32f1.cpp runtime_stm32f1.cpp
 CONFIG_JSON     = config/config.json
 CONFIG_GEN      = $(BUILD)/runtime_config.gen.cpp
 CONFIG_GEN_STUB = $(BUILD)/runtime_config_stub.gen.cpp
 
-# HAL 源文件（从 CubeF1 包中添加需要的 HAL 驱动）
 HAL_SRCS  = \
     $(HAL_DRV)/Src/stm32f1xx_hal.c \
     $(HAL_DRV)/Src/stm32f1xx_hal_rcc.c \
@@ -89,7 +87,6 @@ HAL_SRCS  = \
     $(HAL_DRV)/Src/stm32f1xx_hal_tim.c \
     $(HAL_DRV)/Src/stm32f1xx_hal_cortex.c
 
-# 如果 HAL 不存在，使用 stub 占位
 HAL_STUB :=
 ifneq ("$(wildcard $(HAL_DRV)/Src/stm32f1xx_hal.c)","")
     HAL_STUB :=
@@ -97,7 +94,6 @@ else
     HAL_STUB := hal_stub.cpp
 endif
 
-# ─── 生成运行时配置代码（绑定 + 任务 + POU 注册） ───
 config: $(CONFIG_GEN)
 
 $(CONFIG_GEN): $(CONFIG_JSON) | $(BUILD)
@@ -110,7 +106,6 @@ $(CONFIG_GEN_STUB): $(CONFIG_JSON) | $(BUILD)
 	python  ../scripts/gen_config.py --target stm32f1 --stub --input $(CONFIG_JSON) --output $(CONFIG_GEN_STUB) || \
 	echo "Warning: gen_config.py --stub failed" 1>&2
 
-# 替换 pou_stub.cpp 为 runtime_config.gen.cpp
 SRCS      = $(PLAT_SRC) $(HAL_SRCS) $(HAL_STUB) startup_stm32f103xb.s system_stm32f1xx.c $(CONFIG_GEN)
 RT_OBJS   = $(addprefix $(BUILD)/,diag.o event.o gvl.o program.o scheduler.o task.o watchdog.o)
 OBJS      = $(RT_OBJS) \
@@ -126,7 +121,6 @@ all: $(CONFIG_GEN) $(BUILD)/$(TARGET).elf $(BUILD)/$(TARGET).bin $(BUILD)/$(TARG
 
 vpath %.c $(HAL_DRV)/Src
 
-# CMSIS 启动/系统文件路径
 STARTUP_DIR = $(CMSIS_DIR)/Device/ST/STM32F1xx/Source/Templates
 vpath %.s $(STARTUP_DIR)/gcc
 vpath %.c $(STARTUP_DIR)
@@ -140,11 +134,9 @@ $(BUILD)/%.o: %.c | $(BUILD)
 $(BUILD)/%.o: %.s | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# runtime_config.gen.cpp 编译（在 build/ 下生成，从 build/ 编译）
 $(BUILD)/runtime_config.gen.o: $(CONFIG_GEN) | $(BUILD)
 	$(CXX) $(CXXFLAGS) -c $(CONFIG_GEN) -o $@
 
-# 从 RT_DIR/src/ 编译
 $(BUILD)/diag.o: $(RT_DIR)/src/diag.cpp | $(BUILD)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 $(BUILD)/event.o: $(RT_DIR)/src/event.cpp | $(BUILD)

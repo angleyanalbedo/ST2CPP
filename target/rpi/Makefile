@@ -12,17 +12,14 @@
 # 配置（环境变量或命令行覆盖）：
 #   CYCLE_US=500 make run
 
-# ═══ 编译器 ═══
 CROSS   ?=
 CC       = $(CROSS)gcc
 CXX      = $(CROSS)g++
 
-# ═══ 路径 ═══
 ROOT     = ../..
 RT_DIR   = $(ROOT)/runtime-flat
 BUILD    = $(ROOT)/output/flat/build
 
-# ═══ 源文件 ═══
 RT_SRCS  = $(wildcard $(RT_DIR)/src/*.cpp)
 PLAT_SRC = platform_rpi.cpp
 MAIN_SRC = runtime_rpi.cpp
@@ -31,8 +28,9 @@ POU_SRCS = $(wildcard $(BUILD)/*.cpp)
 CONFIG_JSON     = config/config.json
 CONFIG_GEN      = build/runtime_config.gen.cpp
 CONFIG_GEN_STUB = build/runtime_config_stub.gen.cpp
+TCI_DIR  = ../lib/tci
+TCI_SRCS = $(TCI_DIR)/network_tci.cpp $(TCI_DIR)/tcp_tci.cpp
 
-# ─── 生成运行时配置代码（绑定 + 任务 + POU 注册） ───
 config: $(CONFIG_GEN)
 
 $(CONFIG_GEN): $(CONFIG_JSON) | build
@@ -45,23 +43,21 @@ $(CONFIG_GEN_STUB): $(CONFIG_JSON) | build
 	python  ../scripts/gen_config.py --target rpi --stub --input $(CONFIG_JSON) --output $(CONFIG_GEN_STUB) || \
 	echo "Warning: gen_config.py --stub failed" 1>&2
 
-# ═══ 编译选项 ═══
 OPT      ?= -O2
 CXXFLAGS  = $(OPT) -std=c++17 -D_GNU_SOURCE \
             -DRT_PLATFORM_LINUX \
             -I$(RT_DIR)/include \
+            -I$(TCI_DIR) -I. \
             -Wall -Wextra -Wno-unused-parameter
 LDFLAGS   = $(OPT) -lpthread
 
 TARGET   = plc_runtime_rpi
 
-# ═══ 构建 ═══
 .PHONY: all stub run clean config
 
 all: $(CONFIG_GEN) $(TARGET)
 
-# 无 POU 模式
-STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) $(MAIN_SRC) $(HAL_SRC) $(CONFIG_GEN_STUB) ../network_tci.cpp ../tcp_tci.cpp
+STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) $(MAIN_SRC) $(HAL_SRC) $(CONFIG_GEN_STUB) $(TCI_SRCS)
 STUB_TARGET = plc_runtime_stub
 
 stub: $(CONFIG_GEN_STUB) $(STUB_TARGET)
@@ -70,13 +66,12 @@ $(STUB_TARGET): $(STUB_SRCS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	@echo "=== Build (stub): $@ ==="
 
-SRCS = $(RT_SRCS) $(PLAT_SRC) $(MAIN_SRC) $(HAL_SRC) $(POU_SRCS) $(CONFIG_GEN) ../network_tci.cpp ../tcp_tci.cpp
+SRCS = $(RT_SRCS) $(PLAT_SRC) $(MAIN_SRC) $(HAL_SRC) $(POU_SRCS) $(CONFIG_GEN) $(TCI_SRCS)
 
 $(TARGET): $(SRCS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	@echo "=== Build: $@ ==="
 
-# ═══ 运行（仅本地编译） ═══
 CYCLE_US ?= 1000
 
 run: all
@@ -95,7 +90,6 @@ build:
 clean:
 	-rm -f $(TARGET) $(STUB_TARGET) $(ECAT_TARGET) $(CONFIG_GEN) $(CONFIG_GEN_STUB)
 
-# ═══ EtherCAT (SOEM) 构建 — 共享 SOEM 子模块 ═══
 SOEM_DIR  = ../lib/soem
 ECAT_SRC  = ethercat_tci.cpp
 SOEM_CFLAGS = -O2 -D_GNU_SOURCE -DRT_PLATFORM_LINUX -DSOEM_LINUX \
@@ -116,7 +110,7 @@ ECAT_TARGET = plc_runtime_ecat
 SOEM_C_OBJS = $(patsubst $(SOEM_DIR)/src/%.c,build/soem_%.o,$(wildcard $(SOEM_DIR)/src/*.c)) \
               build/soem_oshw.o build/soem_osal.o build/soem_nicdrv.o
 
-ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(MAIN_SRC) $(HAL_SRC) $(ECAT_SRC) $(CONFIG_GEN) ../network_tci.cpp ../tcp_tci.cpp
+ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(MAIN_SRC) $(HAL_SRC) $(ECAT_SRC) $(CONFIG_GEN) $(TCI_SRCS)
 
 build/soem_%.o: $(SOEM_DIR)/src/%.c
 	$(CC) $(SOEM_CFLAGS) -c $< -o $@

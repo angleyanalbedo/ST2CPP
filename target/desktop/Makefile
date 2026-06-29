@@ -27,8 +27,9 @@ POU_SRCS = $(wildcard $(BUILD)/*.cpp)
 CONFIG_JSON = config/config.json
 CONFIG_GEN      = build/runtime_config.gen.cpp
 CONFIG_GEN_STUB = build/runtime_config_stub.gen.cpp
+TCI_DIR  = ../lib/tci
+TCI_SRCS = $(TCI_DIR)/network_tci.cpp $(TCI_DIR)/tcp_tci.cpp
 
-# ─── 生成运行时配置代码（绑定 + 任务 + POU 注册） ───
 config: $(CONFIG_GEN)
 
 $(CONFIG_GEN): $(CONFIG_JSON) | build
@@ -44,9 +45,9 @@ $(CONFIG_GEN_STUB): $(CONFIG_JSON) | build
 OPT      ?= -O2
 CXXFLAGS  = $(OPT) -std=c++17 \
             -I$(RT_DIR)/include \
+            -I$(TCI_DIR) -I. \
             -Wall -Wextra -Wno-unused-parameter
 
-# OS 检测
 UNAME    := $(shell uname -s 2>/dev/null || echo "Windows")
 ifeq ($(UNAME),Linux)
 LDFLAGS   = $(OPT) -lpthread
@@ -62,7 +63,7 @@ TARGET   = plc_runtime_desktop$(EXE)
 
 all: $(CONFIG_GEN) $(TARGET)
 
-STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) $(CONFIG_GEN_STUB) ../network_tci.cpp ../tcp_tci.cpp
+STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) $(CONFIG_GEN_STUB) $(TCI_SRCS)
 STUB_TARGET = plc_runtime_desktop_stub$(EXE)
 
 stub: $(CONFIG_GEN_STUB) $(STUB_TARGET)
@@ -71,7 +72,7 @@ $(STUB_TARGET): $(STUB_SRCS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	@echo "=== Build (stub): $@ ==="
 
-SRCS = $(RT_SRCS) $(PLAT_SRC) $(POU_SRCS) $(CONFIG_GEN) ../network_tci.cpp ../tcp_tci.cpp
+SRCS = $(RT_SRCS) $(PLAT_SRC) $(POU_SRCS) $(CONFIG_GEN) $(TCI_SRCS)
 
 $(TARGET): $(SRCS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
@@ -89,7 +90,6 @@ build:
 clean:
 	rm -f $(TARGET) $(STUB_TARGET) $(ECAT_TARGET) $(CONFIG_GEN) $(CONFIG_GEN_STUB) 2>/dev/null || del /Q $(TARGET) $(STUB_TARGET) $(ECAT_TARGET) $(CONFIG_GEN) $(CONFIG_GEN_STUB) 2>NUL
 
-# ═══ EtherCAT (SOEM) 构建 — 共享 SOEM 子模块 ═══
 SOEM_DIR     = ../lib/soem
 SOEM_OPTIONS = $(SOEM_DIR)/include/soem/ec_options.h
 ECAT_SRC     = ethercat_tci.cpp
@@ -142,7 +142,7 @@ ECAT_TARGET = plc_runtime_desktop_ecat$(EXE)
 SOEM_C_OBJS = $(patsubst $(SOEM_DIR)/src/%.c,build/soem_desk_%.o,$(wildcard $(SOEM_DIR)/src/*.c)) \
               $(SOEM_OBJ_OSHW) $(SOEM_OBJ_OSAL) $(SOEM_OBJ_NIC)
 
-ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(ECAT_SRC) $(CONFIG_GEN) ../network_tci.cpp ../tcp_tci.cpp
+ECAT_CPP_SRCS = $(RT_SRCS) $(PLAT_SRC) $(ECAT_SRC) $(CONFIG_GEN) $(TCI_SRCS)
 
 build/soem_desk_%.o: $(SOEM_DIR)/src/%.c
 	$(CC) $(SOEM_CFLAGS) -c $< -o $@
@@ -174,9 +174,8 @@ ECAT_IF     ?= eth0
 ethercat-run: ethercat
 	./$(ECAT_TARGET) --cycle-us $(ECAT_CYCLES) --tci ethercat --ecat-if $(ECAT_IF)
 
-# ═══ NetworkTCI 测试 ═══
 NET_TEST_TARGET = network_test$(EXE)
-NET_TEST_SRCS   = ../network_test.cpp ../network_tci.cpp ../tcp_tci.cpp
+NET_TEST_SRCS   = ../network_test.cpp $(TCI_SRCS)
 
 $(NET_TEST_TARGET): $(NET_TEST_SRCS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
