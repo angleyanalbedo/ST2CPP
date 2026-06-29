@@ -304,6 +304,13 @@ public class PLCSTPARSERBaseVisitor<T> extends AbstractParseTreeVisitor<T> imple
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
+	@Override public T visitString_type_name(PLCSTPARSERParser.String_type_nameContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
 	@Override public T visitBit_str_type_name(PLCSTPARSERParser.Bit_str_type_nameContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}

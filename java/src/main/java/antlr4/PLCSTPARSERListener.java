@@ -418,6 +418,16 @@ public interface PLCSTPARSERListener extends ParseTreeListener {
 	 */
 	void exitInt_type_name(PLCSTPARSERParser.Int_type_nameContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link PLCSTPARSERParser#string_type_name}.
+	 * @param ctx the parse tree
+	 */
+	void enterString_type_name(PLCSTPARSERParser.String_type_nameContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link PLCSTPARSERParser#string_type_name}.
+	 * @param ctx the parse tree
+	 */
+	void exitString_type_name(PLCSTPARSERParser.String_type_nameContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link PLCSTPARSERParser#bit_str_type_name}.
 	 * @param ctx the parse tree
 	 */

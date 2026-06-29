@@ -508,6 +508,18 @@ public class PLCSTPARSERBaseListener implements PLCSTPARSERListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterString_type_name(PLCSTPARSERParser.String_type_nameContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitString_type_name(PLCSTPARSERParser.String_type_nameContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterBit_str_type_name(PLCSTPARSERParser.Bit_str_type_nameContext ctx) { }
 	/**
 	 * {@inheritDoc}

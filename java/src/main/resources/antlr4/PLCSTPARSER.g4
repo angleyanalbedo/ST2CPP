@@ -278,7 +278,7 @@ data_type_access
 elem_type_name                                  //SC DONE
             : numeric_type_name
             | bit_str_type_name
-//          | string_type_name
+            | string_type_name
             | Date_Type_Name
             | Time_Type_Name
             | Char_Type_name
@@ -300,13 +300,11 @@ int_type_name
             | Unsign_Int_Type_Name
             ;
 
-//string_type_name
-//            :
-////              'STRING'  ( '[' (Unsigned_int | identifier) ']' )?
-////            | 'WSTRING' ( '[' (Unsigned_int | identifier) ']' )?  //数组长度定义支持非直接量
-//            'CHAR'
-//            | 'WCHAR'
-//            ;
+string_type_name
+            :
+              'STRING'  ( '[' (Unsigned_int | identifier) ']' )?
+            | 'WSTRING' ( '[' (Unsigned_int | identifier) ']' )?
+            ;
 
 bit_str_type_name
             : Bool_Type_Name
