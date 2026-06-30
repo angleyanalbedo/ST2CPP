@@ -20,6 +20,7 @@ items should live in compiler docs unless they directly affect the runtime ABI.
 - [x] Software watchdog
 - [x] `TaskExecutor` for unified cyclic/event/freewheeling task execution
 - [x] `IoManager` wrapper for TCI/CompositeTCI sync and safe-output staging
+- [x] `DiagManager` wrapper for diagnostics reset/recording and scheduler print snapshot
 - [x] Runtime error ring buffer and safe math helpers
 - [x] RETAIN region markers and in-memory backup/restore hooks
 - [x] Diagnostics counters for scan time and overruns
@@ -100,13 +101,12 @@ items should live in compiler docs unless they directly affect the runtime ABI.
   - `IoManager` owns TCI calls from the runtime core.
   - Existing `config.json -> gen_config.py -> CompositeTCI` target flow remains
     unchanged.
-  - First safe-output staging API is available, but not yet wired into ERROR
-    state transitions.
+  - First safe-output staging API is wired into Scheduler ERROR transitions.
 
-- [ ] Wire safe outputs into fatal/error transitions
-  - On selected fatal errors or watchdog policy violations, apply configured
-    safe outputs before final `syncOutputs()`.
-  - Keep policy explicit: not every diagnostic warning should force safe output.
+- [x] Wire safe outputs into fatal/error transitions
+  - `Scheduler::enterErrorState()` applies configured safe outputs and performs
+    final `syncOutputs()` when safe outputs are enabled.
+  - Covered by direct `Scheduler::error()` and event-watchdog ERROR tests.
 
 - [ ] Promote EtherCAT TCI to a first-class runtime backend
   - PDO mapping generated from config/compiler layout.
@@ -131,6 +131,8 @@ items should live in compiler docs unless they directly affect the runtime ABI.
 - [ ] Add structured diagnostics API
   - Machine-readable snapshot instead of only `printDiag()`.
   - Include system state, task stats, scan stats, errors, watchdog, and IO state.
+  - First boundary exists as `DiagManager`; structured snapshot DTO is still
+    pending.
 
 - [ ] Add variable watch/trace hooks
   - Read GVL/ProcessImage by symbol metadata and offset.
@@ -206,6 +208,7 @@ These were previously tracked here and are kept as context:
 
 - [x] TaskExecutor extraction from Scheduler
 - [x] IoManager extraction around TCI/CompositeTCI
+- [x] DiagManager extraction around diagnostic stats and print snapshot
 - [x] GVL offset bounds checks
 - [x] ProcessImage offset bounds checks
 - [x] Task interval/priority validation
