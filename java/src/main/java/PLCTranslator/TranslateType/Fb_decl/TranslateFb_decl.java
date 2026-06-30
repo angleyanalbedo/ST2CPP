@@ -9,6 +9,8 @@ import antlr4.PLCSTPARSERParser;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class TranslateFb_decl {
 
@@ -18,20 +20,17 @@ public class TranslateFb_decl {
 
         StringBuilder sb = new StringBuilder();
 
-        // 收集所有成员变量
         List<FBField> fields = collectFields(ctx, translatorNew.gvlCtx);
 
-        // Has body only when there are actual statements (stmt_list matches zero tokens for empty FBs)
         boolean hasBody = ctx.fb_body() != null
             && ctx.fb_body().stmt_list() != null
             && ctx.fb_body().stmt_list().stmt() != null
             && !ctx.fb_body().stmt_list().stmt().isEmpty();
 
         if (hasBody) {
-            // 有 body → 生成完整 struct（用户定义 FB）
             sb.append("\nstruct ").append(fbName).append(" {\n");
             for (FBField f : fields) {
-                sb.append("    ").append(f.typeName).append(" ").append(f.name).append(";");
+                sb.append("    ").append(f.typeName).append(" ").append(f.declName()).append(";");
                 if (f.initValue != null && !f.initValue.isEmpty()) {
                     sb.append(" // = ").append(f.initValue);
                 }
@@ -43,19 +42,19 @@ public class TranslateFb_decl {
             sb.append("\n    }\n");
             sb.append("};\n");
         } else {
-            // 无 body → 前向声明（运行时提供定义）
             sb.append("\nstruct ").append(fbName).append(";\n");
         }
 
-        // 注册 struct 布局（用于字段偏移计算）
         List<GvlContext.StructField> structFields = new ArrayList<>();
         int currentOffset = 0;
         for (FBField f : fields) {
             String nativeType = translatorNew.gvlCtx.toNativeType(f.typeName);
-            int fieldSize = translatorNew.gvlCtx.getTypeSize(nativeType);
-            int aligned = (currentOffset + fieldSize - 1) / fieldSize * fieldSize;
-            structFields.add(new GvlContext.StructField(f.name, nativeType, aligned));
-            currentOffset = aligned + fieldSize;
+            int elemSize = translatorNew.gvlCtx.getTypeSize(nativeType);
+            int count = arrayCount(f.arraySuffix);
+            int totalSize = elemSize * count;
+            int aligned = (currentOffset + elemSize - 1) / elemSize * elemSize;
+            structFields.add(new GvlContext.StructField(f.name, nativeType + f.arraySuffix, aligned));
+            currentOffset = aligned + totalSize;
         }
         GvlContext.StructLayout layout = new GvlContext.StructLayout(
             fbName, structFields, currentOffset);
@@ -68,7 +67,15 @@ public class TranslateFb_decl {
         String name;
         String typeName;
         String initValue;
-        FBField(String n, String t, String i) { name = n; typeName = t; initValue = i; }
+        String arraySuffix;
+        FBField(String n, String t, String i) {
+            name = n; typeName = t; initValue = i; arraySuffix = "";
+        }
+        FBField(String n, String t, String i, String suffix) {
+            name = n; typeName = t; initValue = i;
+            arraySuffix = (suffix != null) ? suffix : "";
+        }
+        String declName() { return name + arraySuffix; }
     }
 
     private List<FBField> collectFields(PLCSTPARSERParser.Fb_declContext ctx, GvlContext gvlCtx) {
@@ -81,10 +88,29 @@ public class TranslateFb_decl {
             if (s instanceof PLCVariable v) {
                 if (v.getSymbolId() == fbSymbol.getSymbolId()) continue;
                 String typeName = resolveFieldTypeName(v, gvlCtx);
-                fields.add(new FBField(v.getName(), typeName, v.getAssignVar()));
+                String suffix = makeArraySuffix(v);
+                fields.add(new FBField(v.getName(), typeName, v.getAssignVar(), suffix));
             }
         }
         return fields;
+    }
+
+    private static String makeArraySuffix(PLCVariable v) {
+        int[][] bounds = v.getArrayBounds();
+        if (bounds == null) return "";
+        StringBuilder sb = new StringBuilder();
+        for (int[] dim : bounds) {
+            sb.append("[").append(dim[2]).append("]");
+        }
+        return sb.toString();
+    }
+
+    private static int arrayCount(String suffix) {
+        if (suffix == null || suffix.isEmpty()) return 1;
+        int total = 1;
+        Matcher m = Pattern.compile("\\[(\\d+)\\]").matcher(suffix);
+        while (m.find()) total *= Integer.parseInt(m.group(1));
+        return total;
     }
 
     private static String resolveFieldTypeName(PLCVariable v, GvlContext gvlCtx) {

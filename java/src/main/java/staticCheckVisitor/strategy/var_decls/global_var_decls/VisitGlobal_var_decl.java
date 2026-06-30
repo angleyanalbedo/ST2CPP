@@ -42,6 +42,7 @@ public class VisitGlobal_var_decl implements Strategy {
             returnVar.setAssignVar(varInfo.getAssignVar());
             returnVar.setDeclSymbol(varInfo.getDeclSymbol());
             returnVar.setRuntimeTypeName(varInfo.getRuntimeTypeName());
+            returnVar.setArrayBounds(varInfo.getArrayBounds());
 
             //检查名称
             visitor.visitorTool.checkNameOnly(PLCScopeStack.currentSymbolTable, returnVar.getName());

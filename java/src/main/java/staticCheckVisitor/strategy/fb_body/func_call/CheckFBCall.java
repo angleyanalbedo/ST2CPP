@@ -47,8 +47,8 @@ public class CheckFBCall {
             String accessVarName = accessVar.getName();
             if (!paramMap.containsKey(accessVarName)) {
                 String defaultAssign = accessVar.getAssignVar();
-                if (defaultAssign == null || defaultAssign.isEmpty()) {
-                    throw new PLCSemanticException("var " + accessVarName + " need param");
+                if (defaultAssign != null && !defaultAssign.isEmpty()) {
+                    fbCallSym.addInputParam(accessVar);
                 }
             }
         }

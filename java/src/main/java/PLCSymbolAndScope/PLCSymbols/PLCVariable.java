@@ -125,6 +125,7 @@ public class PLCVariable extends PLCSymbol{
         this.assignVar = another.assignVar;
         this.location = another.location;
         this.declSymbol = another.declSymbol;
+        this.arrayBounds = another.arrayBounds;
     }
 
     //

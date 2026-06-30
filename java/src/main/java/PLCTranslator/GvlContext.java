@@ -145,6 +145,10 @@ public class GvlContext {
         TYPE_MAP.put("UINT", "UINT");
         TYPE_MAP.put("UDINT", "UDINT");
         TYPE_MAP.put("ULINT", "ULINT");
+        TYPE_MAP.put("BYTE", "BYTE");
+        TYPE_MAP.put("WORD", "WORD");
+        TYPE_MAP.put("DWORD", "DWORD");
+        TYPE_MAP.put("LWORD", "LWORD");
         TYPE_MAP.put("REAL", "REAL");
         TYPE_MAP.put("LREAL", "LREAL");
         TYPE_MAP.put("BOOL", "BOOL");
@@ -174,6 +178,10 @@ public class GvlContext {
         SIZE_MAP.put("UINT", 2);
         SIZE_MAP.put("UDINT", 4);
         SIZE_MAP.put("ULINT", 8);
+        SIZE_MAP.put("BYTE", 1);
+        SIZE_MAP.put("WORD", 2);
+        SIZE_MAP.put("DWORD", 4);
+        SIZE_MAP.put("LWORD", 8);
         SIZE_MAP.put("REAL", 4);
         SIZE_MAP.put("LREAL", 8);
         SIZE_MAP.put("BOOL", 1);

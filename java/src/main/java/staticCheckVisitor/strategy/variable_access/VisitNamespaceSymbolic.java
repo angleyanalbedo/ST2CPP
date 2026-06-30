@@ -14,19 +14,11 @@ import staticCheckVisitor.register.StrategyForVisit;
 import staticCheckVisitor.strategy.Strategy;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import static PLCSymbolAndScope.PLCScopeStack.currentScope;
 import static antlr4.PLCSTPARSERParser.RULE_symbolic_variable;
 
-/**
- * 处理 namespaceSymbolic 分支（branch=1 of symbolic_variable）：
- *   ( namespace_name '.' )* ( var_access | multi_elem_var )
- *
- * multi_elem_var 支持交替的数组索引和 struct 字段访问：
- *   var_access ( subscript_list | struct_variable )+
- *
- * 例如：ARR_OF_STRUCT[I].FIELD
- */
 @StrategyForVisit(ruleIndex = RULE_symbolic_variable, branch = 1)
 public class VisitNamespaceSymbolic implements Strategy {
 
@@ -38,9 +30,21 @@ public class VisitNamespaceSymbolic implements Strategy {
         PLCVariable resultVar;
 
         if (ctx.multi_elem_var() != null) {
-            resultVar = visitMultiElemVar(ctx.multi_elem_var(), visitor);
+            List<String> nsNames = new ArrayList<>();
+            for (var nc : ctx.namespace_name()) {
+                nsNames.add(nc.getText());
+            }
+            if (!nsNames.isEmpty()) {
+                PLCSymbol firstSym = currentScope.deepFindSymbol(nsNames.get(0));
+                if (firstSym instanceof PLCVariable baseVar) {
+                    resultVar = visitMultiElemVarWithNamespace(
+                            ctx.multi_elem_var(), nsNames, baseVar);
+                    return visitor.packSymbols(resultVar);
+                }
+            }
+            resultVar = visitMultiElemVar(ctx.multi_elem_var());
         } else if (ctx.var_access() != null) {
-            resultVar = visitSimpleVarAccess(ctx.var_access(), visitor);
+            resultVar = visitSimpleVarAccess(ctx.var_access());
         } else {
             throw new PLCSemanticException("empty namespaceSymbolic: " + ctx.getText());
         }
@@ -49,7 +53,7 @@ public class VisitNamespaceSymbolic implements Strategy {
     }
 
     private PLCVariable visitSimpleVarAccess(
-            PLCSTPARSERParser.Var_accessContext varAccessCtx, PLCVisitor visitor) {
+            PLCSTPARSERParser.Var_accessContext varAccessCtx) {
         String varName = varAccessCtx.variable_name().identifier().getText();
         PLCSymbol symbol = currentScope.deepFindSymbol(varName);
         if (!(symbol instanceof PLCVariable varSymbol)) {
@@ -60,10 +64,32 @@ public class VisitNamespaceSymbolic implements Strategy {
         return result;
     }
 
-    private PLCVariable visitMultiElemVar(
-            PLCSTPARSERParser.Multi_elem_varContext multiCtx, PLCVisitor visitor) {
+    private PLCVariable visitMultiElemVarWithNamespace(
+            PLCSTPARSERParser.Multi_elem_varContext multiCtx,
+            List<String> nsNames,
+            PLCVariable baseVar) {
 
-        // 1. 获取基础变量
+        PLCVariable result = new PLCVariable(baseVar);
+        String currentName = baseVar.getLocalScope() == currentScope
+                ? "*" + nsNames.get(0) : baseVar.getUniqueName();
+        result.setName(currentName);
+
+        for (int j = 1; j < nsNames.size(); j++) {
+            String fieldName = nsNames.get(j);
+            result = resolveStructField(result, fieldName, multiCtx);
+            String cleanPath = cleanPath(currentName);
+            currentName = "*(" + cleanPath + "." + fieldName + ")";
+            result.setName(currentName);
+            result.setAssignVar("(" + cleanPath + "." + fieldName + ")");
+        }
+
+        result = processMultiElemChildren(result, multiCtx, 0);
+        return result;
+    }
+
+    private PLCVariable visitMultiElemVar(
+            PLCSTPARSERParser.Multi_elem_varContext multiCtx) {
+
         String baseName = multiCtx.var_access().variable_name().identifier().getText();
         PLCSymbol baseSymbol = currentScope.deepFindSymbol(baseName);
         if (!(baseSymbol instanceof PLCVariable baseVar)) {
@@ -71,21 +97,27 @@ public class VisitNamespaceSymbolic implements Strategy {
         }
 
         PLCVariable result = new PLCVariable(baseVar);
-        String currentName = baseSymbol.getLocalScope() == currentScope ? "*" + baseName : baseVar.getUniqueName();
-        result.setName(currentName);
+        result.setName(baseSymbol.getLocalScope() == currentScope
+                ? "*" + baseName : baseVar.getUniqueName());
 
-        // 构建 assignVar 路径用的名字（不含 *)
-        String pathName = currentName.startsWith("*") ? currentName.substring(1) : currentName;
+        result = processMultiElemChildren(result, multiCtx, 1);
+        return result;
+    }
 
-        // 2. 遍历交替的 subscript_list / struct_variable
-        // 按顺序处理（multi_elem_var 的 children 按 grammar 顺序排列）
-        // children: [0]=var_access, [1..N]=subscript_list/struct_variable 交替
-        for (int i = 1; i < multiCtx.getChildCount(); i++) {
+    private PLCVariable processMultiElemChildren(
+            PLCVariable result,
+            PLCSTPARSERParser.Multi_elem_varContext multiCtx,
+            int startIndex) {
+
+        String currentName = result.getName();
+
+        for (int i = startIndex; i < multiCtx.getChildCount(); i++) {
             ParseTree child = multiCtx.getChild(i);
+
             if (child instanceof PLCSTPARSERParser.Subscript_listContext) {
                 PLCSTPARSERParser.Subscript_listContext subCtx =
-                    (PLCSTPARSERParser.Subscript_listContext) child;
-                // 数组索引访问
+                        (PLCSTPARSERParser.Subscript_listContext) child;
+
                 int currentTypeId = result.getTypeId();
                 PLCTypeDeclSymbol typeSymbol = PLCTotalSymbolTable.getTypeByTypeID(currentTypeId);
                 if (!(typeSymbol instanceof PLCArrayDeclSymbol)) {
@@ -93,72 +125,89 @@ public class VisitNamespaceSymbolic implements Strategy {
                             + " is not subscriptable: " + multiCtx.getText());
                 }
                 PLCArrayDeclSymbol arrayType = (PLCArrayDeclSymbol) typeSymbol;
-                // 更新类型为数组元素类型
                 result.setTypeId(arrayType.getElementTypeId());
 
-                // 获取索引表达式文本
                 String indexExpr = subCtx.subscript(0).expression().getText();
-                // 去掉当前 name 中的前导 * 和外部括号
-                String cleanPath = currentName.startsWith("*") ? currentName.substring(1) : currentName;
-                if (cleanPath.startsWith("(") && cleanPath.endsWith(")")) {
-                    cleanPath = cleanPath.substring(1, cleanPath.length() - 1);
-                }
+                String cleanPath = cleanPath(currentName);
                 currentName = "*(" + cleanPath + "[" + indexExpr + "])";
-                pathName = "(" + cleanPath + "[" + indexExpr + "])";
                 result.setName(currentName);
-                if (result instanceof PLCVariable) {
-                    ((PLCVariable) result).setAssignVar(pathName);
-                }
+                result.setAssignVar("(" + cleanPath + "[" + indexExpr + "])");
 
             } else if (child instanceof PLCSTPARSERParser.Struct_variableContext) {
                 PLCSTPARSERParser.Struct_variableContext structCtx =
-                    (PLCSTPARSERParser.Struct_variableContext) child;
-                // struct 字段访问
+                        (PLCSTPARSERParser.Struct_variableContext) child;
                 String fieldName = structCtx.struct_elem_select()
                         .var_access().variable_name().identifier().getText();
 
-                int currentTypeId = result.getTypeId();
-                PLCTypeDeclSymbol typeSymbol = PLCTotalSymbolTable.getTypeByTypeID(currentTypeId);
-                if (!(typeSymbol instanceof PLCStructDeclSymbol)) {
-                    throw new PLCSemanticException("variable " + result.getName()
-                            + " is not a struct type FROM : " + multiCtx.getText());
-                }
-                PLCStructDeclSymbol structType = (PLCStructDeclSymbol) typeSymbol;
+                result = resolveStructField(result, fieldName, multiCtx);
 
-                // 查找字段
-                PLCVariable fieldVar = null;
-                for (PLCVariable fv : structType.getVariables()) {
-                    if (fv.getName().equals(fieldName)) {
-                        fieldVar = fv;
-                        break;
-                    }
-                }
-                if (fieldVar == null) {
-                    throw new PLCSemanticException("struct " + typeSymbol.getName()
-                            + " has no member named " + fieldName + " FROM : " + multiCtx.getText());
-                }
-
-                // 更新类型信息
-                result.setTypeId(fieldVar.getTypeId());
-                result.setSort(fieldVar.getSort());
-                result.setRuntimeTypeName(fieldVar.getRuntimeTypeName());
-
-                // 构造带字段的路径
-                String cleanPath = currentName.startsWith("*") ? currentName.substring(1) : currentName;
-                if (cleanPath.startsWith("(") && cleanPath.endsWith(")")) {
-                    cleanPath = cleanPath.substring(1, cleanPath.length() - 1);
-                }
+                String cleanPath = cleanPath(currentName);
                 currentName = "*(" + cleanPath + "." + fieldName + ")";
-                pathName = "(" + cleanPath + "." + fieldName + ")";
                 result.setName(currentName);
-                if (result instanceof PLCVariable) {
-                    PLCVariable rv = (PLCVariable) result;
-                    rv.setAssignVar(pathName);
-                    rv.setDeclSymbol(fieldVar.getDeclSymbol());
-                }
+                result.setAssignVar("(" + cleanPath + "." + fieldName + ")");
+
+            } else if (i == 0 && child instanceof PLCSTPARSERParser.Var_accessContext) {
+                String fieldName = ((PLCSTPARSERParser.Var_accessContext) child)
+                        .variable_name().identifier().getText();
+
+                result = resolveStructField(result, fieldName, multiCtx);
+
+                String cleanPath = cleanPath(currentName);
+                currentName = "*(" + cleanPath + "." + fieldName + ")";
+                result.setName(currentName);
+                result.setAssignVar("(" + cleanPath + "." + fieldName + ")");
             }
         }
 
         return result;
+    }
+
+    private static PLCVariable resolveStructField(PLCVariable current, String fieldName, ParserRuleContext errorCtx) {
+        int currentTypeId = current.getTypeId();
+        PLCTypeDeclSymbol typeSymbol = PLCTotalSymbolTable.getTypeByTypeID(currentTypeId);
+
+        PLCVariable fieldVar = null;
+
+        if (typeSymbol instanceof PLCStructDeclSymbol structType) {
+            for (PLCVariable fv : structType.getVariables()) {
+                if (fv.getName().equals(fieldName)) {
+                    fieldVar = fv;
+                    break;
+                }
+            }
+            if (fieldVar == null) {
+                throw new PLCSemanticException("struct " + typeSymbol.getName()
+                        + " has no member named " + fieldName + " FROM : " + errorCtx.getText());
+            }
+        } else if (typeSymbol instanceof PLCBaseClassDeclSymbol classType) {
+            PLCSymbolTable importTable = classType.getImportSymbolTable();
+            PLCSymbol fieldSym = (importTable != null) ? importTable.findSymbol(fieldName) : null;
+            fieldVar = (fieldSym instanceof PLCVariable) ? (PLCVariable) fieldSym : null;
+            if (fieldVar == null) {
+                throw new PLCSemanticException("type " + typeSymbol.getName()
+                        + " has no member named " + fieldName + " FROM : " + errorCtx.getText());
+            }
+        } else if (typeSymbol == null) {
+            throw new PLCSemanticException("variable " + current.getName()
+                    + " has unknown type (typeId=" + currentTypeId + ") FROM : " + errorCtx.getText());
+        } else {
+            throw new PLCSemanticException("variable " + current.getName()
+                    + " is not a struct or FB type FROM : " + errorCtx.getText());
+        }
+
+        PLCVariable updated = new PLCVariable(current);
+        updated.setTypeId(fieldVar.getTypeId());
+        updated.setSort(fieldVar.getSort());
+        updated.setRuntimeTypeName(fieldVar.getRuntimeTypeName());
+        updated.setDeclSymbol(fieldVar.getDeclSymbol());
+        return updated;
+    }
+
+    private static String cleanPath(String name) {
+        String cp = name.startsWith("*") ? name.substring(1) : name;
+        if (cp.startsWith("(") && cp.endsWith(")")) {
+            cp = cp.substring(1, cp.length() - 1);
+        }
+        return cp;
     }
 }
