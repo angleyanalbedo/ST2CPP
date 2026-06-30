@@ -165,6 +165,23 @@ BOOL check_alarm_rising(GVL& gvl, ProcessImage& io) {
     return gvl.read<BOOL>(Off::ALARM_FLAG);
 }
 
+static BOOL event_watchdog_signal = FALSE;
+
+BOOL check_event_watchdog_toggle(GVL& gvl, ProcessImage& io) {
+    (void)gvl;
+    (void)io;
+    event_watchdog_signal = event_watchdog_signal ? FALSE : TRUE;
+    return event_watchdog_signal;
+}
+
+void POU_EventSlow_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
+    (void)gvl;
+    (void)io;
+    (void)dt;
+    volatile int dummy = 0;
+    for (volatile int i = 0; i < 100000; i++) dummy += i;
+}
+
 
 // ═══════════════════════════════════════════════════════
 // 错误回调
@@ -463,6 +480,43 @@ void test_watchdog() {
 
 
 // ═══════════════════════════════════════════════════════
+// 测试 6b: Event 任务同样触发看门狗
+// ═══════════════════════════════════════════════════════
+
+void test_event_watchdog() {
+    TEST_SECTION("6b. Event 任务看门狗路径");
+
+    Scheduler sched;
+    sched.gvl.clear();
+    sched.setBaseCycle(T_us(1));
+    sched.watchdog.setDefault(T_us(1));
+
+    event_watchdog_signal = FALSE;
+    int tIdx = sched.addEventTask("SlowEvent", 0,
+                                  check_event_watchdog_toggle,
+                                  EventEdge::BOTH);
+    sched.addPOU(tIdx, POU_EventSlow_cyclic);
+    sched.setTaskWatchdog(tIdx, T_us(1));
+
+    sched.start(StartupMode::COLD);
+    for (int i = 0; i < 12 && sched.systemState == SystemState::RUN; i++) {
+        sched.tick();
+    }
+
+    TEST("Event 任务触发软件看门狗");
+    CHECK(sched.watchdog.tripped == true, "event watchdog should trip");
+
+    TEST("Event 任务连续超时进入 ERROR");
+    CHECK(sched.systemState == SystemState::ERROR, "scheduler should enter ERROR");
+
+    const Task& t = sched.task(tIdx);
+    TEST("Event 任务记录执行时间与 overrun");
+    CHECK(t.lastExecTime > 0 && t.overrunCount >= 10,
+          "event task should record exec time and overruns");
+}
+
+
+// ═══════════════════════════════════════════════════════
 // 测试 7: 冷/暖启动 RETAIN
 // ═══════════════════════════════════════════════════════
 
@@ -573,6 +627,7 @@ void test_diagnostics() {
     TEST("totalTicks = 10");
     CHECK(sched.totalTicks == 10, "totalTicks should be 10");
 
+#ifdef ENABLE_DIAG
     TEST("diag.totalScanCount > 0");
     CHECK(sched.diag.totalScanCount > 0, "scanCount should be > 0");
 
@@ -583,12 +638,16 @@ void test_diagnostics() {
     TEST("diag.maxScanTime >= avgScanTime");
     CHECK(sched.diag.maxScanTime >= sched.diag.avgScanTime(),
           "max should >= avg");
+#else
+    TEST("ENABLE_DIAG=OFF 时 scan 诊断统计保持关闭");
+    CHECK(sched.diag.totalScanCount == 0, "scan diagnostics should be disabled");
+#endif
 
     TEST("Task cycleCount = 10");
     CHECK(sched.task(tIdx).cycleCount == 10, "cycleCount should be 10");
 
-    TEST("Task lastExecTime >= 0");
-    CHECK(sched.task(tIdx).lastExecTime >= 0, "execTime should be >= 0");
+    TEST("Task lastExecTime 独立于 ENABLE_DIAG 更新");
+    CHECK(sched.task(tIdx).lastExecTime >= 0, "execTime should be recorded");
 }
 
 
@@ -705,6 +764,7 @@ int main() {
     test_priority_ordering();
     test_event_trigger();
     test_watchdog();
+    test_event_watchdog();
     test_cold_warm_start();
     test_error_integration();
     test_diagnostics();

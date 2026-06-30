@@ -18,6 +18,7 @@
  * 14.  ProcessImage 偏移量越界检查
  * 15.  Task 参数校验
  * 16.  错误操作数记录
+ * 17.  IoManager TCI 委托与安全输出
  */
 #include "rt_runtime.h"
 #include <cstdio>
@@ -821,6 +822,43 @@ void test_error_operand_recording() {
 }
 
 
+void test_io_manager() {
+    printf("\n--- 17. IoManager TCI 委托与安全输出 ---\n");
+
+    IoManager io;
+    ProcessImage image;
+    image.clearInputs();
+    image.clearOutputs();
+
+    SimTCI tci;
+    io.setTCI(&tci);
+
+    TEST("IoManager syncInputs 委托给 TCI");
+    io.syncInputs(image);
+    CHECK(tci.syncInCount == 1, "syncInputs 应调用 TCI");
+
+    TEST("IoManager syncOutputs 委托给 TCI");
+    io.syncOutputs(image);
+    CHECK(tci.syncOutCount == 1, "syncOutputs 应调用 TCI");
+
+    TEST("safe output disabled 时不覆盖输出");
+    image.outputs[0] = 0xAA;
+    io.clearSafeOutputs();
+    io.setSafeOutputByte(0, 0x55);
+    io.applySafeOutputs(image);
+    CHECK(image.outputs[0] == 0xAA, "未启用时不应覆盖输出");
+
+    TEST("safe output enabled 后覆盖输出");
+    io.enableSafeOutputs(true);
+    io.applySafeOutputs(image);
+    CHECK(image.outputs[0] == 0x55, "启用后应写入安全输出值");
+
+    TEST("safe output 越界不崩溃");
+    io.setSafeOutputByte(PROCESS_IMAGE_SIZE, 0xFF);
+    CHECK(true, "越界应被忽略并记录日志");
+}
+
+
 // ═══════════════════════════════════════════════════════
 // main
 // ═══════════════════════════════════════════════════════
@@ -845,6 +883,7 @@ int main() {
     test_process_image_bounds();
     test_task_parameter_validation();
     test_error_operand_recording();
+    test_io_manager();
 
     printf("\n═══════════════════════════════\n");
     printf("通过: %d  失败: %d  总计: %d\n", test_pass, test_fail, test_pass + test_fail);

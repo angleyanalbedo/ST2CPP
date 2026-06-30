@@ -130,7 +130,7 @@ void Scheduler::start(StartupMode mode) {
     }
 
     // 5. 同步首次输入
-    if (tci) tci->syncInputs(image);
+    syncInputs();
 
     // 6. 进入 RUN
     systemState = SystemState::RUN;
@@ -224,11 +224,12 @@ void Scheduler::tick() {
     systemTime = totalTicks * baseCycleTime;
 #endif
 
-    // 检查事件触发（输入更新后才能检测）
-    checkEvents();
-
     // Phase 2: Logic Solve
     currentPhase = ScanPhase::LOGIC_SOLVE;
+
+    // 检查事件触发（输入更新后才能检测）
+    checkEvents();
+    if (systemState != SystemState::RUN) return;
 
     for (int i = 0; i < taskCount_; i++) {
         int idx = taskOrder_[i];
@@ -236,60 +237,7 @@ void Scheduler::tick() {
 
         if (!shouldRun(task)) continue;
 
-#ifdef ENABLE_DIAG
-        int64_t execStart = platform::steadyUs();
-#endif
-        task.state = TaskState::RUNNING;
-
-        // 执行挂载的 POU 函数
-        task.executePOUs(gvl, image, baseCycleTime);
-
-        // 执行挂载的 PROGRAM 实例
-        for (int j = 0; j < task.programCount; j++) {
-            int pIdx = task.programIndices[j];
-            if (pIdx >= 0 && pIdx < MAX_PROGRAMS) {
-                programs_[pIdx].doCyclic(gvl, image, baseCycleTime);
-            }
-        }
-
-        task.cycleCount++;
-        task.lastRunTime = systemTime;
-
-#ifdef ENABLE_DIAG
-        int64_t execEnd = platform::steadyUs();
-        task.lastExecTime = execEnd - execStart;
-        if (task.lastExecTime > task.maxExecTime) {
-            task.maxExecTime = task.lastExecTime;
-        }
-#endif
-
-        // 看门狗检查（诊断模式下用时间，非诊断模式下用 tick 计数）
-        if (watchdog.check(task, idx)) {
-            task.state = TaskState::OVERRUN;
-            task.overrunCount++;
-            diag.totalOverruns++;
-#ifdef ENABLE_DIAG
-            RT_LOG_ERR("[Watchdog] Task '%s' overrun: %lld us (limit: %lld us)\n",
-                    task.name, (long long)task.lastExecTime,
-                    (long long)(task.watchdogLimit > 0 ? task.watchdogLimit : watchdog.defaultLimit));
-#endif
-            // 严重超时 → 进入 ERROR
-            if (task.overrunCount >= MAX_CONSECUTIVE_OVERRUNS) {
-                errorMgr.report(ErrorCode::WATCHDOG_TIMEOUT, 0, 0,
-                                task.name, systemTime);
-                systemState = SystemState::ERROR;
-                return;
-            }
-        } else {
-            task.state = TaskState::READY;
-            task.overrunCount = 0;  // 正则运行时重置计数
-        }
-
-        // 检查致命错误
-        if (errorMgr.fatalMode) {
-            systemState = SystemState::ERROR;
-            return;
-        }
+        if (!executeTask(idx)) return;
     }
 
     // Phase 3: Write Outputs
@@ -407,41 +355,56 @@ bool Scheduler::shouldRun(Task& task) const {
     }
 }
 
+bool Scheduler::executeTask(int taskIndex) {
+    if (taskIndex < 0 || taskIndex >= MAX_TASKS) return true;
+
+    Task& task = tasks_[taskIndex];
+    TaskExecutorContext ctx {
+        gvl,
+        image,
+        programs_,
+        MAX_PROGRAMS,
+        watchdog,
+        errorMgr,
+        diag,
+        baseCycleTime,
+        systemTime,
+        MAX_CONSECUTIVE_OVERRUNS
+    };
+
+    if (!taskExecutor_.execute(task, taskIndex, ctx)) {
+        systemState = SystemState::ERROR;
+        return false;
+    }
+
+    return true;
+}
+
 void Scheduler::checkEvents() {
     for (int i = 0; i < eventCount_; i++) {
         if (events_[i].check(gvl, image)) {
             int taskIdx = events_[i].taskIndex;
             if (taskIdx >= 0 && taskIdx < MAX_TASKS) {
-                Task& task = tasks_[taskIdx];
-                int64_t execStart = platform::steadyUs();
-                task.state = TaskState::RUNNING;
-                task.executePOUs(gvl, image, baseCycleTime);
-                // 事件任务也执行挂载的 PROGRAM
-                for (int j = 0; j < task.programCount; j++) {
-                    int pIdx = task.programIndices[j];
-                    if (pIdx >= 0 && pIdx < MAX_PROGRAMS) {
-                        programs_[pIdx].doCyclic(gvl, image, baseCycleTime);
-                    }
-                }
-                task.cycleCount++;
-                task.lastRunTime = systemTime;
-                int64_t execEnd = platform::steadyUs();
-                task.lastExecTime = execEnd - execStart;
-                if (task.lastExecTime > task.maxExecTime) {
-                    task.maxExecTime = task.lastExecTime;
-                }
-                task.state = TaskState::IDLE;
+                if (!executeTask(taskIdx)) return;
             }
         }
     }
 }
 
+void Scheduler::syncTCIBinding() {
+    if (tci && io.tci() != tci) {
+        io.setTCI(tci);
+    }
+}
+
 void Scheduler::syncInputs() {
-    if (tci) tci->syncInputs(image);
+    syncTCIBinding();
+    io.syncInputs(image);
 }
 
 void Scheduler::syncOutputs() {
-    if (tci) tci->syncOutputs(image);
+    syncTCIBinding();
+    io.syncOutputs(image);
 }
 
 const char* Scheduler::stateName(SystemState s) {
