@@ -113,7 +113,7 @@ void Scheduler::start(StartupMode mode) {
     }
 
     errorMgr.reset();
-    diag.reset();
+    diagManager.reset();
     watchdog.reset();
 
     // 2. 进入 STARTING 状态
@@ -167,7 +167,7 @@ void Scheduler::resume() {
 }
 
 void Scheduler::error() {
-    systemState = SystemState::ERROR;
+    enterErrorState();
 }
 
 void Scheduler::resetError() {
@@ -250,7 +250,7 @@ void Scheduler::tick() {
 #ifdef ENABLE_DIAG
     int64_t scanEnd = platform::steadyUs();
     TIME scanTime = scanEnd - scanStart;
-    diag.recordScan(scanTime);
+    diagManager.recordScan(scanTime);
 #endif
 
     totalTicks++;
@@ -258,50 +258,16 @@ void Scheduler::tick() {
 }
 
 void Scheduler::printDiag() const {
-    RT_LOG_INFO("=== Scheduler Diagnostics ===\n");
-    RT_LOG_INFO("System: %s | Ticks: %llu | Time: %lld us\n",
-           stateName(systemState),
-           (unsigned long long)totalTicks,
-           (long long)systemTime);
-    RT_LOG_INFO("Watchdog: %s\n", watchdog.tripped ? "TRIPPED" : "OK");
-    RT_LOG_INFO("Errors: %d (fatal: %s)\n",
-           errorMgr.totalCount, errorMgr.fatalMode ? "YES" : "NO");
-
-    RT_LOG_INFO("\nScan Times: last=%lld  avg=%lld  min=%lld  max=%lld us\n",
-           (long long)diag.lastScanTime,
-           (long long)diag.avgScanTime(),
-           (long long)diag.minScanTime,
-           (long long)diag.maxScanTime);
-    RT_LOG_INFO("Total Overruns: %llu\n", (unsigned long long)diag.totalOverruns);
-
-    RT_LOG_INFO("\n%-20s %-10s %-8s %-10s %-10s %-10s %-8s\n",
-           "Task", "Trigger", "Pri", "Cycles", "Last(us)", "Max(us)", "Overrun");
-    RT_LOG_INFO("%-20s %-10s %-8s %-10s %-10s %-10s %-8s\n",
-           "----", "-------", "---", "------", "--------", "--------", "-------");
-    for (int i = 0; i < taskCount_; i++) {
-        const Task& t = tasks_[i];
-        RT_LOG_INFO("%-20s %-10s %-8d %-10llu %-10lld %-10lld %-8u\n",
-               t.name,
-               triggerName(t.trigger),
-               t.priority,
-               (unsigned long long)t.cycleCount,
-               (long long)t.lastExecTime,
-               (long long)t.maxExecTime,
-               t.overrunCount);
-    }
-
-    RT_LOG_INFO("\nPrograms:\n");
-    for (int i = 0; i < programCount_; i++) {
-        const ProgramInstance& p = programs_[i];
-        RT_LOG_INFO("  %-20s phase=%-12s cycles=%llu\n",
-               p.name, phaseName(p.phase),
-               (unsigned long long)p.cycleCount);
-    }
-
-    RT_LOG_INFO("\nGVL used: %zu / %zu bytes (retain: [%zu, %zu))\n",
-           gvl.usedBytes(), GVL_SIZE,
-           gvl.retainStart, gvl.retainEnd);
-    RT_LOG_INFO("=============================\n");
+    diagManager.printSchedulerSnapshot(systemState,
+                                       totalTicks,
+                                       systemTime,
+                                       watchdog,
+                                       errorMgr,
+                                       tasks_,
+                                       taskCount_,
+                                       programs_,
+                                       programCount_,
+                                       gvl);
 }
 
 int Scheduler::findFreeTask() {
@@ -366,14 +332,14 @@ bool Scheduler::executeTask(int taskIndex) {
         MAX_PROGRAMS,
         watchdog,
         errorMgr,
-        diag,
+        diagManager,
         baseCycleTime,
         systemTime,
         MAX_CONSECUTIVE_OVERRUNS
     };
 
     if (!taskExecutor_.execute(task, taskIndex, ctx)) {
-        systemState = SystemState::ERROR;
+        enterErrorState();
         return false;
     }
 
@@ -389,6 +355,18 @@ void Scheduler::checkEvents() {
             }
         }
     }
+}
+
+void Scheduler::enterErrorState() {
+    systemState = SystemState::ERROR;
+
+    if (io.safeOutputsEnabled()) {
+        currentPhase = ScanPhase::WRITE_OUTPUTS;
+        io.applySafeOutputs(image);
+        syncOutputs();
+    }
+
+    currentPhase = ScanPhase::IDLE;
 }
 
 void Scheduler::syncTCIBinding() {

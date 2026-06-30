@@ -9,7 +9,7 @@
 #include "core/task_executor.h"
 #include "core/event.h"
 #include "core/watchdog.h"
-#include "core/diag.h"
+#include "core/diag_manager.h"
 #include "core/platform.h"
 #include "rt_plc.h"
 
@@ -29,6 +29,7 @@ public:
     Watchdog      watchdog;
     ErrorManager  errorMgr;
     DiagStats     diag;
+    DiagManager   diagManager{diag};
     plc_lock      gvlLock;     // GVL 访问互斥锁
 
     // 时间
@@ -142,6 +143,8 @@ private:
     bool executeTask(int taskIndex);
 
     void checkEvents();
+
+    void enterErrorState();
 
     void syncTCIBinding();
     void syncInputs();

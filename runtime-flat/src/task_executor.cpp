@@ -28,7 +28,7 @@ bool TaskExecutor::execute(Task& task, int taskIndex, TaskExecutorContext& ctx) 
     if (ctx.watchdog.check(task, taskIndex)) {
         task.state = TaskState::OVERRUN;
         task.overrunCount++;
-        ctx.diag.totalOverruns++;
+        ctx.diag.recordTaskOverrun();
 #ifdef ENABLE_DIAG
         RT_LOG_ERR("[Watchdog] Task '%s' overrun: %lld us (limit: %lld us)\n",
                 task.name, (long long)task.lastExecTime,
