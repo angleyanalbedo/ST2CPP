@@ -43,21 +43,18 @@ public class TranslateCallFunc {
                 // 普通函数调用（独立语句）
                 // assignVar 格式: *FUNC_NAME(&PARAM1, )
                 String funcName = extractFuncName(funcVar.getAssignVar());
+                StringBuilder args = new StringBuilder();
                 for (PLCSTPARSERParser.Param_assignContext param_assignContext : childCtx.param_assign()) {
-                    PLCVariable plcVariable = PLCTranslatorNew.getVariable(param_assignContext, "call parameter");
                     if (param_assignContext instanceof PLCSTPARSERParser.InputParamContext ip) {
-                        String typeName = plcVariable.getRuntimeTypeName();
-                        if (typeName == null || typeName.isEmpty()) {
-                            typeName = "INT";
-                        }
-                        typeName = translatorNew.gvlCtx.toNativeType(typeName);
-                        // visitor 翻译参数表达式
-                        String exprResult = translatorNew.visit(ip.expression());
-                        sb.append("\n\t\t").append(typeName).append(" ")
-                          .append(plcVariable.getRuntimeName()).append("=").append(exprResult).append(";");
+                        String paramExpr = translatorNew.visit(ip.expression());
+                        if (args.length() > 0) args.append(", ");
+                        args.append(paramExpr);
+                    } else {
+                        if (args.length() > 0) args.append(", ");
+                        args.append(param_assignContext.getText());
                     }
                 }
-                sb.append("\n\t\t").append(funcName).append(";");
+                sb.append("\n\t\t").append(funcName).append("(").append(args).append(");");
             }
         }else{
             String result = translatorNew.visit(ctx.getChild(0));

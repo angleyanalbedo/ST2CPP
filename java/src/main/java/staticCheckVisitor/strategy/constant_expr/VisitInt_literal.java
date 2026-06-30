@@ -36,6 +36,7 @@ public class VisitInt_literal implements Strategy {
             intSymbol.setTypeId(forceTranslateType.getTypeId());
             intSymbol.setSort(PLCModifierEnum.Sort.INT);
             String constNum = ctx.getChild(ctx.getChildCount()-1).getText();
+            constNum = convertSTNumeric(constNum);
 
             intSymbol.setAssignVar("(" + constNum + ")");
 
@@ -45,9 +46,29 @@ public class VisitInt_literal implements Strategy {
             PLCVariable intSymbol = new PLCVariable();
             intSymbol.setTypeId(IDGenerator.INTID);
             intSymbol.setSort(PLCModifierEnum.Sort.INT);
-            intSymbol.setAssignVar("(" + ctx.getChild(ctx.getChildCount()-1).getText() + ")");
+            String constNum = ctx.getChild(ctx.getChildCount()-1).getText();
+            intSymbol.setAssignVar("(" + convertSTNumeric(constNum) + ")");
             return visitor.packSymbols(intSymbol);
         }
 
+    }
+
+    /** 将 ST 数值前缀转为 C++ 格式：16#→0x, 2#→0b, 8#→0 */
+    public static String convertSTNumeric(String s) {
+        if (s == null) return null;
+        // typed literal like DINT#16#FF → strip type prefix first
+        String result = s;
+        if (result.matches("^[A-Za-z_]+#.*")) {
+            int hash = result.indexOf('#');
+            result = result.substring(hash + 1);
+        }
+        if (result.startsWith("16#")) {
+            result = "0x" + result.substring(3);
+        } else if (result.startsWith("2#")) {
+            result = "0b" + result.substring(2);
+        } else if (result.startsWith("8#")) {
+            result = "0" + result.substring(2);
+        }
+        return result;
     }
 }

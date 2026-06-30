@@ -31,19 +31,11 @@ public class TranslateFunc_call {
             String funcName = extractFuncName(assignVarStr);
 
             // 遍历 AST param_assign，通过 visitor 翻译每个参数
+            // 表达式结果直接内联进函数调用，无需临时变量
             StringBuilder args = new StringBuilder();
             for (PLCSTPARSERParser.Param_assignContext param_assignContext : ctx.param_assign()) {
-                PLCVariable plcVariable = PLCTranslatorNew.getVariable(param_assignContext, "function parameter");
                 if(param_assignContext instanceof PLCSTPARSERParser.InputParamContext ip){
-                    String exprResult = translatorNew.visit(ip.expression());
-                    String paramExpr;
-                    if (isSimpleExpression(ip.expression())) {
-                        paramExpr = exprResult;
-                    } else {
-                        String typeName = resolveTypeName(plcVariable, translatorNew);
-                        translatorNew.pendingDecls.add("\n\t\t" + typeName + " " + plcVariable.getRuntimeName() + "=" + exprResult + ";");
-                        paramExpr = plcVariable.getRuntimeName();
-                    }
+                    String paramExpr = translatorNew.visit(ip.expression());
                     if (args.length() > 0) args.append(", ");
                     args.append(paramExpr);
                 }else{
@@ -56,17 +48,8 @@ public class TranslateFunc_call {
             String funcName = funDecl.getStdFunction();
             StringBuilder args = new StringBuilder();
             for(PLCSTPARSERParser.Param_assignContext param_assignContext : ctx.param_assign()){
-                PLCVariable plcVariable = PLCTranslatorNew.getVariable(param_assignContext, "function parameter");
                 if(param_assignContext instanceof PLCSTPARSERParser.InputParamContext ip){
-                    String exprResult = translatorNew.visit(ip.expression());
-                    String paramExpr;
-                    if (isSimpleExpression(ip.expression())) {
-                        paramExpr = exprResult;
-                    } else {
-                        String typeName = resolveTypeName(plcVariable, translatorNew);
-                        translatorNew.pendingDecls.add("\n\t\t" + typeName + " " + plcVariable.getRuntimeName() + "=" + exprResult + ";");
-                        paramExpr = plcVariable.getRuntimeName();
-                    }
+                    String paramExpr = translatorNew.visit(ip.expression());
                     if (args.length() > 0) args.append(", ");
                     args.append(paramExpr);
                 }else{
@@ -91,29 +74,4 @@ public class TranslateFunc_call {
         return cleaned;
     }
 
-    private String resolveTypeName(PLCVariable plcVariable, PLCTranslatorNew translatorNew) {
-        String typeName = plcVariable.getRuntimeTypeName();
-        if(typeName == null || typeName.isEmpty() || "INT".equals(typeName)){
-            int tid = plcVariable.getTypeId();
-            if(tid != 0){
-                PLCSymbolAndScope.PLCSymbols.PLCTypeDeclSymbol tdecl =
-                    PLCSymbolAndScope.PLCSymbolTables.PLCTotalSymbolTable.getTypeByTypeID(tid);
-                if(tdecl != null && tdecl.getName() != null){
-                    typeName = tdecl.getName();
-                }
-            }
-        }
-        if(typeName == null || typeName.isEmpty()){
-            typeName = "INT";
-        }
-        return translatorNew.gvlCtx.toNativeType(typeName);
-    }
-
-    private boolean isSimpleExpression(PLCSTPARSERParser.ExpressionContext expr) {
-        if (expr == null) return false;
-        String text = expr.getText().trim();
-        if (text.matches("^-?\\d+\\.?\\d*$")) return true;
-        if (text.matches("^[A-Za-z_][A-Za-z0-9_]*$")) return true;
-        return false;
-    }
 }

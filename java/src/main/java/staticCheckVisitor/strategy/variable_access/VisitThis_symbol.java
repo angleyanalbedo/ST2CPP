@@ -83,12 +83,16 @@ public class VisitThis_symbol implements Strategy {
                         String exprText = null;
                         if (exprSyms != null && !exprSyms.isEmpty()
                                 && exprSyms.get(0) instanceof PLCVariable ev) {
-                            exprText = ev.getAssignVar();
+                            // 使用 name（变量名）而非 assignVar（初始化值/常量折叠结果）
+                            exprText = ev.getName();
                             if (exprText == null || exprText.isEmpty()) {
-                                exprText = ev.getName();
+                                exprText = ev.getAssignVar();
                             }
                             if (exprText != null && exprText.startsWith("*")) {
                                 exprText = exprText.substring(1);
+                            }
+                            if (exprText != null && exprText.startsWith("(") && exprText.endsWith(")")) {
+                                exprText = exprText.substring(1, exprText.length() - 1);
                             }
                         }
                         if (exprText == null || exprText.isEmpty()) {
