@@ -46,13 +46,16 @@ ST2C-master/
 │       ├── antlr4/              # ANTLR 生成的 Lexer/Parser/Visitor
 │       ├── staticCheckVisitor/  # 语义检查 + 表达式预组装
 │       ├── PLCTranslator/       # 代码生成器
-│       │   ├── CodeGenerator.java
-│       │   ├── FlatCodeGenerator.java
-│       │   └── TranslateType/
+│       │   ├── PLCTranslatorNew.java  # 主调度器
+│       │   ├── GvlContext.java        # GVL 偏移量 + SIZE_MAP + toNativeType
+│       │   ├── CompilerConfig.java    # 编译器配置
+│       │   ├── PLCTargetFile.java     # 文件输出辅助
+│       │   └── TranslateType/         # 各语法节点翻译器（59 个类）
 │       ├── PLCSymbolAndScope/
 │       ├── PLCTargetFileOutPut/
 │       ├── PLCException/
-│       └── JSON/
+│       ├── JSON/
+│       └── com/st2c/lsp/       # LSP 服务器
 ├── runtime-flat/                # 核心运行时静态库（平台无关）
 │   ├── include/                 # 头文件
 │   │   ├── rt_plc.h             # ProcessImage / TCI / 安全运算宏
@@ -138,13 +141,6 @@ cd target/linux && g++ -O2 -DRT_PLATFORM_LINUX -I../../runtime-flat/include \
     ../../runtime-flat/src/*.cpp runtime_linux.cpp -lpthread -o plc_runtime_linux
 ```
 
-## 周目标
-
-1. 找一块积灰的开发板，格式化
-2. 写纯裸机（Bare-metal）或极简 RTOS 的高精度定时器
-3. 把 ST 代码编译进去，点亮板子 LED
-4. 用示波器测每次点亮的 **时间抖动**
-
 ## 代码约定（继承）
 
 - 命名空间：`rt_plc`
@@ -162,28 +158,41 @@ cd target/linux && g++ -O2 -DRT_PLATFORM_LINUX -I../../runtime-flat/include \
 
 ## TODO
 
-### 第一阶段：裸机调度器（本周）
+### 第一阶段：前端 UI（当前）
+
+- [ ] 决定编辑器方向：VS Code LSP vs openplc-editor 整合
+- [ ] openplc-editor 编译器后端接口探索（`compiler-module.ts`）
+- [ ] openplc-editor 调试协议兼容性评估（Modbus PDU FC 0x41-0x45）
+- [ ] XML2ST 转换工具独立复用方案
+
+### 第二阶段：编译器正确性
+
+- [ ] ST 标识符大小写不敏感（`HashMap.get` 需 case-insensitive）
+- [ ] robot_arm 项目全量回归测试
+- [ ] FB（功能块）翻译完善
+- [ ] RETAIN 区域标记验证
+
+### 第三阶段：裸机调度器
 
 - [ ] STM32H7 或 RISC-V 开发板选型 + BSP 初始化
 - [ ] 硬件定时器中断驱动 Cycle（TIM → IRQ → POU tick）
 - [ ] 抖动测量：GPIO 翻转 + 示波器
-- [ ] 从 `runtime-flat` 剥离通用 OS 依赖
 
-### 第二阶段：架构优化编译器
+### 第四阶段：架构优化编译器
 
 - [ ] 检测批量数据移动模式（memcpy 模板匹配）
 - [ ] RISC-V V 扩展 Intrinsic 代码生成
 - [ ] 内联汇编注入通道
 - [ ] 性能基准：相同 ST 代码 vs GCC -O3
 
-### 第三阶段：EtherCAT 集成
+### 第五阶段：EtherCAT 集成
 
 - [ ] SOEM 移植到目标平台
 - [ ] PDO 内存映射与 GVL 绝对地址绑定
 - [ ] 驱动真实伺服电机
 - [ ] 周期抖动在总线负载下验证
 
-### 第四阶段：AI 边缘控制原型
+### 第六阶段：AI 边缘控制原型
 
 - [ ] 定义 AI → ST 接口规范
 - [ ] 端到端演示：推理 → 编译 → 执行 → 驱动

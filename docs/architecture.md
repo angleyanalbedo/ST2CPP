@@ -115,7 +115,7 @@ sequenceDiagram
     participant Factory as Factory<br/>(策略注册表)
     participant Strategy as VisitVariableAssignExpression
     participant Translator as PLCTranslatorNew<br/>(代码生成)
-    participant CodeGen as FlatCodeGenerator
+    participant GvlCtx as GvlContext
     participant File as output/flat/main.cpp
     participant CMake as CMake + GCC
     participant Runtime as runtime.exe
@@ -149,22 +149,15 @@ sequenceDiagram
     end
 
     rect rgb(230, 255, 230)
-        Note over Translator,CodeGen: 阶段④：代码生成
+        Note over Translator,GvlCtx: 阶段④：代码生成
         Main->>Translator: visit(parseTree)
         loop 每个语法树节点
-            Translator->>CodeGen: emitVarDecl("A", "INT", "42")
-            CodeGen->>CodeGen: allocateOffset("A", "INT")<br/>offset=0, currentOffset=2
-            CodeGen-->>Translator: ""
-            Translator->>CodeGen: emitVarDecl("B", "INT", "10")
-            CodeGen->>CodeGen: allocateOffset("B", "INT")<br/>offset=2, currentOffset=4
-            CodeGen-->>Translator: ""
-            Translator->>CodeGen: emitVarDecl("C", "INT", null)
-            CodeGen->>CodeGen: allocateOffset("C", "INT")<br/>offset=4, currentOffset=6
-            CodeGen-->>Translator: ""
-            Translator->>CodeGen: emitAssign("C", "A+B")
-            CodeGen->>CodeGen: translateExpr("A+B")<br/>RFM → gvl.read
-            CodeGen->>CodeGen: writeExpr("C", "expr")
-            CodeGen-->>Translator: "gvl.write&lt;INT&gt;(4, gvl.read&lt;INT&gt;(0)+gvl.read&lt;INT&gt;(2))"
+            Translator->>GvlCtx: allocateOffset("A", "INT")<br/>offset=0, currentOffset=2
+            note right of Translator: Translate* 类直接拼装 C++ 字符串
+            Translator->>GvlCtx: allocateOffset("B", "INT")<br/>offset=2, currentOffset=4
+            Translator->>GvlCtx: allocateOffset("C", "INT")<br/>offset=4, currentOffset=6
+            Translator->>GvlCtx: translateExpr("A+B")<br/>RFM → gvl.read
+            Translator->>GvlCtx: writeExpr("C", "expr")
         end
         Translator-->>Main: fullCode (完整 C++ 字符串)
     end
@@ -284,9 +277,8 @@ graph TB
 
     subgraph 代码生成
         Translator["PLCTranslatorNew"]
-        CodeGen["CodeGenerator 接口"]
-        FlatCode["FlatCodeGenerator"]
-        Translate["TranslateType/<br/>~30 个翻译器类"]
+        GvlCtx["GvlContext"]
+        Translate["TranslateType/<br/>59 个翻译器类"]
     end
 
     subgraph 异常
@@ -307,10 +299,9 @@ graph TB
     PLCVisitor --> GenBasic
     Symbol --> IDGen
 
-    Translator --> CodeGen
-    CodeGen -.- FlatCode
+    Translator --> GvlCtx
     Translator --> Translate
-    Translate --> FlatCode
+    Translate --> GvlCtx
 
     PLCVisitor -.-> |"ParseTreeProperty"| Translator
 ```

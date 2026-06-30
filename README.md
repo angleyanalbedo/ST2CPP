@@ -12,7 +12,7 @@ graph TB
         ST --> Lexer["ANTLR4 Lexer + Parser"]
         Lexer --> AST["ParseTree"]
         AST --> Visitor["静态语义分析<br/>PLCVisitor + Strategy"]
-        Visitor --> |"ParseTreeProperty<br/>(符号表数据桥梁)"| Translator["代码生成<br/>PLCTranslatorNew + FlatCodeGenerator"]
+        Visitor --> |"ParseTreeProperty<br/>(符号表数据桥梁)"| Translator["代码生成<br/>PLCTranslatorNew"]
         Translator --> CPP["C++ 源码 (.cpp)"]
     end
 
@@ -127,13 +127,6 @@ block-beta
 | MinGW | GCC 7+ | 编译 C++ |
 | CMake | 3.10+ | 构建运行时 |
 
-### 一键测试
-
-```bash
-test.bat                    # 默认编译 examples/test.st
-test.bat examples/test_print.st   # 指定输入
-```
-
 ### 手动构建
 
 ```bash
@@ -161,40 +154,39 @@ cmake --build .
 ST2C-master/
 ├── java/                        # Java 编译器
 │   └── src/main/java/
-│       ├── Main.java            # 入口（仅 Flat 后端）
+│       ├── Main.java            # 入口
 │       ├── antlr4/              # ANTLR 生成的 Lexer/Parser
 │       ├── staticCheckVisitor/  # 语义检查 + 表达式预组装
 │       ├── PLCTranslator/       # 代码生成器
-│       │   ├── CodeGenerator.java       # 代码生成接口
-│       │   ├── FlatCodeGenerator.java   # Flat 后端实现
-│       │   └── TranslateType/           # 各语法节点翻译器
+│       │   ├── PLCTranslatorNew.java   # 主调度器
+│       │   ├── GvlContext.java         # GVL 偏移量 + SIZE_MAP + toNativeType
+│       │   ├── CompilerConfig.java     # 编译器配置
+│       │   ├── PLCTargetFile.java      # 文件输出辅助
+│       │   └── TranslateType/          # 各语法节点翻译器（59 个类）
 │       ├── PLCSymbolAndScope/   # 符号表 + 作用域栈
-│       └── PLCException/        # 异常体系
+│       ├── PLCException/        # 异常体系
+│       └── com/st2c/lsp/        # LSP 服务器
 ├── runtime-flat/                # C++17 实时运行时
 │   ├── include/
 │   │   ├── rt_plc.h             # 类型系统 + 功能块 + 内置函数
 │   │   ├── rt_runtime.h         # 调度器 + GVL + 生命周期
 │   │   └── core/                # GVL, ErrorManager, Task, Registry
 │   ├── src/                     # 调度器、程序、任务实现
-│   ├── tests/                   # 框架测试（112 项）
-│   ├── runtime_main.cpp         # 运行时主程序
+│   ├── tests/                   # 框架测试（124 项）
 │   └── CMakeLists.txt
 ├── examples/                    # ST 示例程序
 ├── output/flat/                 # 编译器输出的 .cpp 文件
 ├── tasks.json                   # 调度配置
-├── test.bat                     # 一键测试脚本
 ├── README.md                    # 本文件
 ├── CONTRIBUTING.md              # 开发指南、环境搭建、编码规范
-├── compiler-to-runtime.md       # 编译器→运行时接口文档
-├── st-support.md                # ST 语言支持矩阵
-├── ST2C实时化改造方案.md         # 详细设计文档
-├── PLC运行时架构知识库.md        # PLC 架构背景知识
+├── docs/
+│   ├── compiler-to-runtime.md   # 编译器→运行时接口文档
+│   ├── architecture.md          # 架构详解（类图、序列图）
+│   └── PLC运行时架构知识库.md    # PLC 架构背景知识
 └── AGENTS.md                    # AI 代理指令
 ```
 
 ## ST 语言支持
-
-详见 [ST 语言支持矩阵](st-support.md)。
 
 **已支持**：
 - FUNCTION、PROGRAM 声明与调用
@@ -219,12 +211,10 @@ ST2C-master/
 | 文档 | 用途 |
 |------|------|
 | [本文件](README.md) | 项目入口、架构概览、快速开始 |
-| [架构详解](architecture.md) | 类图、序列图、状态图、依赖图（Mermaid） |
-| [编译器→运行时接口](compiler-to-runtime.md) | 编译流程、接口契约、表达式转换、GVL 偏移量 |
-| [ST 语言支持矩阵](st-support.md) | 各 ST 特性的支持状态 |
+| [架构详解](docs/architecture.md) | 类图、序列图、状态图、依赖图（Mermaid） |
+| [编译器→运行时接口](docs/compiler-to-runtime.md) | 编译流程、接口契约、表达式转换、GVL 偏移量 |
 | [开发指南](CONTRIBUTING.md) | 环境搭建、如何加新语法/类型/FB、编码规范 |
-| [实时化改造方案](ST2C实时化改造方案.md) | 详细设计决策与实现方案 |
-| [PLC 运行时架构知识库](PLC运行时架构知识库.md) | 工业 PLC 架构背景知识 |
+| [PLC 运行时架构知识库](docs/PLC运行时架构知识库.md) | 工业 PLC 架构背景知识 |
 | [Runtime 文档](runtime-flat/docs/README.md) | 运行时目录结构、构建、开发指南 |
 
 ## 许可证

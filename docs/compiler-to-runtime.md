@@ -76,15 +76,13 @@ plcVisitor.visit(parseTree);
 ### 1.4 代码生成
 
 ```java
-PLCTranslatorNew translatorNew = new PLCTranslatorNew(property, codeGen);
+PLCTranslatorNew translatorNew = new PLCTranslatorNew(property, gvlCtx);
 String fullCode = translatorNew.visit(parseTree);
 ```
 
-`PLCTranslatorNew` 遍历同一棵语法树，对每个节点创建 `TranslateXxx` 实例并调用 `translateNode()`。`TranslateXxx` 从 `ParseTreeProperty` 读取符号数据，通过 `CodeGenerator` 接口发射 C++ 代码字符串。
+`PLCTranslatorNew` 遍历同一棵语法树，对每个节点创建 `TranslateXxx` 实例并调用 `translateNode()`。`TranslateXxx` 从 `ParseTreeProperty` 读取符号数据，通过 `GvlContext` 查询偏移量和进行表达式转换。
 
-**关键接口**：`CodeGenerator`（约 30 个 `emitXxx()` 方法），所有方法返回 `String`，不直接写文件。
-
-**Flat 后端实现**：`FlatCodeGenerator` 管理 GVL 偏移量分配、表达式转换、FOR 循环遮盖等。
+**核心上下文**：`GvlContext` 管理 GVL 偏移量分配（`allocateOffset()`）、类型映射（`SIZE_MAP` / `toNativeType()`）、表达式转换（`translateExpr()`）、FOR 循环遮盖等。
 
 ### 1.5 文件输出
 
@@ -92,7 +90,7 @@ String fullCode = translatorNew.visit(parseTree);
 try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
     writer.write(fullCode);
 }
-System.out.println(codeGen.getOffsetDefinitions());  // GVL 偏移量信息输出到 stdout
+System.out.println(gvlCtx.getOffsetDefinitions());  // GVL 偏移量信息输出到 stdout
 ```
 
 一次性写入生成的 C++ 代码。GVL 偏移量映射输出到控制台供调试。
@@ -202,10 +200,10 @@ extern void registerAllPOUs(POURegistry& reg) {
 
 ## 3. GVL 偏移量分配算法
 
-编译器在 `FlatCodeGenerator.allocateOffset()` 中按顺序为变量分配偏移：
+编译器在 `GvlContext.allocateOffset()` 中按顺序为变量分配偏移：
 
 ```java
-private int allocateOffset(String varName, String nativeType) {
+public int allocateOffset(String varName, String nativeType) {
     int size = getTypeSize(nativeType);
     int aligned = (currentOffset + size - 1) / size * size;  // 对齐到类型边界
     offsetMap.put(varName, aligned);
@@ -256,7 +254,7 @@ private int allocateOffset(String varName, String nativeType) {
 (*::PLC::RFM->getSymbolByID<INT*>(123))
 ```
 
-`FlatCodeGenerator.translateExpr()` 通过多轮正则替换将其转换为原生 C++：
+`GvlContext.translateExpr()` 通过多轮正则替换将其转换为原生 C++：
 
 ### 转换管线
 
@@ -375,12 +373,12 @@ void registerPOU_test_print(POURegistry& reg) {
 ### 流程
 
 ```
-test.bat [input.st]
-    │
-    ├── [1/4] mvn compile          # 编译 Java 编译器
-    ├── [2/4] java Main ...        # ST → C++（输出到 output/flat/main.cpp）
-    ├── [3/4] mingw32-make          # CMake 构建 runtime-flat
-    └── [4/4] framework_test.exe   # 运行框架测试
+# 手动构建
+cd java && mvn compile                            # 编译 Java 编译器
+java -jar target/st2c-jar-with-dependencies.jar \ # ST → C++
+  --input examples/test.st --output-dir output/flat/build
+cd runtime-flat/build && cmake --build .          # CMake 构建 runtime-flat
+./tests/framework_test.exe                        # 运行框架测试
 ```
 
 ### CMake 关键变量
@@ -400,9 +398,11 @@ ST2C-master/
 │   └── src/main/java/
 │       ├── Main.java                    # 入口
 │       ├── PLCTranslator/
-│       │   ├── CodeGenerator.java       # 代码生成接口
-│       │   ├── FlatCodeGenerator.java   # Flat 后端实现
-│       │   └── PLCTranslatorNew.java    # Visitor 调度器
+│       │   ├── PLCTranslatorNew.java    # Visitor 调度器
+│       │   ├── GvlContext.java          # GVL 偏移量 + SIZE_MAP + toNativeType
+│       │   ├── CompilerConfig.java      # 编译器配置
+│       │   ├── PLCTargetFile.java       # 文件输出辅助
+│       │   └── TranslateType/           # 各语法节点翻译器（59 个类）
 │       ├── staticCheckVisitor/          # 语义检查 + 表达式预组装
 │       └── PLCSymbolAndScope/           # 符号表 + 作用域栈
 ├── runtime-flat/            # C++ 实时运行时
@@ -410,11 +410,14 @@ ST2C-master/
 │   │   ├── rt_plc.h         # 类型系统 + 功能块 + 内置函数
 │   │   ├── rt_runtime.h     # 调度器 + GVL + POU 注册
 │   │   └── core/            # GVL, ErrorManager, Task, Registry
-│   ├── runtime_main.cpp     # 运行时主程序
+│   ├── src/                 # 运行时源文件
+│   ├── tests/               # 桌面端测试
 │   └── CMakeLists.txt       # 构建配置
+├── target/                  # 平台特定运行时入口
 ├── output/flat/             # 编译器输出的 .cpp 文件
 ├── examples/                # ST 源码示例
-└── tasks.json               # 调度配置
+├── tasks.json               # 调度配置
+└── docs/                    # 架构文档
 ```
 
 ---

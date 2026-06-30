@@ -26,10 +26,7 @@ cmake --version        # CMake 3.10+
 ### 3. 构建项目
 
 ```bash
-# 一键测试（推荐）
-test.bat
-
-# 或手动分步
+# 手动分步
 cd java && mvn compile
 cd runtime-flat/build && cmake .. -G "MinGW Makefiles" && cmake --build .
 ```
@@ -84,12 +81,12 @@ cd runtime-flat/build && cmake .. -G "MinGW Makefiles" && cmake --build .
 
 2. 如需类型转换，添加 `TO_MY_TYPE()` 函数
 
-3. 在 `FlatCodeGenerator.SIZE_MAP` 中注册大小：
+3. 在 `GvlContext.SIZE_MAP` 中注册大小：
    ```java
    SIZE_MAP.put("MY_TYPE", 4);
    ```
 
-4. 在 `FlatCodeGenerator.toNativeType()` 中注册映射：
+4. 在 `GvlContext.toNativeType()` 中注册映射：
    ```java
    case "MY_TYPE": return "MY_TYPE";
    ```
@@ -99,7 +96,7 @@ cd runtime-flat/build && cmake .. -G "MinGW Makefiles" && cmake --build .
 ```bash
 cd runtime-flat/build
 cmake .. -G "MinGW Makefiles" && cmake --build .
-.\framework_test.exe      # 112+ 项全部 PASS
+.\tests\framework_test.exe      # 124+ 项全部 PASS
 .\fibonacci.exe            # 基础类型验证
 .\multitask_demo.exe       # 多任务调度演示
 ```
@@ -116,7 +113,7 @@ cmake .. -G "MinGW Makefiles" && cmake --build .
 | Visitor 方法大写开头 | `VisitFunc_decl`, `VisitProg_decl` |
 | 翻译器类 `Translate` 前缀 | `TranslateFunc_decl`, `TranslateCallFunc` |
 | 工厂方法在 `packageFactory` 中 | — |
-| `CodeGenerator` 接口：所有 `emitXxx()` 返回 `String` | 不直接写文件 |
+| `GvlContext` 管理偏移量 + 表达式转换 | `Translate*` 类只读 `GvlContext` |
 | 策略类用 `@StrategyForVisit` 注解 | `ruleIndex` + `branch` |
 
 ### C++ 运行时

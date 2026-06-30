@@ -5,7 +5,7 @@
 ```
 tests/
 ├── JUnit (95+ 单元测试)  ← mvn test
-│   ├── FlatCodeGeneratorTest     — 代码生成器方法测试 (61)
+│   ├── GvlContextTest            — GVL 偏移量 + 类型转换 (61)
 │   ├── PLCSymbolTableTest        — 符号表操作 (11)
 │   ├── PLCScopeTest              — 作用域栈 (12)
 │   ├── IDGeneratorTest           — ID 生成器 (8)
@@ -70,7 +70,7 @@ git diff src/test/resources/snapshots/
 mvn test
 
 # 运行单个测试类
-mvn test -Dtest=FlatCodeGeneratorTest
+mvn test -Dtest=GvlContextTest
 
 # 跳过测试（打包时）
 mvn package -DskipTests
