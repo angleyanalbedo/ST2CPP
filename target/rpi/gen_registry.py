@@ -19,6 +19,8 @@ def main():
                         help="Compiler output directory (default: ../../output/flat/build)")
     parser.add_argument("--output", default=None,
                         help="Output file (default: <build-dir>/pou_registry.gen.cpp)")
+    parser.add_argument("--exclude", nargs="*", default=[],
+                        help="Basenames to exclude (e.g. test_tricky.cpp)")
     args = parser.parse_args()
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -35,6 +37,8 @@ def main():
     # Find all .cpp files (excluding this registry file itself)
     cpp_files = glob.glob(os.path.join(build_dir, "*.cpp"))
     cpp_files = [f for f in cpp_files if not os.path.basename(f).startswith("pou_registry")]
+    if args.exclude:
+        cpp_files = [f for f in cpp_files if os.path.basename(f) not in args.exclude]
 
     # Extract registerPOU_xxx function names
     pattern = re.compile(r"\bvoid\s+(registerPOU_\w+)\s*\(")

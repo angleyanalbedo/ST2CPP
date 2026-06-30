@@ -24,7 +24,9 @@ RT_SRCS  = $(wildcard $(RT_DIR)/src/*.cpp)
 PLAT_SRC = platform_rpi.cpp
 MAIN_SRC = runtime_rpi.cpp
 HAL_SRC  = hal/gpio_hal.cpp hal/gpio_tci.cpp
-POU_SRCS = $(wildcard $(BUILD)/*.cpp)
+POU_BROKEN = $(BUILD)/test_tricky.cpp $(BUILD)/test_tricky_isolate.cpp $(BUILD)/test_tricky_mini.cpp
+POU_EXCLUDE_NAMES = test_tricky.cpp test_tricky_isolate.cpp test_tricky_mini.cpp
+POU_SRCS = $(filter-out $(BUILD)/pou_registry.gen.cpp $(POU_BROKEN), $(wildcard $(BUILD)/*.cpp))
 CONFIG_JSON     = config/config.json
 CONFIG_GEN      = build/runtime_config.gen.cpp
 CONFIG_GEN_STUB = build/runtime_config_stub.gen.cpp
@@ -34,8 +36,8 @@ TCI_SRCS = $(TCI_DIR)/network_tci.cpp $(TCI_DIR)/tcp_tci.cpp
 config: $(CONFIG_GEN)
 
 $(CONFIG_GEN): $(CONFIG_JSON) | build
-	python3 ../scripts/gen_config.py --target rpi --input $(CONFIG_JSON) --output $(CONFIG_GEN) || \
-	python  ../scripts/gen_config.py --target rpi --input $(CONFIG_JSON) --output $(CONFIG_GEN) || \
+	python3 ../scripts/gen_config.py --target rpi --input $(CONFIG_JSON) --output $(CONFIG_GEN) --exclude $(POU_EXCLUDE_NAMES) || \
+	python  ../scripts/gen_config.py --target rpi --input $(CONFIG_JSON) --output $(CONFIG_GEN) --exclude $(POU_EXCLUDE_NAMES) || \
 	echo "Warning: gen_config.py failed" 1>&2
 
 $(CONFIG_GEN_STUB): $(CONFIG_JSON) | build

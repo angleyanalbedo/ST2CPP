@@ -72,7 +72,7 @@ def parse_addr(addr_str):
     return direction, byte_off, bit_off
 
 
-def scan_pou_registrations(build_dir):
+def scan_pou_registrations(build_dir, exclude=None):
     """Scan compiler output .cpp files for registerPOU_xxx functions."""
     if not os.path.isdir(build_dir):
         return []
@@ -80,6 +80,8 @@ def scan_pou_registrations(build_dir):
     cpp_files = glob.glob(os.path.join(build_dir, "*.cpp"))
     cpp_files = [f for f in cpp_files if not os.path.basename(f).startswith("pou_registry")
                  and not os.path.basename(f).startswith("runtime_config")]
+    if exclude:
+        cpp_files = [f for f in cpp_files if os.path.basename(f) not in exclude]
 
     pattern = re.compile(r"\bvoid\s+(registerPOU_\w+)\s*\(")
     reg_funcs = set()
@@ -220,9 +222,9 @@ DRIVER_GENERATORS = {
 }
 
 
-def generate(config, target, build_dir, stub=False):
+def generate(config, target, build_dir, stub=False, exclude=None):
     """Generate runtime_config.gen.cpp content."""
-    reg_funcs = [] if stub else scan_pou_registrations(build_dir)
+    reg_funcs = [] if stub else scan_pou_registrations(build_dir, exclude)
 
     base_cycle = config.get('base_cycle_us', 1000)
     tasks = config.get('tasks', [])
@@ -362,6 +364,8 @@ def main():
                         help="Compiler output directory for POU scanning (default: ../../output/flat/build)")
     parser.add_argument("--stub", action="store_true",
                         help="Generate empty POU registration (stub mode, no POU scanning)")
+    parser.add_argument("--exclude", nargs="*", default=[],
+                        help="Basenames to exclude from POU scanning (e.g. test_tricky.cpp)")
     args = parser.parse_args()
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -394,7 +398,7 @@ def main():
         print(f"Config not found: {config_path}, using defaults")
 
     # Generate
-    code = generate(config, args.target, build_dir, args.stub)
+    code = generate(config, args.target, build_dir, args.stub, args.exclude)
 
     # Write
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
@@ -402,7 +406,7 @@ def main():
         f.write(code)
 
     print(f"Generated: {output_path}")
-    pou_count = 0 if args.stub else len(scan_pou_registrations(build_dir))
+    pou_count = 0 if args.stub else len(scan_pou_registrations(build_dir, args.exclude))
     print(f"  POU registrations: {pou_count}")
     print(f"  Tasks: {len(config.get('tasks', []))}")
     print(f"  Bindings: {len(config.get('bindings', []))}")
