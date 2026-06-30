@@ -18,6 +18,8 @@ items should live in compiler docs unless they directly affect the runtime ABI.
 - [x] Cyclic, event, and freewheeling task types
 - [x] Static task/program/event capacity limits
 - [x] Software watchdog
+- [x] `TaskExecutor` for unified cyclic/event/freewheeling task execution
+- [x] `IoManager` wrapper for TCI/CompositeTCI sync and safe-output staging
 - [x] Runtime error ring buffer and safe math helpers
 - [x] RETAIN region markers and in-memory backup/restore hooks
 - [x] Diagnostics counters for scan time and overruns
@@ -32,15 +34,18 @@ items should live in compiler docs unless they directly affect the runtime ABI.
   - Keep a 64-bit extended counter or handle deltas with unsigned wrap logic.
   - Add a long-run test hook so diagnostics do not break after counter wrap.
 
-- [ ] Unify cyclic and event task execution paths
+- [x] Unify cyclic and event task execution paths
   - Event tasks should use the same timing, watchdog, overrun, fatal-error, and
     diagnostic accounting as cyclic tasks.
   - Avoid duplicated PROGRAM execution logic in `Scheduler::tick()` and
     `Scheduler::checkEvents()`.
+  - Implemented by `TaskExecutor`; covered by the event-task watchdog regression
+    test.
 
-- [ ] Make watchdog behavior independent of `ENABLE_DIAG`
+- [x] Make watchdog behavior independent of `ENABLE_DIAG`
   - Watchdog timing must work in release builds.
   - Diagnostics can control logging/statistics, but not safety behavior.
+  - Verified with the `ENABLE_DIAG=OFF` runtime integration test.
 
 - [ ] Define deterministic overrun semantics
   - Decide whether an overrun skips the next period, catches up, latches ERROR,
@@ -91,6 +96,18 @@ items should live in compiler docs unless they directly affect the runtime ABI.
 
 ## P1 — Fieldbus and I/O Productization
 
+- [x] Add runtime I/O management boundary
+  - `IoManager` owns TCI calls from the runtime core.
+  - Existing `config.json -> gen_config.py -> CompositeTCI` target flow remains
+    unchanged.
+  - First safe-output staging API is available, but not yet wired into ERROR
+    state transitions.
+
+- [ ] Wire safe outputs into fatal/error transitions
+  - On selected fatal errors or watchdog policy violations, apply configured
+    safe outputs before final `syncOutputs()`.
+  - Keep policy explicit: not every diagnostic warning should force safe output.
+
 - [ ] Promote EtherCAT TCI to a first-class runtime backend
   - PDO mapping generated from config/compiler layout.
   - Input/output domain copy must be deterministic and non-blocking inside scan.
@@ -122,6 +139,8 @@ items should live in compiler docs unless they directly affect the runtime ABI.
 - [ ] Add force/override mechanism
   - Force inputs/outputs/internal variables with clear ownership and expiry.
   - Log force activity for audit and safety review.
+  - Route I/O forcing through `IoManager`, while symbol/GVL forcing can remain
+    a separate diagnostics feature.
 
 - [ ] Add alarm/event history
   - Fixed-size ring buffer.
@@ -185,6 +204,8 @@ items should live in compiler docs unless they directly affect the runtime ABI.
 
 These were previously tracked here and are kept as context:
 
+- [x] TaskExecutor extraction from Scheduler
+- [x] IoManager extraction around TCI/CompositeTCI
 - [x] GVL offset bounds checks
 - [x] ProcessImage offset bounds checks
 - [x] Task interval/priority validation
