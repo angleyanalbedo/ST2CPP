@@ -163,13 +163,13 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
 
     public static String mapOperator(String op) {
         return switch (op) {
-            case "OR" -> "||";
+            case "OR" -> "|";
             case "XOR" -> "^";
-            case "AND" -> "&&";
+            case "AND" -> "&";
             case "=" -> "==";
             case "<>" -> "!=";
             case "MOD" -> "MOD";
-            case "NOT" -> "!";
+            case "NOT" -> "!";   // TODO: NOT on INT needs ~, NOT on BOOL needs !; 需类型上下文区分
             default -> op;
         };
     }

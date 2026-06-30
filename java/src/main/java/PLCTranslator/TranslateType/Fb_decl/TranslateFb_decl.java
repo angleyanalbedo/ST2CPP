@@ -40,9 +40,11 @@ public class TranslateFb_decl {
                             init = init.substring(1, init.length() - 1);
                         }
                         sb.append(" = ").append(init);
+                    } else if (init.contains(":=")) {
+                        // ST 命名聚合初始化 (J1:=0.0,J2:=-45.0,...) → {0.0, -45.0, ...}
+                        sb.append(" = ").append(toAggregateInit(init, fields));
                     } else {
-                        // 复杂聚合初始化，留注释（后续可加 _init 函数）
-                        sb.append(" /* = ").append(f.initValue).append(" */");
+                        sb.append(" = ").append(init);
                     }
                 }
                 sb.append(";\n");
@@ -139,5 +141,35 @@ public class TranslateFb_decl {
             return "INT";
         }
         return gvlCtx.toNativeType(typeDecl.getName());
+    }
+
+    /**
+     * 将 ST 命名聚合初始化转为 C++ 聚合初始化。
+     * (J1:=0.0,J2:=-45.0,SPEED:=50.0,DWELL_MS:=500) → {0.0, -45.0, ..., 50.0, 500}
+     * 字段按 fields 列表顺序输出（即声明顺序）。
+     */
+    private static String toAggregateInit(String init, List<FBField> fields) {
+        // 解析命名参数 → Map<name, value>
+        java.util.Map<String, String> namedValues = new java.util.LinkedHashMap<>();
+        String inner = init.trim();
+        if (inner.startsWith("(") && inner.endsWith(")")) {
+            inner = inner.substring(1, inner.length() - 1);
+        }
+        for (String part : inner.split(",")) {
+            String trimmed = part.trim();
+            int eq = trimmed.indexOf(":=");
+            if (eq >= 0) {
+                namedValues.put(trimmed.substring(0, eq).trim(), trimmed.substring(eq + 2).trim());
+            }
+        }
+        // 按 fields 声明顺序输出值
+        StringBuilder sb = new StringBuilder("{");
+        for (int i = 0; i < fields.size(); i++) {
+            if (i > 0) sb.append(", ");
+            String val = namedValues.get(fields.get(i).name);
+            sb.append(val != null ? val : "0");
+        }
+        sb.append("}");
+        return sb.toString();
     }
 }

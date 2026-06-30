@@ -127,8 +127,21 @@ public class TranslateCallFunc {
             arrayBase = gvlCtx.resolveStructMemberOffset(arrayName);
         }
         if(arrayBase == null){
-            sb.append("\n\t\t// TODO: array FB call for ").append(arrayName).append("[")
-              .append(indexExpr).append("]");
+            // 非 GVL 数组（如 FB 体内的成员数组 Srv[I]）：直接生成成员访问
+            // 提取元素类型名
+            String elemTypeName = fbTypeName;
+            if(fbTypeName != null && fbTypeName.startsWith("ARRAY[")){
+                int ofIdx = fbTypeName.indexOf(" OF ");
+                if(ofIdx >= 0) elemTypeName = fbTypeName.substring(ofIdx + 4).trim();
+            }
+            for (int i = 0; i < paramNames.size(); i++) {
+                String paramName = paramNames.get(i);
+                String paramValue = paramValues.get(i);
+                sb.append("\n\t\t").append(arrayName).append("[").append(indexExpr)
+                  .append("].").append(paramName).append(" = ").append(paramValue).append(";");
+            }
+            sb.append("\n\t\t").append(arrayName).append("[").append(indexExpr)
+              .append("].update(gvl, io, dt);");
             return sb.toString();
         }
 
