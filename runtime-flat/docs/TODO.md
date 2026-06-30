@@ -1,65 +1,196 @@
 # runtime-flat TODO
 
-本文件列出 runtime-flat 的待办事项，基于 2025-06-25 全项目审计更新。完整上下文参见项目根目录 `AGENTS.md`。
+This TODO tracks the runtime work needed to move from a functional PLC runtime
+kernel to something that can survive industrial product scrutiny.
 
-## ✅ 已完成（2025-06-25 审计中确认）
+The current strategic focus is hard real-time execution, target integration,
+fieldbus behavior, persistence, diagnostics, and safety evidence. Compiler-only
+items should live in compiler docs unless they directly affect the runtime ABI.
 
-- [x] GVL 偏移量越界检查（framework_test #13）
-- [x] ProcessImage 偏移量越界检查（framework_test #14）
-- [x] Task 参数校验：interval/priority clamp（framework_test #15）
-- [x] 除零/溢出错误码细化：safeDiv/safeMod 记录操作数（framework_test #16）
-- [x] ARRAY 类型支持：emitVarDecl + safeArrayAt
-- [x] STRUCT 类型支持：C++ struct 生成 + 字段访问
-- [x] RETAIN 区域标记：编译器收集 RETAIN 变量并生成 setRetainRegion()（已修复参数 bug）
-- [x] 临时变量类型推断：INT _X0=A（非 auto）
-- [x] GVL 变量在表达式中的转换：gvl.read/write<T>(offset)
-- [x] WHILE / REPEAT / CASE 控制流翻译
-- [x] ErrorManager 提取到独立头文件 error_manager.h（解决 gvl.h 循环依赖）
-- [x] 数组下标 GVL 变量转换（readExpr/writeExpr/translateExpr 三处修复）
-- [x] fileId 后缀修复（从输入文件名派生）
-- [x] CASE 翻译遗漏修复（case_list_elem 走 translateExpr）
-- [x] 子模块拆分：core/ 下已有 gvl.h, types.h, error_manager.h, registry.h, task.h, program.h, diag.h, watchdog.h, event.h, constants.h
+## Status Snapshot
 
-## 🔴 高优先级（阻塞产品化）
+`runtime-flat` already has:
 
-### 编译器 Bug
+- [x] Flat GVL memory with bounds-checked `read/write/ptr`
+- [x] ProcessImage input/output buffers with bit and typed accessors
+- [x] TCI abstraction plus `CompositeTCI`
+- [x] PROGRAM lifecycle support
+- [x] Cyclic, event, and freewheeling task types
+- [x] Static task/program/event capacity limits
+- [x] Software watchdog
+- [x] Runtime error ring buffer and safe math helpers
+- [x] RETAIN region markers and in-memory backup/restore hooks
+- [x] Diagnostics counters for scan time and overruns
+- [x] Desktop/Linux/bare-metal platform abstraction
+- [x] Linux `timerfd` + `SCHED_FIFO` runtime entry
+- [x] STM32-style timer interrupt runtime entry
+- [x] Desktop functional and integration tests
 
-- [x] **24 处无保护的 PLCVariable 强转**：多个 TranslateXxx 中 `(PLCVariable) properties.get(ctx).get(0)` 未检查类型，若 properties 含 PLCTypeDeclSymbol 等会 ClassCastException
-  - 涉及文件：TranslateCase_stmt, TranslateAssert_stmt, TranslateFunc_call, TranslateCallFunc, TranslateStruct_elem_decl, TranslateElsif_stmt, TranslateIf_stmt, TranslateWhile_stmt, TranslateRepeat_stmt, TranslateFor_stmt, TranslateVariableAssignExpression, TranslateInvocation1/2
-- [x] **多文件同名 PROGRAM 链接冲突**：多个 .st 定义同名 PROGRAM 导致 multiple definition 错误
-  - 需要：同名时编译器报出重定义错误
-- [x] **runtime_main 链接失败**：CMake 的 `runtime_main` 目标未链接 `pou_registry.gen.cpp`，`registerAllPOUs` 未定义
-  - 修复：`runtime_main` 使用 `RUNTIME_MAIN_STANDALONE` 定义空 stub；完整版用 `runtime` 目标
+## P0 — Correctness Issues Blocking Runtime Trust
 
-### 编译器功能缺失
+- [ ] Make `platform::steadyUs()` wrap-safe on STM32/Cortex-M DWT `CYCCNT`
+  - Keep a 64-bit extended counter or handle deltas with unsigned wrap logic.
+  - Add a long-run test hook so diagnostics do not break after counter wrap.
 
-- [x] **FB（功能块）翻译**：当前仅支持 FUNCTION 和 PROGRAM，无法翻译 FUNCTION_BLOCK 声明和实例化
-- [x] **ENUM 类型声明**：TYPE...END_TYPE 中的 ENUM 在 PROGRAM 变量段输出 `// TODO` 注释
-- [x] **VAR_INPUT/VAR_OUTPUT/VAR_IN_OUT**：PROGRAM 的 IO 参数声明未正确处理
-- [x] **标准 FB 调用集成**：运行时有 TON/CTU/CTD/R_TRIG/F_TRIG 实现，但编译器不会生成调用代码
-- [x] **FB 实例化**：无法 `VAR btn : TON; END_VAR` 声明 FB 实例
+- [ ] Unify cyclic and event task execution paths
+  - Event tasks should use the same timing, watchdog, overrun, fatal-error, and
+    diagnostic accounting as cyclic tasks.
+  - Avoid duplicated PROGRAM execution logic in `Scheduler::tick()` and
+    `Scheduler::checkEvents()`.
 
-## 🟡 中优先级（可观测性 + 质量）
+- [ ] Make watchdog behavior independent of `ENABLE_DIAG`
+  - Watchdog timing must work in release builds.
+  - Diagnostics can control logging/statistics, but not safety behavior.
 
-- [ ] **测试覆盖**：WHILE / REPEAT / CASE 无独立测试用例（仅通过 framework_test 间接验证）
-- [ ] **CASE 翻译改用原生 switch**：当前翻译为 if/else if 链，效率低于 switch/case
-- [ ] **周期报警阈值**：`DiagStats` 增加 `alarmThreshold` 和报警回调接口
-- [ ] **抖动（jitter）统计**：标准差、百分位数（P99/P95）
-- [ ] **OPC UA 报警接口**：`printDiag()` 仅输出到 stdout，需工业协议输出
-- [ ] **错误码标准化**：扩展为 IEC 61131-3 / PLCopen 风格的分层错误码（0x8xxx 格式）
-- [ ] **轴级超时**：新增 `Axis` 对象，每轴独立超时保护
-- [ ] **emitVarDecl 代码重复**：`emitVarDecl`/`emitGlobalVarDecl`/`emitProgVarDecl` 三份几乎相同，需合并
+- [ ] Define deterministic overrun semantics
+  - Decide whether an overrun skips the next period, catches up, latches ERROR,
+    or enters a degraded mode.
+  - Document behavior and add tests for each selected policy.
 
-## 🟢 低优先级（工业认证 + 扩展）
+- [ ] Harden GVL/ProcessImage alignment contract
+  - Add compile-time or runtime checks for generated offsets.
+  - Document required alignment per IEC type and target architecture.
 
-- [ ] **STO（安全转矩关闭）**：新增 `SafetyModule` 接口，硬件安全回路抽象
-- [ ] **硬件看门狗**：独立硬件 WDT 接口（与软件看门狗互补）
-- [ ] **安全状态机**：与主状态机物理隔离或逻辑强隔离的独立安全路径
-- [ ] **TÜV 认证准备**：需求追溯矩阵、FMEA/FTA 文档、故障注入测试框架
-- [ ] **SIL/PL 等级**：SIL2/SIL3 所需的冗余、诊断覆盖度
-- [ ] **多核调度**：当前单线程串行，需评估 RTOS 集成方案
-- [ ] **动态任务注册**：当前任务在编译期固定，需支持运行时动态创建/销毁
-- [ ] **OPC UA 集成**：工业协议通信接口
-- [ ] **MQTT 集成**：物联网上报通道
-- [ ] **在线下载/热更新**：不支持
-- [ ] **错误信息国际化**：当前中英混杂
+## P1 — Hard Real-Time Evidence
+
+- [ ] Add jitter histogram and percentiles
+  - Track min/max/avg/stddev plus P95/P99/P99.9.
+  - Keep fixed-size buckets to avoid heap allocation.
+
+- [ ] Add WCET measurement per task and per scan phase
+  - Record ReadInputs, LogicSolve, WriteOutputs, Housekeeping separately.
+  - Record max execution time per task and per PROGRAM.
+
+- [ ] Add long-run stability test
+  - 24h/72h run mode with periodic diagnostic snapshots.
+  - Detect missed ticks, timerfd overruns, counter wrap, and memory corruption.
+
+- [ ] Add hardware GPIO jitter measurement mode
+  - Toggle a pin at scan start/end for oscilloscope validation.
+  - Keep this available on STM32, Raspberry Pi, and Banana Pi targets.
+
+- [ ] Add target timing acceptance criteria
+  - Example: 1 ms cycle, P99 jitter under target-specific threshold, zero missed
+    watchdog-safe ticks under load.
+
+## P1 — RETAIN and Startup Semantics
+
+- [ ] Replace RAM-only RETAIN backup with a storage interface
+  - `RetainStore::load/save/commit/invalidate`
+  - Backends: file, Flash, FRAM, or target-specific NVRAM.
+
+- [ ] Add RETAIN integrity metadata
+  - CRC, layout version, payload size, compiler build ID, and monotonic counter.
+
+- [ ] Define cold/warm/hot restart behavior
+  - Specify what happens to GVL, ProcessImage, tasks, diagnostics, and errors.
+
+- [ ] Add power-loss consistency tests
+  - Simulate interrupted writes.
+  - Verify corrupt RETAIN data enters a known safe fallback.
+
+## P1 — Fieldbus and I/O Productization
+
+- [ ] Promote EtherCAT TCI to a first-class runtime backend
+  - PDO mapping generated from config/compiler layout.
+  - Input/output domain copy must be deterministic and non-blocking inside scan.
+
+- [ ] Add EtherCAT fault state handling
+  - Link down, slave missing, PDO watchdog timeout, working-counter mismatch,
+    and safe output fallback.
+
+- [ ] Validate under bus load
+  - Measure scan jitter with EtherCAT traffic enabled.
+  - Record bus cycle time, WKC, slave state, and dropped/error frames.
+
+- [ ] Add real hardware demo
+  - ST code -> generated C++ -> runtime -> EtherCAT PDO -> real servo or IO.
+
+- [ ] Define absolute address mapping contract
+  - `%IX/%QX/%IB/%QB/%IW/%QW/...` must map predictably to ProcessImage/PDO.
+
+## P2 — Diagnostics and Online Engineering Hooks
+
+- [ ] Add structured diagnostics API
+  - Machine-readable snapshot instead of only `printDiag()`.
+  - Include system state, task stats, scan stats, errors, watchdog, and IO state.
+
+- [ ] Add variable watch/trace hooks
+  - Read GVL/ProcessImage by symbol metadata and offset.
+  - Keep the hard real-time path free from blocking transport code.
+
+- [ ] Add force/override mechanism
+  - Force inputs/outputs/internal variables with clear ownership and expiry.
+  - Log force activity for audit and safety review.
+
+- [ ] Add alarm/event history
+  - Fixed-size ring buffer.
+  - Include timestamp, source, severity, acknowledge state, and payload.
+
+- [ ] Add remote diagnostic transport adapters
+  - OPC UA, MQTT, or a small custom binary protocol can sit outside the core.
+
+## P2 — Runtime API and ABI Hardening
+
+- [ ] Version the generated-code/runtime ABI
+  - Include ABI version, GVL layout hash, ProcessImage size, and compiler ID.
+
+- [ ] Add config validation at startup
+  - Task intervals, priorities, watchdog limits, RETAIN ranges, and TCI mappings.
+
+- [ ] Document capacity limits
+  - `MAX_TASKS`, `MAX_PROGRAMS`, `MAX_EVENTS`, `MAX_POUS_PER_TASK`, GVL size,
+    ProcessImage size, and expected RAM footprint.
+
+- [ ] Add graceful safe-state transition
+  - On fatal runtime error, explicitly drive outputs to configured safe values.
+
+- [ ] Add hardware watchdog interface
+  - Software watchdog detects logical overruns.
+  - Hardware watchdog resets the target if the runtime itself stalls.
+
+## P3 — Safety Path
+
+- [ ] Expand `SafetyModule` beyond placeholder interface
+  - Safe inputs, safe outputs, safe state, cyclic safety check, and fault latch.
+
+- [ ] Add fault-injection tests
+  - Divide by zero, array OOB, task overrun, corrupted RETAIN, IO timeout,
+    fieldbus disconnect, and watchdog failure.
+
+- [ ] Prepare certification evidence structure
+  - Requirements traceability matrix
+  - FMEA/FTA
+  - Test evidence index
+  - Coding standard checklist
+
+- [ ] Decide safety scope honestly
+  - Non-safety controller first, safety-rated runtime later.
+  - Do not market as SIL-capable before the evidence exists.
+
+## P3 — IEC Library and Ecosystem
+
+- [ ] Complete and verify standard IEC functions and function blocks
+  - Timers, counters, triggers, string functions, math functions, conversion
+    edge cases, and time/date operations.
+
+- [ ] Add PLCopen-style motion-control foundation
+  - Axis object model, enable/disable, homing, move absolute/relative, stop,
+    fault reset, and per-axis timeout.
+
+- [ ] Add conformance-oriented tests
+  - Golden ST programs with expected scan-by-scan behavior.
+
+## Completed Historical Items
+
+These were previously tracked here and are kept as context:
+
+- [x] GVL offset bounds checks
+- [x] ProcessImage offset bounds checks
+- [x] Task interval/priority validation
+- [x] Safe division/modulo with operand logging
+- [x] Safe array access support
+- [x] STRUCT and ARRAY generated-code support
+- [x] RETAIN region marker generation
+- [x] ErrorManager extraction to independent header
+- [x] Runtime submodule split under `include/core`
