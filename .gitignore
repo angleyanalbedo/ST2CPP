@@ -16,3 +16,4 @@ target/rpi/pou_registry.gen.cpp
 *.jar
 target/*/build/
 
+runtime-flat/build-no-diag/

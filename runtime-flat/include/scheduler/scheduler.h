@@ -135,6 +135,8 @@ private:
 
     bool shouldRun(Task& task) const;
 
+    bool executeTask(int taskIndex);
+
     void checkEvents();
 
     void syncInputs();
