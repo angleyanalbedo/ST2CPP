@@ -27,6 +27,8 @@ public class VisitInputParam implements Strategy {
             String variableName = ctx.variable_name().getText();
             var.setName(variableName);
             var.setRuntimeName("_" + variableName + IDGenerator.getIDGenerator().newTempId());
+        } else {
+            var.setRuntimeName("_tmp_" + IDGenerator.getIDGenerator().newTempId());
         }
 
         PLCVariable exprVar = (PLCVariable) visitor.visit(ctx.expression()).get(0);
