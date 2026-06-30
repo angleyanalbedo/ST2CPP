@@ -99,7 +99,7 @@ FUNCTION_BLOCK ROBOT_CTRL
         );
         SrvReady[I] := Srv[I].READY;
         SrvFaultArr[I] := Srv[I].FAULT;
-        ActPosArr[i] := Srv[I].ACT_POSITION;
+        ActPosArr[I] := Srv[I].ACT_POSITION;
     END_FOR;
 
     (* ─── 安全监控 ─── *)

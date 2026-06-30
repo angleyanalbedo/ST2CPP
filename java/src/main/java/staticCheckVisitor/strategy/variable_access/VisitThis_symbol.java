@@ -73,13 +73,30 @@ public class VisitThis_symbol implements Strategy {
                     typeSymbol = PLCTotalSymbolTable.getTypeByTypeID(currentTypeId);
 
                     // 更新变量名，添加索引访问后缀（用于代码生成）
-                    // array_index 的 getText() 包含方括号，如 "[I]"，需要去掉
+                    // 访问每个 subscript 的表达式以验证符号存在性
                     // 多维数组 ST 语法 [i,j] → C++ [i][j]
-                    String indexExpr = ctx.array_index(i).getText();
-                    if (indexExpr.startsWith("[") && indexExpr.endsWith("]")) {
-                        indexExpr = indexExpr.substring(1, indexExpr.length() - 1);
+                    StringBuilder idxBuilder = new StringBuilder();
+                    for (int s = 0; s < ctx.array_index(i).subscript().size(); s++) {
+                        if (s > 0) idxBuilder.append("][");
+                        ArrayList<PLCSymbol> exprSyms = visitor.visit(
+                                ctx.array_index(i).subscript(s).expression());
+                        String exprText = null;
+                        if (exprSyms != null && !exprSyms.isEmpty()
+                                && exprSyms.get(0) instanceof PLCVariable ev) {
+                            exprText = ev.getAssignVar();
+                            if (exprText == null || exprText.isEmpty()) {
+                                exprText = ev.getName();
+                            }
+                            if (exprText != null && exprText.startsWith("*")) {
+                                exprText = exprText.substring(1);
+                            }
+                        }
+                        if (exprText == null || exprText.isEmpty()) {
+                            exprText = ctx.array_index(i).subscript(s).expression().getText();
+                        }
+                        idxBuilder.append(exprText);
                     }
-                    indexExpr = indexExpr.replace(",", "][");
+                    String indexExpr = idxBuilder.toString();
                     String currentName = tempFoundSymbol.getName();
                     // 移除前导的 *（如果有）
                     if (currentName.startsWith("*")) {

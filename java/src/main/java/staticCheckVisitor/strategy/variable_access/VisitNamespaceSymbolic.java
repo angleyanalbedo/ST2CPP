@@ -38,11 +38,11 @@ public class VisitNamespaceSymbolic implements Strategy {
                 PLCSymbol firstSym = currentScope.deepFindSymbol(nsNames.get(0));
                 if (firstSym instanceof PLCVariable baseVar) {
                     resultVar = visitMultiElemVarWithNamespace(
-                            ctx.multi_elem_var(), nsNames, baseVar);
+                            ctx.multi_elem_var(), nsNames, baseVar, visitor);
                     return visitor.packSymbols(resultVar);
                 }
             }
-            resultVar = visitMultiElemVar(ctx.multi_elem_var());
+            resultVar = visitMultiElemVar(ctx.multi_elem_var(), visitor);
         } else if (ctx.var_access() != null) {
             resultVar = visitSimpleVarAccess(ctx.var_access());
         } else {
@@ -67,7 +67,8 @@ public class VisitNamespaceSymbolic implements Strategy {
     private PLCVariable visitMultiElemVarWithNamespace(
             PLCSTPARSERParser.Multi_elem_varContext multiCtx,
             List<String> nsNames,
-            PLCVariable baseVar) {
+            PLCVariable baseVar,
+            PLCVisitor visitor) {
 
         PLCVariable result = new PLCVariable(baseVar);
         String currentName = baseVar.getLocalScope() == currentScope
@@ -83,12 +84,13 @@ public class VisitNamespaceSymbolic implements Strategy {
             result.setAssignVar("(" + cleanPath + "." + fieldName + ")");
         }
 
-        result = processMultiElemChildren(result, multiCtx, 0);
+        result = processMultiElemChildren(result, multiCtx, 0, visitor);
         return result;
     }
 
     private PLCVariable visitMultiElemVar(
-            PLCSTPARSERParser.Multi_elem_varContext multiCtx) {
+            PLCSTPARSERParser.Multi_elem_varContext multiCtx,
+            PLCVisitor visitor) {
 
         String baseName = multiCtx.var_access().variable_name().identifier().getText();
         PLCSymbol baseSymbol = currentScope.deepFindSymbol(baseName);
@@ -100,14 +102,15 @@ public class VisitNamespaceSymbolic implements Strategy {
         result.setName(baseSymbol.getLocalScope() == currentScope
                 ? "*" + baseName : baseVar.getUniqueName());
 
-        result = processMultiElemChildren(result, multiCtx, 1);
+        result = processMultiElemChildren(result, multiCtx, 1, visitor);
         return result;
     }
 
     private PLCVariable processMultiElemChildren(
             PLCVariable result,
             PLCSTPARSERParser.Multi_elem_varContext multiCtx,
-            int startIndex) {
+            int startIndex,
+            PLCVisitor visitor) {
 
         String currentName = result.getName();
 
@@ -128,10 +131,27 @@ public class VisitNamespaceSymbolic implements Strategy {
                 result.setTypeId(arrayType.getElementTypeId());
 
                 // ST 多维下标 [i,j] → C++ [i][j]
+                // 访问表达式以验证符号存在性
                 StringBuilder idxBuilder = new StringBuilder();
                 for (int s = 0; s < subCtx.subscript().size(); s++) {
                     if (s > 0) idxBuilder.append("][");
-                    idxBuilder.append(subCtx.subscript(s).expression().getText());
+                    ArrayList<PLCSymbol> exprSyms = visitor.visit(
+                            subCtx.subscript(s).expression());
+                    String exprText = null;
+                    if (exprSyms != null && !exprSyms.isEmpty()
+                            && exprSyms.get(0) instanceof PLCVariable ev) {
+                        exprText = ev.getAssignVar();
+                        if (exprText == null || exprText.isEmpty()) {
+                            exprText = ev.getName();
+                        }
+                        if (exprText != null && exprText.startsWith("*")) {
+                            exprText = exprText.substring(1);
+                        }
+                    }
+                    if (exprText == null || exprText.isEmpty()) {
+                        exprText = subCtx.subscript(s).expression().getText();
+                    }
+                    idxBuilder.append(exprText);
                 }
                 String indexExpr = idxBuilder.toString();
                 String cleanPath = cleanPath(currentName);
