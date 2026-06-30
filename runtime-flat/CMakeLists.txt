@@ -36,6 +36,7 @@ include_directories(${RT_INCLUDE_DIR})
 # ═══ 源文件 ═══
 set(RT_CORE_SOURCES
     ${RT_SRC_DIR}/gvl.cpp
+    ${RT_SRC_DIR}/io_manager.cpp
     ${RT_SRC_DIR}/program.cpp
     ${RT_SRC_DIR}/task.cpp
     ${RT_SRC_DIR}/task_executor.cpp

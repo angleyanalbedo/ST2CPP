@@ -3,6 +3,7 @@
 #include "core/constants.h"
 #include "core/types.h"
 #include "core/gvl.h"
+#include "core/io_manager.h"
 #include "core/program.h"
 #include "core/task.h"
 #include "core/task_executor.h"
@@ -23,6 +24,7 @@ public:
     ProcessImage  image;
     GVL           gvl;
     TCI*          tci          = nullptr;
+    IoManager     io;
     SystemState   systemState  = SystemState::STOP;
     Watchdog      watchdog;
     ErrorManager  errorMgr;
@@ -39,7 +41,7 @@ public:
 
     // ─── 配置 API ───
 
-    void setTCI(TCI* t) { tci = t; }
+    void setTCI(TCI* t) { tci = t; io.setTCI(t); }
     void setBaseCycle(TIME us) { baseCycleTime = us; }
     void setErrorHandler(ErrorHandler h) { errorMgr.setHandler(h); }
 
@@ -141,6 +143,7 @@ private:
 
     void checkEvents();
 
+    void syncTCIBinding();
     void syncInputs();
     void syncOutputs();
 

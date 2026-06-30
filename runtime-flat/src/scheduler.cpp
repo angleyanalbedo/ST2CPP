@@ -130,7 +130,7 @@ void Scheduler::start(StartupMode mode) {
     }
 
     // 5. 同步首次输入
-    if (tci) tci->syncInputs(image);
+    syncInputs();
 
     // 6. 进入 RUN
     systemState = SystemState::RUN;
@@ -391,12 +391,20 @@ void Scheduler::checkEvents() {
     }
 }
 
+void Scheduler::syncTCIBinding() {
+    if (tci && io.tci() != tci) {
+        io.setTCI(tci);
+    }
+}
+
 void Scheduler::syncInputs() {
-    if (tci) tci->syncInputs(image);
+    syncTCIBinding();
+    io.syncInputs(image);
 }
 
 void Scheduler::syncOutputs() {
-    if (tci) tci->syncOutputs(image);
+    syncTCIBinding();
+    io.syncOutputs(image);
 }
 
 const char* Scheduler::stateName(SystemState s) {
