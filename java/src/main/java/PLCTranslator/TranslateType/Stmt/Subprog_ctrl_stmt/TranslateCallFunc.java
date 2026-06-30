@@ -101,9 +101,9 @@ public class TranslateCallFunc {
         }
         if (fbBase != null) {
             sb.append("\n\t\tgvl.ptr<").append(fbTypeName).append(">(")
-              .append(fbBase).append(")->update(dt);");
+              .append(fbBase).append(")->update(gvl, io, dt);");
         } else {
-            sb.append("\n\t\t").append(fbInstanceName).append(".update(dt);");
+            sb.append("\n\t\t").append(fbInstanceName).append(".update(gvl, io, dt);");
         }
         return sb.toString();
     }
@@ -156,7 +156,7 @@ public class TranslateCallFunc {
         // 调用 update — 使用元素类型
         sb.append("\n\t\tgvl.ptr<").append(elemTypeName).append(">(")
           .append(arrayBase).append(" + (").append(indexExpr).append(") * ").append(elemSize)
-          .append(")->update(dt);");
+          .append(")->update(gvl, io, dt);");
         return sb.toString();
     }
 }

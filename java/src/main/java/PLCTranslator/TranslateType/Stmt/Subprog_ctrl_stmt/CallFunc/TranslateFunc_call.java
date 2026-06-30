@@ -22,7 +22,7 @@ public class TranslateFunc_call {
                 if(paramStr.length() > 0) paramStr.append(", ");
                 paramStr.append(pv.getName()).append(" := ").append(translatorNew.visit(p));
             }
-            sb.append("\n\t\t").append(fbInstanceName).append("(").append(paramStr).append(").update();");
+            sb.append("\n\t\t").append(fbInstanceName).append("(").append(paramStr).append(").update(gvl, io, dt);");
         }else if(firstSym instanceof PLCVariable funcVar){
             // 语义检查阶段 CheckFuncCall 返回的 PLCVariable
             // assignVar 格式: *FUNC_NAME(&PARAM1, &PARAM2, )
