@@ -91,6 +91,7 @@ clean:
 	rm -f $(TARGET) $(STUB_TARGET) $(ECAT_TARGET) $(CONFIG_GEN) $(CONFIG_GEN_STUB) 2>/dev/null || del /Q $(TARGET) $(STUB_TARGET) $(ECAT_TARGET) $(CONFIG_GEN) $(CONFIG_GEN_STUB) 2>NUL
 
 SOEM_DIR     = ../lib/soem
+SOEM_GEN     = ../lib/gen_options.py
 SOEM_OPTIONS = $(SOEM_DIR)/include/soem/ec_options.h
 ECAT_SRC     = ethercat_tci.cpp
 
@@ -159,8 +160,8 @@ $(SOEM_OBJ_NIC): $(NIC_SRC)
 ethercat: $(ECAT_TARGET)
 
 $(SOEM_OPTIONS): $(SOEM_OPTIONS).in
-	python3 $(SOEM_DIR)/gen_options.py $(SOEM_OPTIONS).in $(SOEM_OPTIONS) 2>/dev/null || \
-	python  $(SOEM_DIR)/gen_options.py $(SOEM_OPTIONS).in $(SOEM_OPTIONS)
+	python3 $(SOEM_GEN) $(SOEM_OPTIONS).in $(SOEM_OPTIONS) 2>/dev/null || \
+	python  $(SOEM_GEN) $(SOEM_OPTIONS).in $(SOEM_OPTIONS)
 
 $(SOEM_C_OBJS): $(SOEM_OPTIONS)
 
