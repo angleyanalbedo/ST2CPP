@@ -67,8 +67,8 @@ public class VisitFunc_access implements Strategy {
                     PLCBaseClassDeclSymbol scopeLocateType = (PLCBaseClassDeclSymbol) PLCTotalSymbolTable.getTypeByTypeID(instance.getTypeId());
                     //切换当前作用域
                     scope = scopeLocateType.getImportScope();
-                    //组装runtimeTypeName
-                    runtimeTypeName.append(instanceName).append(".");
+                    //组装runtimeTypeName: ClassName.InstanceName.
+                    runtimeTypeName.append(scopeLocateType.getName()).append(".").append(instanceName).append(".");
                 }catch(ClassCastException e){
                     throw new PLCSemanticException("error scope : " + scopeSymbol.getName());
                 }
