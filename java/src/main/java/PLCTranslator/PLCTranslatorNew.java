@@ -142,12 +142,20 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     }
 
     public static String translateBinaryChain(ParserRuleContext ctx, int opStartIndex, int opStep,
-                                              PLCTranslatorNew t) {
+                                               PLCTranslatorNew t) {
         StringBuilder sb = new StringBuilder();
         sb.append(t.visit(ctx.getChild(0)));
         for (int i = opStartIndex; i < ctx.getChildCount(); i += opStep) {
             String op = ctx.getChild(i).getText();
-            sb.append(" ").append(mapOperator(op)).append(" ");
+            String mapped = mapOperator(op);
+            if ("MOD".equals(mapped)) {
+                // IEC MOD → 函数调用 MOD(a, b)，保证非负结果
+                sb.insert(0, "MOD(");
+                sb.append(", ").append(t.visit(ctx.getChild(i + 1))).append(")");
+                // 跳过后续链式处理，MOD 只有两个操作数
+                break;
+            }
+            sb.append(" ").append(mapped).append(" ");
             sb.append(t.visit(ctx.getChild(i + 1)));
         }
         return sb.toString();
@@ -160,7 +168,7 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
             case "AND" -> "&&";
             case "=" -> "==";
             case "<>" -> "!=";
-            case "MOD" -> "%";
+            case "MOD" -> "MOD";
             case "NOT" -> "!";
             default -> op;
         };

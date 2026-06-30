@@ -57,7 +57,16 @@ public class TranslateVariableAssignExpression {
                 }
             }
         }else{
-            sb.append("\n\t\treturn ").append(rhs).append(";");
+            // 在 FC/METHOD 内部
+            String varName = varSymbol.getName();
+            // 语义分析器把函数返回赋值（如 WRAP_ANGLE := x）解析为 *this->returnValue
+            if (varName.contains("this->returnValue")) {
+                sb.append("\n\t\treturn ").append(rhs).append(";");
+            } else {
+                // 局部变量或参数，正常赋值
+                if (varName.startsWith("*")) varName = varName.substring(1);
+                sb.append("\n\t\t").append(varName).append(" = ").append(rhs).append(";");
+            }
         }
         return sb.toString();
     }

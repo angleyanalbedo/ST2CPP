@@ -123,6 +123,10 @@ public class TranslateCallFunc {
         // 获取数组基地址
         Integer arrayBase = gvlCtx.offsetMap.get(arrayName);
         if(arrayBase == null){
+            // 尝试解析为结构体成员（如 ROBOT_CTRL.Srv）
+            arrayBase = gvlCtx.resolveStructMemberOffset(arrayName);
+        }
+        if(arrayBase == null){
             sb.append("\n\t\t// TODO: array FB call for ").append(arrayName).append("[")
               .append(indexExpr).append("]");
             return sb.toString();

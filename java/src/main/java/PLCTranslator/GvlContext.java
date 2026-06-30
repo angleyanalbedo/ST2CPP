@@ -134,6 +134,25 @@ public class GvlContext {
         return typeMap.get(varName);
     }
 
+    /**
+     * 解析结构体成员的绝对 GVL 偏移量。
+     * 例如 memberName="Srv"，遍历所有 GVL 变量找到包含 Srv 的结构体，
+     * 返回 baseOffset + fieldOffset。
+     */
+    public Integer resolveStructMemberOffset(String memberName) {
+        for (Map.Entry<String, Integer> entry : offsetMap.entrySet()) {
+            String varName = entry.getKey();
+            Integer baseOffset = entry.getValue();
+            String typeName = typeMap.get(varName);
+            if (typeName == null) continue;
+            Integer fieldOff = getStructFieldOffset(typeName, memberName);
+            if (fieldOff != null) {
+                return baseOffset + fieldOff;
+            }
+        }
+        return null;
+    }
+
     // ST 类型名 → 原生 C++ 类型名
     public static final Map<String, String> TYPE_MAP = new HashMap<>();
     static {

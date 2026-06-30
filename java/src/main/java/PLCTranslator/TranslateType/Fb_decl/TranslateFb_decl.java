@@ -30,11 +30,22 @@ public class TranslateFb_decl {
         if (hasBody) {
             sb.append("\nstruct ").append(fbName).append(" {\n");
             for (FBField f : fields) {
-                sb.append("    ").append(f.typeName).append(" ").append(f.declName()).append(";");
+                sb.append("    ").append(f.typeName).append(" ").append(f.declName());
                 if (f.initValue != null && !f.initValue.isEmpty()) {
-                    sb.append(" // = ").append(f.initValue);
+                    String init = f.initValue;
+                    // 简单值（数字、BOOL、无逗号表达式）用 C++ 成员初始化
+                    if (!init.contains(",") && !init.contains(":=") && !init.contains("{")) {
+                        // 去掉外层括号：(0) → 0
+                        if (init.startsWith("(") && init.endsWith(")")) {
+                            init = init.substring(1, init.length() - 1);
+                        }
+                        sb.append(" = ").append(init);
+                    } else {
+                        // 复杂聚合初始化，留注释（后续可加 _init 函数）
+                        sb.append(" /* = ").append(f.initValue).append(" */");
+                    }
                 }
-                sb.append("\n");
+                sb.append(";\n");
             }
             sb.append("\n    void update(GVL& gvl, ProcessImage& io, TIME dt) {\n");
             String body = translatorNew.visit(ctx.fb_body());
