@@ -29,5 +29,6 @@
 #include "core/event.h"
 #include "core/watchdog.h"
 #include "core/diag.h"
+#include "core/diag_manager.h"
 #include "scheduler/scheduler.h"
 #include "safety/safety_module.h"

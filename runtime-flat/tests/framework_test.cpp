@@ -19,6 +19,7 @@
  * 15.  Task 参数校验
  * 16.  错误操作数记录
  * 17.  IoManager TCI 委托与安全输出
+ * 18.  Scheduler ERROR 安全输出
  */
 #include "rt_runtime.h"
 #include <cstdio>
@@ -425,6 +426,14 @@ void test_scan_phases() {
     TEST("DiagStats 统计正确");
     CHECK(stats.totalScanCount == 3 && stats.minScanTime == 100 &&
           stats.maxScanTime == 300 && stats.avgScanTime() == 200, "统计值错误");
+
+    DiagManager diagManager(stats);
+    diagManager.reset();
+    diagManager.recordScan(400);
+    diagManager.recordTaskOverrun();
+    TEST("DiagManager 包装 DiagStats");
+    CHECK(stats.totalScanCount == 1 && stats.lastScanTime == 400 &&
+          stats.totalOverruns == 1, "DiagManager 应更新同一份 DiagStats");
 }
 
 
@@ -858,6 +867,41 @@ void test_io_manager() {
     CHECK(true, "越界应被忽略并记录日志");
 }
 
+void test_scheduler_safe_outputs() {
+    printf("\n--- 18. Scheduler ERROR 安全输出 ---\n");
+
+    Scheduler sched;
+    SimTCI tci;
+    sched.setTCI(&tci);
+
+    sched.io.clearSafeOutputs();
+    sched.io.setSafeOutputByte(0, 0x55);
+    sched.image.outputs[0] = 0xAA;
+
+    int outBefore = tci.syncOutCount;
+    sched.error();
+
+    TEST("safe output 未启用时 ERROR 不覆盖输出");
+    CHECK(sched.systemState == SystemState::ERROR &&
+          sched.image.outputs[0] == 0xAA &&
+          tci.syncOutCount == outBefore,
+          "未启用 safe output 时不应覆盖或同步输出");
+
+    sched.resetError();
+    sched.io.enableSafeOutputs(true);
+    sched.io.setSafeOutputByte(0, 0x55);
+    sched.image.outputs[0] = 0xAA;
+
+    outBefore = tci.syncOutCount;
+    sched.error();
+
+    TEST("safe output 启用时 ERROR 覆盖并同步输出");
+    CHECK(sched.systemState == SystemState::ERROR &&
+          sched.image.outputs[0] == 0x55 &&
+          tci.syncOutCount == outBefore + 1,
+          "启用 safe output 时应覆盖输出并调用 syncOutputs");
+}
+
 
 // ═══════════════════════════════════════════════════════
 // main
@@ -884,6 +928,7 @@ int main() {
     test_task_parameter_validation();
     test_error_operand_recording();
     test_io_manager();
+    test_scheduler_safe_outputs();
 
     printf("\n═══════════════════════════════\n");
     printf("通过: %d  失败: %d  总计: %d\n", test_pass, test_fail, test_pass + test_fail);

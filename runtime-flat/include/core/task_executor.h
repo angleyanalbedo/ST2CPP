@@ -1,7 +1,7 @@
 #pragma once
 
 #include "constants.h"
-#include "diag.h"
+#include "diag_manager.h"
 #include "error_manager.h"
 #include "gvl.h"
 #include "program.h"
@@ -18,7 +18,7 @@ struct TaskExecutorContext {
     int              programCapacity;
     Watchdog&        watchdog;
     ErrorManager&    errorMgr;
-    DiagStats&       diag;
+    DiagManager&     diag;
     TIME             baseCycleTime;
     TIME             systemTime;
     int              maxConsecutiveOverruns;

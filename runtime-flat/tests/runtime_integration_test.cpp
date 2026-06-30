@@ -486,10 +486,16 @@ void test_watchdog() {
 void test_event_watchdog() {
     TEST_SECTION("6b. Event 任务看门狗路径");
 
+    FakeTCI tci;
     Scheduler sched;
     sched.gvl.clear();
+    sched.setTCI(&tci);
     sched.setBaseCycle(T_us(1));
     sched.watchdog.setDefault(T_us(1));
+    sched.io.clearSafeOutputs();
+    sched.io.setSafeOutputByte(0, 0x5A);
+    sched.io.enableSafeOutputs(true);
+    sched.image.outputs[0] = 0xA5;
 
     event_watchdog_signal = FALSE;
     int tIdx = sched.addEventTask("SlowEvent", 0,
@@ -508,6 +514,10 @@ void test_event_watchdog() {
 
     TEST("Event 任务连续超时进入 ERROR");
     CHECK(sched.systemState == SystemState::ERROR, "scheduler should enter ERROR");
+
+    TEST("ERROR 路径应用 safe output 并同步 TCI");
+    CHECK(sched.image.outputs[0] == 0x5A && tci.syncOut_count >= 1,
+          "safe output should be applied and synced on ERROR");
 
     const Task& t = sched.task(tIdx);
     TEST("Event 任务记录执行时间与 overrun");

@@ -43,6 +43,7 @@ set(RT_CORE_SOURCES
     ${RT_SRC_DIR}/event.cpp
     ${RT_SRC_DIR}/watchdog.cpp
     ${RT_SRC_DIR}/diag.cpp
+    ${RT_SRC_DIR}/diag_manager.cpp
 )
 
 set(RT_SCHEDULER_SOURCES
