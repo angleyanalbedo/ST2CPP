@@ -14,6 +14,9 @@ public class TranslateVariable_access {
         }
 
         if (t.inCyclic) {
+            if (cleanName.startsWith("(") && cleanName.endsWith(")")) {
+                cleanName = cleanName.substring(1, cleanName.length() - 1);
+            }
             return cleanName;
         }
 

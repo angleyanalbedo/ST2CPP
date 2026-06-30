@@ -33,6 +33,9 @@ public class TranslateVariableAssignExpression {
         if (!inFC) {
             String varName = varSymbol.getName();
             if (varName.startsWith("*")) varName = varName.substring(1);
+            if (varName.startsWith("(") && varName.endsWith(")")) {
+                varName = varName.substring(1, varName.length() - 1);
+            }
 
             if (translatorNew.inCyclic) {
                 sb.append("\n\t\t").append(varName).append(" = ").append(rhs).append(";");

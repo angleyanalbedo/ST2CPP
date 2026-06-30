@@ -127,7 +127,13 @@ public class VisitNamespaceSymbolic implements Strategy {
                 PLCArrayDeclSymbol arrayType = (PLCArrayDeclSymbol) typeSymbol;
                 result.setTypeId(arrayType.getElementTypeId());
 
-                String indexExpr = subCtx.subscript(0).expression().getText();
+                // ST 多维下标 [i,j] → C++ [i][j]
+                StringBuilder idxBuilder = new StringBuilder();
+                for (int s = 0; s < subCtx.subscript().size(); s++) {
+                    if (s > 0) idxBuilder.append("][");
+                    idxBuilder.append(subCtx.subscript(s).expression().getText());
+                }
+                String indexExpr = idxBuilder.toString();
                 String cleanPath = cleanPath(currentName);
                 currentName = "*(" + cleanPath + "[" + indexExpr + "])";
                 result.setName(currentName);

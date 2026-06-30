@@ -74,10 +74,12 @@ public class VisitThis_symbol implements Strategy {
 
                     // 更新变量名，添加索引访问后缀（用于代码生成）
                     // array_index 的 getText() 包含方括号，如 "[I]"，需要去掉
+                    // 多维数组 ST 语法 [i,j] → C++ [i][j]
                     String indexExpr = ctx.array_index(i).getText();
                     if (indexExpr.startsWith("[") && indexExpr.endsWith("]")) {
                         indexExpr = indexExpr.substring(1, indexExpr.length() - 1);
                     }
+                    indexExpr = indexExpr.replace(",", "][");
                     String currentName = tempFoundSymbol.getName();
                     // 移除前导的 *（如果有）
                     if (currentName.startsWith("*")) {
