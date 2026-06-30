@@ -359,49 +359,20 @@ bool Scheduler::executeTask(int taskIndex) {
     if (taskIndex < 0 || taskIndex >= MAX_TASKS) return true;
 
     Task& task = tasks_[taskIndex];
-    int64_t execStart = platform::steadyUs();
+    TaskExecutorContext ctx {
+        gvl,
+        image,
+        programs_,
+        MAX_PROGRAMS,
+        watchdog,
+        errorMgr,
+        diag,
+        baseCycleTime,
+        systemTime,
+        MAX_CONSECUTIVE_OVERRUNS
+    };
 
-    task.state = TaskState::RUNNING;
-
-    task.executePOUs(gvl, image, baseCycleTime);
-
-    for (int j = 0; j < task.programCount; j++) {
-        int pIdx = task.programIndices[j];
-        if (pIdx >= 0 && pIdx < MAX_PROGRAMS) {
-            programs_[pIdx].doCyclic(gvl, image, baseCycleTime);
-        }
-    }
-
-    task.cycleCount++;
-    task.lastRunTime = systemTime;
-
-    int64_t execEnd = platform::steadyUs();
-    task.lastExecTime = execEnd - execStart;
-    if (task.lastExecTime > task.maxExecTime) {
-        task.maxExecTime = task.lastExecTime;
-    }
-
-    if (watchdog.check(task, taskIndex)) {
-        task.state = TaskState::OVERRUN;
-        task.overrunCount++;
-        diag.totalOverruns++;
-#ifdef ENABLE_DIAG
-        RT_LOG_ERR("[Watchdog] Task '%s' overrun: %lld us (limit: %lld us)\n",
-                task.name, (long long)task.lastExecTime,
-                (long long)(task.watchdogLimit > 0 ? task.watchdogLimit : watchdog.defaultLimit));
-#endif
-        if (task.overrunCount >= MAX_CONSECUTIVE_OVERRUNS) {
-            errorMgr.report(ErrorCode::WATCHDOG_TIMEOUT, 0, 0,
-                            task.name, systemTime);
-            systemState = SystemState::ERROR;
-            return false;
-        }
-    } else {
-        task.state = (task.trigger == TaskTrigger::EVENT) ? TaskState::IDLE : TaskState::READY;
-        task.overrunCount = 0;
-    }
-
-    if (errorMgr.fatalMode) {
+    if (!taskExecutor_.execute(task, taskIndex, ctx)) {
         systemState = SystemState::ERROR;
         return false;
     }

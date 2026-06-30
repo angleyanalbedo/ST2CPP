@@ -5,6 +5,7 @@
 #include "core/gvl.h"
 #include "core/program.h"
 #include "core/task.h"
+#include "core/task_executor.h"
 #include "core/event.h"
 #include "core/watchdog.h"
 #include "core/diag.h"
@@ -119,6 +120,7 @@ private:
     Task            tasks_[MAX_TASKS];
     Event           events_[MAX_EVENTS];
     ProgramInstance programs_[MAX_PROGRAMS];
+    TaskExecutor    taskExecutor_;
     int     taskCount_    = 0;
     int     eventCount_   = 0;
     int     programCount_ = 0;
