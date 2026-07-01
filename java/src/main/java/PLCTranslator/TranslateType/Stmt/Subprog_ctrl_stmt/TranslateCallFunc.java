@@ -22,11 +22,17 @@ public class TranslateCallFunc {
                 if(fbTypeName == null) fbTypeName = fbInstanceName;
                 List<String> paramNames = new ArrayList<>();
                 List<String> paramValues = new ArrayList<>();
+                // 追踪输出参数：paramName → 目标变量名
+                java.util.LinkedHashMap<String, String> outputParams = new java.util.LinkedHashMap<>();
                 for(PLCSTPARSERParser.Param_assignContext param_assignContext : childCtx.param_assign()){
                     PLCVariable plcVariable = PLCTranslatorNew.getVariable(param_assignContext, "call parameter");
                     paramNames.add(plcVariable.getName());
                     if (param_assignContext instanceof PLCSTPARSERParser.InputParamContext ip) {
                         paramValues.add(translatorNew.visit(ip.expression()));
+                    } else if (param_assignContext instanceof PLCSTPARSERParser.OutParamContext op) {
+                        // 输出参数：值用 0 占位（稍后读回），记录目标变量名
+                        paramValues.add("0");
+                        outputParams.put(plcVariable.getName(), op.variable().getText());
                     } else {
                         paramValues.add(param_assignContext.getText());
                     }
@@ -34,7 +40,7 @@ public class TranslateCallFunc {
                 if(fbCallSym.isArrayElement()){
                     sb.append(emitFBArrayCall(fbCallSym, fbTypeName, paramNames, paramValues, translatorNew));
                 } else {
-                    sb.append(emitFBCall(fbInstanceName, fbTypeName, paramNames, paramValues, translatorNew.gvlCtx));
+                    sb.append(emitFBCall(fbInstanceName, fbTypeName, paramNames, paramValues, outputParams, translatorNew.gvlCtx));
                 }
             }else if(firstSym instanceof PLCVariable funcVar){
                 // 检查 AST 是否为 Instance.Method() 模式
@@ -84,12 +90,16 @@ public class TranslateCallFunc {
 
     public static String emitFBCall(String fbInstanceName, String fbTypeName,
                                      List<String> paramNames, List<String> paramValues,
+                                     java.util.LinkedHashMap<String, String> outputParams,
                                      GvlContext gvlCtx) {
         StringBuilder sb = new StringBuilder();
         Integer fbBase = gvlCtx.offsetMap.get(fbInstanceName);
+        // 写入输入参数
         for (int i = 0; i < paramNames.size(); i++) {
             String paramName = paramNames.get(i);
             String paramValue = paramValues.get(i);
+            // 跳过输出参数的写入（它们将在 update 后读回）
+            if (outputParams.containsKey(paramName)) continue;
             Integer offset = gvlCtx.offsetMap.get(paramName);
             String type = gvlCtx.typeMap.get(paramName);
             if (offset == null && fbBase != null) {
@@ -104,11 +114,30 @@ public class TranslateCallFunc {
                   .append(offset).append(", ").append(paramValue).append(");");
             }
         }
+        // 调用 update
         if (fbBase != null) {
             sb.append("\n\t\tgvl.ptr<").append(fbTypeName).append(">(")
               .append(fbBase).append(")->update(gvl, io, dt);");
         } else {
             sb.append("\n\t\t").append(fbInstanceName).append(".update(gvl, io, dt);");
+        }
+        // 读回输出参数
+        for (java.util.Map.Entry<String, String> entry : outputParams.entrySet()) {
+            String paramName = entry.getKey();
+            String targetVar = entry.getValue();
+            Integer offset = gvlCtx.offsetMap.get(paramName);
+            String type = gvlCtx.typeMap.get(paramName);
+            if (offset == null && fbBase != null) {
+                Integer fieldOff = gvlCtx.getStructFieldOffset(fbTypeName, paramName);
+                if (fieldOff != null) {
+                    offset = fbBase + fieldOff;
+                    type = gvlCtx.getStructFieldType(fbTypeName, paramName);
+                }
+            }
+            if (offset != null && type != null) {
+                sb.append("\n\t\t").append(targetVar).append(" = gvl.read<").append(type).append(">(")
+                  .append(offset).append(");");
+            }
         }
         return sb.toString();
     }

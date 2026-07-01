@@ -13,11 +13,11 @@ public class CheckFBCall {
         PLCFBDeclSymbol fbDecl = (PLCFBDeclSymbol) PLCTotalSymbolTable.getTypeByTypeID(fbCallSym.getFbTypeId());
         PLCSymbolTable fbTable = fbDecl.getImportSymbolTable();
 
-        java.util.HashMap<String, PLCVariable> inputVars = new java.util.HashMap<>();
+        // 收集 FB 的所有参数（不管 varSection）
+        java.util.HashMap<String, PLCVariable> allParams = new java.util.HashMap<>();
         for(PLCSymbol sym : fbTable.getSymbolIDHashMap().values()){
-            if(sym instanceof PLCVariable pv
-                && pv.getVarSections() == PLCModifierEnum.VarSections.VAR_INPUT){
-                inputVars.put(pv.getName(), pv);
+            if(sym instanceof PLCVariable pv){
+                allParams.put(pv.getName(), pv);
             }
         }
 
@@ -27,13 +27,9 @@ public class CheckFBCall {
             if (paramName == null) {
                 throw new PLCSemanticException("Irregular calls are not supported");
             }
-            PLCVariable accessVar = inputVars.get(paramName);
+            PLCVariable accessVar = allParams.get(paramName);
             if (accessVar == null) {
-                throw new PLCSemanticException(paramName + " param name error or var section error: " + paramName);
-            }
-            if (accessVar.getVarSections() != param.getVarSections()) {
-                throw new PLCSemanticException(paramName + " var section is " + accessVar.getVarSections()
-                        + " but not " + param.getVarSections());
+                throw new PLCSemanticException(paramName + " param name error: " + paramName);
             }
             PLCTypeDeclSymbol varType = PLCTotalSymbolTable.getTypeByTypeID(accessVar.getTypeId());
             if (!varType.checkCanAssignWith(param.getTypeId())) {
@@ -43,7 +39,8 @@ public class CheckFBCall {
             fbCallSym.addInputParam(param);
         }
 
-        for (PLCVariable accessVar : inputVars.values()) {
+        // 为未提供的输入参数填入默认值
+        for (PLCVariable accessVar : allParams.values()) {
             String accessVarName = accessVar.getName();
             if (!paramMap.containsKey(accessVarName)) {
                 String defaultAssign = accessVar.getAssignVar();
