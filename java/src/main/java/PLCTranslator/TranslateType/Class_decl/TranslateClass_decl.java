@@ -17,9 +17,16 @@ public class TranslateClass_decl {
         String className = classDeclSymbol.getName();
 
         translatorNew.inClassDecl = true;
+        translatorNew.currentClassName = className;
 
         StringBuilder sb = new StringBuilder();
-        sb.append("\nclass ").append(className).append(" {");
+        // 如果有父类，生成继承声明
+        PLCBaseClassDeclSymbol baseClass = classDeclSymbol.getBaseClass();
+        if (baseClass != null) {
+            sb.append("\nclass ").append(className).append(" : public ").append(baseClass.getName()).append(" {");
+        } else {
+            sb.append("\nclass ").append(className).append(" {");
+        }
         sb.append("\npublic:");
 
         List<GvlContext.StructField> structFields = new ArrayList<>();
@@ -44,6 +51,7 @@ public class TranslateClass_decl {
 
         sb.append("\n};");
         translatorNew.inClassDecl = false;
+        translatorNew.currentClassName = null;
 
         GvlContext.StructLayout layout = new GvlContext.StructLayout(className, structFields, currentOffset);
         translatorNew.gvlCtx.registerStructType(className, layout);
