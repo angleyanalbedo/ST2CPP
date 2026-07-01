@@ -37,7 +37,7 @@ public class TranslateFb_decl {
                         init = PLCVariable.stripParens(init);
                         sb.append(" = ").append(init);
                     } else if (init.contains(":=")) {
-                        sb.append(" = ").append(toAggregateInit(init, fields));
+                        sb.append(" = ").append(toAggregateInit(init, f.typeName));
                     } else {
                         sb.append(" = ").append(init);
                     }
@@ -95,8 +95,6 @@ public class TranslateFb_decl {
         for (PLCSymbol s : importTable.getSymbolIDHashMap().values()) {
             if (s instanceof PLCVariable v) {
                 if (v.getSymbolId() == fbSymbol.getSymbolId()) continue;
-                // 仅收集 VAR 局部变量，跳过 VAR_INPUT/VAR_OUTPUT/VAR_IN_OUT
-                if (v.getVarSections() != PLCModifierEnum.VarSections.VAR) continue;
                 String typeName = resolveFieldTypeName(v, gvlCtx);
                 String suffix = makeArraySuffix(v);
                 fields.add(new FBField(v.getName(), typeName, v.getAssignVar(), suffix));
@@ -143,11 +141,11 @@ public class TranslateFb_decl {
     /**
      * 将 ST 命名聚合初始化转为 C++ 聚合初始化。
      * (J1:=0.0,J2:=-45.0,SPEED:=50.0,DWELL_MS:=500) → {0.0, -45.0, ..., 50.0, 500}
-     * 字段按 fields 列表顺序输出（即声明顺序）。
+     * 使用子 struct 的字段顺序，而非父 struct 的字段列表。
      */
-    private static String toAggregateInit(String init, List<FBField> fields) {
+    private static String toAggregateInit(String init, String childTypeName) {
         // 解析命名参数 → Map<name, value>
-        java.util.Map<String, String> namedValues = new java.util.LinkedHashMap<>();
+        java.util.LinkedHashMap<String, String> namedValues = new java.util.LinkedHashMap<>();
         String inner = PLCVariable.stripParens(init);
         for (String part : inner.split(",")) {
             String trimmed = part.trim();
@@ -156,11 +154,21 @@ public class TranslateFb_decl {
                 namedValues.put(trimmed.substring(0, eq).trim(), trimmed.substring(eq + 2).trim());
             }
         }
-        // 按 fields 声明顺序输出值
+        // 查子 struct 的字段列表（按声明顺序）
+        List<String> childFieldNames = new ArrayList<>();
+        for (PLCTypeDeclSymbol t : PLCTotalSymbolTable.totalTypeMap.values()) {
+            if (t instanceof PLCStructDeclSymbol s && t.getName().equals(childTypeName)) {
+                for (PLCVariable v : s.getVariables()) {
+                    childFieldNames.add(v.getName());
+                }
+                break;
+            }
+        }
+        // 按子 struct 字段顺序输出值
         StringBuilder sb = new StringBuilder("{");
-        for (int i = 0; i < fields.size(); i++) {
+        for (int i = 0; i < childFieldNames.size(); i++) {
             if (i > 0) sb.append(", ");
-            String val = namedValues.get(fields.get(i).name);
+            String val = namedValues.get(childFieldNames.get(i));
             sb.append(val != null ? val : "0");
         }
         sb.append("}");
