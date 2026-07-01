@@ -83,20 +83,16 @@ public class TranslateFunc_call {
     }
 
     /**
-     * 尝试将 CLASS 方法调用解析为 ClassName_methodName(&instance, args) 格式。
+     * 解析 CLASS 方法调用为 Instance.Method(args) 格式。
      * runtimeTypeName 格式：ClassName.InstanceName.MethodName
-     * 返回 null 表示不是 CLASS 方法调用。
      */
     private String tryClassMethodCall(String runtimeTypeName, String args) {
         if (runtimeTypeName == null) return null;
         String[] parts = runtimeTypeName.split("\\.");
-        // CLASS 方法格式：ClassName.InstanceName.MethodName（3 段）
-        // 普通函数格式：FuncName（1 段）或 Namespace.FuncName（2 段）
         if (parts.length == 3) {
-            String className = parts[0];
             String instanceName = parts[1];
             String methodName = parts[2];
-            return className + "_" + methodName + "(&" + instanceName + ", " + args + ")";
+            return "\n\t\t" + instanceName + "." + methodName + "(" + args + ");";
         }
         return null;
     }
