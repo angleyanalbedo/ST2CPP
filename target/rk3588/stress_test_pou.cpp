@@ -78,12 +78,12 @@ struct PIDController {
 // ═══════════════════════════════════════════════════════
 
 struct FIRFilter {
-    REAL buffer[64];
-    REAL coeffs[64];
+    REAL buffer[256];
+    REAL coeffs[256];
     int index = 0;
     int taps;
 
-    FIRFilter(int tapCount) : taps(tapCount > 64 ? 64 : tapCount) {
+    FIRFilter(int tapCount) : taps(tapCount > 256 ? 256 : tapCount) {
         for (int i = 0; i < taps; i++) {
             buffer[i] = 0.0f;
             coeffs[i] = 1.0f / (REAL)taps;
@@ -277,10 +277,11 @@ struct StressPOUState {
     CTU counterUp[4];
     CTUD counterUpDown[2];
 
-    // 大数组操作
-    REAL arrayA[110];
-    REAL arrayB[110];
-    REAL arrayC[110];
+// 大数组操作（支持最大 load=30 即 310 元素）
+static constexpr int MAX_ARRAY = 310;
+REAL arrayA[MAX_ARRAY];
+REAL arrayB[MAX_ARRAY];
+REAL arrayC[MAX_ARRAY];
 
     // I/O 模拟
     REAL sensorAccum = 0.0f;
