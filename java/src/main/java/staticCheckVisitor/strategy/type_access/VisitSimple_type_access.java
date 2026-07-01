@@ -52,9 +52,16 @@ public class VisitSimple_type_access implements Strategy {
 
         //获取变量名称
         String typeName = ctx.simple_type_name().getText();
-        PLCTypeDeclSymbol basicType = (PLCTypeDeclSymbol) npScope.deepFindSymbol(typeName);
+        PLCSymbol found = npScope.deepFindSymbol(typeName);
+        PLCTypeDeclSymbol basicType = null;
+        if (found instanceof PLCTypeDeclSymbol) {
+            basicType = (PLCTypeDeclSymbol) found;
+        } else if (found instanceof PLCVariable pv) {
+            // 变量名与类型名冲突时，从变量的 typeId 查找类型
+            basicType = PLCTotalSymbolTable.getTypeByTypeID(pv.getTypeId());
+        }
         if(basicType == null){
-            // fallback: 在全局类型表中按名称查找（支持跨文件 FB 类型引用）
+            // fallback: 在全局类型表中按名称查找（支持跨文件类型引用）
             for(PLCTypeDeclSymbol t : PLCTotalSymbolTable.totalTypeMap.values()){
                 if(t.getName().equals(typeName)){
                     basicType = t;

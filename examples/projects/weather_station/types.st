@@ -1,0 +1,89 @@
+(* weather_station/types.st — 全局类型定义 *)
+
+(* 坐标点 *)
+TYPE COORD :
+STRUCT
+    LAT : REAL;
+    LON : REAL;
+END_STRUCT;
+END_TYPE
+
+(* 气象数据包 *)
+TYPE WEATHER_DATA :
+STRUCT
+    TEMP      : REAL;
+    HUMIDITY  : REAL;
+    PRESSURE  : REAL;
+    WIND_SPD  : REAL;
+    WIND_DIR  : INT;
+    RAIN_MM   : REAL;
+    UV_INDEX  : INT;
+    TIMESTAMP : DINT;
+END_STRUCT;
+END_TYPE
+
+(* 站点配置 *)
+TYPE STATION_CONFIG :
+STRUCT
+    SITE_ID     : INT;
+    ALTITUDE_M  : REAL;
+    CALIB_TEMP  : REAL;
+    CALIB_PRESS : REAL;
+    UPLOAD_SEC  : INT;
+    LOG_ENABLE  : BOOL;
+END_STRUCT;
+END_TYPE
+
+(* 报警阈值 *)
+TYPE ALARM_THRESHOLDS :
+STRUCT
+    TEMP_HIGH     : REAL;
+    TEMP_LOW      : REAL;
+    WIND_HIGH     : REAL;
+    RAIN_HIGH     : REAL;
+    UV_HIGH       : INT;
+    PRESSURE_LOW  : REAL;
+END_STRUCT;
+END_TYPE
+
+(* 报警状态 *)
+TYPE ALARM_STATE :
+STRUCT
+    ACTIVE      : BOOL;
+    CODE        : INT;
+    MESSAGE     : INT;
+    TIMESTAMP   : DINT;
+    ACK_FLAG    : BOOL;
+END_STRUCT;
+END_TYPE
+
+(* 日志记录 *)
+TYPE LOG_ENTRY :
+STRUCT
+    ENTRY_ID    : DINT;
+    ENTRY_TYPE  : INT;
+    VALUE_A     : REAL;
+    VALUE_B     : REAL;
+    FLAGS       : INT;
+END_STRUCT;
+END_TYPE
+
+(* 通信状态 *)
+TYPE COMMS_STATUS :
+STRUCT
+    CONNECTED   : BOOL;
+    TX_COUNT    : DINT;
+    RX_COUNT    : DINT;
+    ERR_COUNT   : DINT;
+    LAST_TX     : DINT;
+    SIGNAL_PCT  : INT;
+END_STRUCT;
+END_TYPE
+
+(* 风向枚举 *)
+TYPE WIND_DIR_ENUM : (N, NNE, NE, ENE, E, ESE, SE, SSE, S, SSW, SW, WSW, W, WNW, NW, NNW);
+END_TYPE
+
+(* 报警级别枚举 *)
+TYPE SEVERITY : (INFO, WARNING, ERROR, CRITICAL);
+END_TYPE
