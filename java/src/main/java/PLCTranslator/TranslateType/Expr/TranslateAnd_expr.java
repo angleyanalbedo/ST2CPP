@@ -5,11 +5,20 @@ import antlr4.PLCSTPARSERParser;
 
 public class TranslateAnd_expr {
     public String translateNode(PLCSTPARSERParser.And_exprContext ctx, PLCTranslatorNew t) {
-        // 检查第一个操作数是否是比较表达式（含 <, >, ==, !=, <=, >=）
-        // 比较表达式的结果是 BOOL → 用 &&；否则是整数 → 用 &
+        if (ctx.compare_expr().size() == 1) {
+            return t.visit(ctx.getChild(0));
+        }
+        // 检测操作数是否含比较运算符，决定逻辑/位运算
         String firstChild = t.visit(ctx.getChild(0));
-        boolean hasCompare = firstChild.contains("<") || firstChild.contains(">")
+        boolean isLogical = firstChild.contains("<") || firstChild.contains(">")
                 || firstChild.contains("==") || firstChild.contains("!=");
-        return PLCTranslatorNew.translateBinaryChain(ctx, 1, 2, t, hasCompare);
+        String op = isLogical ? " && " : " & ";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(t.visit(ctx.getChild(0)));
+        for (int i = 1; i < ctx.getChildCount(); i += 2) {
+            sb.append(op).append(t.visit(ctx.getChild(i + 1)));
+        }
+        return sb.toString();
     }
 }

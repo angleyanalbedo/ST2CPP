@@ -152,29 +152,7 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
         return (PLCVariable) sym;
     }
 
-    public static String translateBinaryChain(ParserRuleContext ctx, int opStartIndex, int opStep,
-                                               PLCTranslatorNew t) {
-        return translateBinaryChain(ctx, opStartIndex, opStep, t, true);
-    }
-
     /** @param logicalContext true=逻辑运算(&&/||), false=位运算(&/|) */
-    public static String translateBinaryChain(ParserRuleContext ctx, int opStartIndex, int opStep,
-                                               PLCTranslatorNew t, boolean logicalContext) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(t.visit(ctx.getChild(0)));
-        for (int i = opStartIndex; i < ctx.getChildCount(); i += opStep) {
-            String op = ctx.getChild(i).getText();
-            String mapped = mapOperator(op, logicalContext);
-            if ("MOD".equals(mapped)) {
-                sb.insert(0, "MOD(");
-                sb.append(", ").append(t.visit(ctx.getChild(i + 1))).append(")");
-                break;
-            }
-            sb.append(" ").append(mapped).append(" ");
-            sb.append(t.visit(ctx.getChild(i + 1)));
-        }
-        return sb.toString();
-    }
 
     public static String mapOperator(String op) {
         return mapOperator(op, true);
@@ -200,7 +178,15 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     }
 
     @Override public String visitXor_expr(PLCSTPARSERParser.Xor_exprContext ctx) {
-        return translateBinaryChain(ctx, 1, 2, this);
+        if (ctx.and_expr().size() == 1) {
+            return visit(ctx.getChild(0));
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append(visit(ctx.getChild(0)));
+        for (int i = 1; i < ctx.getChildCount(); i += 2) {
+            sb.append(" ^ ").append(visit(ctx.getChild(i + 1)));
+        }
+        return sb.toString();
     }
 
     @Override public String visitAnd_expr(PLCSTPARSERParser.And_exprContext ctx) {
@@ -208,23 +194,71 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     }
 
     @Override public String visitCompare_expr(PLCSTPARSERParser.Compare_exprContext ctx) {
-        return translateBinaryChain(ctx, 1, 2, this);
+        if (ctx.equ_expr().size() == 1) {
+            return visit(ctx.getChild(0));
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append(visit(ctx.getChild(0)));
+        for (int i = 1; i < ctx.getChildCount(); i += 2) {
+            String op = mapOperator(ctx.getChild(i).getText());
+            sb.append(" ").append(op).append(" ").append(visit(ctx.getChild(i + 1)));
+        }
+        return sb.toString();
     }
 
     @Override public String visitEqu_expr(PLCSTPARSERParser.Equ_exprContext ctx) {
-        return translateBinaryChain(ctx, 1, 2, this);
+        if (ctx.add_expr().size() == 1) {
+            return visit(ctx.getChild(0));
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append(visit(ctx.getChild(0)));
+        for (int i = 1; i < ctx.getChildCount(); i += 2) {
+            String op = mapOperator(ctx.getChild(i).getText());
+            sb.append(" ").append(op).append(" ").append(visit(ctx.getChild(i + 1)));
+        }
+        return sb.toString();
     }
 
     @Override public String visitAdd_expr(PLCSTPARSERParser.Add_exprContext ctx) {
-        return translateBinaryChain(ctx, 1, 2, this);
+        if (ctx.term().size() == 1) {
+            return visit(ctx.getChild(0));
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append(visit(ctx.getChild(0)));
+        for (int i = 1; i < ctx.getChildCount(); i += 2) {
+            sb.append(" ").append(ctx.getChild(i).getText()).append(" ").append(visit(ctx.getChild(i + 1)));
+        }
+        return sb.toString();
     }
 
     @Override public String visitTerm(PLCSTPARSERParser.TermContext ctx) {
-        return translateBinaryChain(ctx, 1, 2, this);
+        if (ctx.power_expr().size() == 1) {
+            return visit(ctx.getChild(0));
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append(visit(ctx.getChild(0)));
+        for (int i = 1; i < ctx.getChildCount(); i += 2) {
+            String op = ctx.getChild(i).getText();
+            if ("MOD".equals(op)) {
+                sb.insert(0, "MOD(");
+                sb.append(", ").append(visit(ctx.getChild(i + 1))).append(")");
+                break;
+            }
+            sb.append(" ").append(op).append(" ").append(visit(ctx.getChild(i + 1)));
+        }
+        return sb.toString();
     }
 
     @Override public String visitPower_expr(PLCSTPARSERParser.Power_exprContext ctx) {
-        return translateBinaryChain(ctx, 1, 2, this);
+        if (ctx.unary_expr().size() == 1) {
+            return visit(ctx.getChild(0));
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append(visit(ctx.getChild(0)));
+        for (int i = 1; i < ctx.getChildCount(); i += 2) {
+            sb.append(" ").append(ctx.getChild(i).getText()).append(" ").append(visit(ctx.getChild(i + 1)));
+        }
+        return sb.toString();
     }
 
     @Override public String visitUnary_expr(PLCSTPARSERParser.Unary_exprContext ctx) {
