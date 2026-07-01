@@ -10,7 +10,6 @@ import antlr4.PLCSTPARSERParser;
 public class TranslateFunc_call {
     public String translateNode(PLCSTPARSERParser.Func_callContext ctx, PLCTranslatorNew translatorNew){
         StringBuilder sb = new StringBuilder();
-
         PLCSymbol firstSym = PLCTranslatorNew.getSymbol(ctx, "function call");
         if(firstSym instanceof PLCFBCallSymbol fbCallSym){
             String fbInstanceName = fbCallSym.getFbInstanceName();
@@ -24,26 +23,40 @@ public class TranslateFunc_call {
             }
             sb.append("\n\t\t").append(fbInstanceName).append("(").append(paramStr).append(").update(gvl, io, dt);");
         }else if(firstSym instanceof PLCVariable funcVar){
-            // 语义检查阶段 CheckFuncCall 返回的 PLCVariable
-            // assignVar 格式: *FUNC_NAME(&PARAM1, &PARAM2, )
-            // 提取函数名
-            String assignVarStr = funcVar.getAssignVar();
-            String funcName = extractFuncName(assignVarStr);
-
-            // 遍历 AST param_assign，通过 visitor 翻译每个参数
-            // 表达式结果直接内联进函数调用，无需临时变量
-            StringBuilder args = new StringBuilder();
-            for (PLCSTPARSERParser.Param_assignContext param_assignContext : ctx.param_assign()) {
-                if(param_assignContext instanceof PLCSTPARSERParser.InputParamContext ip){
-                    String paramExpr = translatorNew.visit(ip.expression());
-                    if (args.length() > 0) args.append(", ");
-                    args.append(paramExpr);
-                }else{
-                    if (args.length() > 0) args.append(", ");
-                    args.append(param_assignContext.getText());
+            // 检查 AST 是否为 Instance.Method() 模式
+            PLCSTPARSERParser.Func_accessContext fa = ctx.func_access();
+            if (fa != null && !fa.scope_name().isEmpty()) {
+                // Instance.Method(args) 模式 — CLASS 成员方法调用
+                String instanceName = fa.scope_name(0).getText();
+                String methodName = fa.func_name().getText();
+                StringBuilder args = new StringBuilder();
+                for (PLCSTPARSERParser.Param_assignContext p : ctx.param_assign()) {
+                    if (p instanceof PLCSTPARSERParser.InputParamContext ip) {
+                        if (args.length() > 0) args.append(", ");
+                        args.append(translatorNew.visit(ip.expression()));
+                    } else {
+                        if (args.length() > 0) args.append(", ");
+                        args.append(p.getText());
+                    }
                 }
+                sb.append(instanceName).append(".").append(methodName).append("(").append(args).append(")");
+            } else {
+                // 普通函数调用
+                String assignVarStr = funcVar.getAssignVar();
+                String funcName = extractFuncName(assignVarStr);
+                StringBuilder args = new StringBuilder();
+                for (PLCSTPARSERParser.Param_assignContext param_assignContext : ctx.param_assign()) {
+                    if(param_assignContext instanceof PLCSTPARSERParser.InputParamContext ip){
+                        String paramExpr = translatorNew.visit(ip.expression());
+                        if (args.length() > 0) args.append(", ");
+                        args.append(paramExpr);
+                    }else{
+                        if (args.length() > 0) args.append(", ");
+                        args.append(param_assignContext.getText());
+                    }
+                }
+                sb.append(funcName).append("(").append(args).append(")");
             }
-            sb.append(funcName).append("(").append(args).append(")");
         }else if(firstSym instanceof PLCBaseFUNDeclSymbol funDecl){
             // 优先使用 runtimeTypeName（格式 ClassName.InstanceName.MethodName）
             String runtimeTypeName = funDecl.getRuntimeTypeName();
