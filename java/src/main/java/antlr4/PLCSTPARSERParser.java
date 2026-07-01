@@ -1,4 +1,4 @@
-// Generated from src/main/resources/antlr4/PLCSTPARSER.g4 by ANTLR 4.10.1
+// Generated from D:\source\Project\ST2C-master\java\src\main\resources\antlr4\PLCSTPARSER.g4 by ANTLR 4.10.1
 package antlr4;
 import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
@@ -9091,8 +9091,8 @@ public class PLCSTPARSERParser extends Parser {
 		public User_defination_type_accessContext user_defination_type_access() {
 			return getRuleContext(User_defination_type_accessContext.class,0);
 		}
-		public Constant_exprContext constant_expr() {
-			return getRuleContext(Constant_exprContext.class,0);
+		public Struct_initContext struct_init() {
+			return getRuleContext(Struct_initContext.class,0);
 		}
 		public User_defination_spec_initContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
@@ -9132,7 +9132,7 @@ public class PLCSTPARSERParser extends Parser {
 				setState(1515);
 				match(T__39);
 				setState(1516);
-				constant_expr();
+				struct_init();
 				}
 			}
 
@@ -26083,7 +26083,7 @@ public class PLCSTPARSERParser extends Parser {
 		"\u05e6\u0001\u0000\u0000\u0000\u05e6\u05e8\u0005&\u0000\u0000\u05e7\u05e1"+
 		"\u0001\u0000\u0000\u0000\u05e7\u05e8\u0001\u0000\u0000\u0000\u05e8\u00f9"+
 		"\u0001\u0000\u0000\u0000\u05e9\u05ed\u0003\u00fc~\u0000\u05ea\u05eb\u0005"+
-		"#\u0000\u0000\u05eb\u05ec\u0005(\u0000\u0000\u05ec\u05ee\u0003\u022a\u0115"+
+		"#\u0000\u0000\u05eb\u05ec\u0005(\u0000\u0000\u05ec\u05ee\u0003\u00acV"+
 		"\u0000\u05ed\u05ea\u0001\u0000\u0000\u0000\u05ed\u05ee\u0001\u0000\u0000"+
 		"\u0000\u05ee\u00fb\u0001\u0000\u0000\u0000\u05ef\u05f0\u0003\u01f8\u00fc"+
 		"\u0000\u05f0\u05f1\u0005\u0018\u0000\u0000\u05f1\u05f3\u0001\u0000\u0000"+

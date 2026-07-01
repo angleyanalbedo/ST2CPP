@@ -846,7 +846,7 @@ str_spec                            //SC DONE
 user_defination_spec_init       //SC DONE
                 :
                   user_defination_type_access
-                  (':''=' constant_expr)?
+                  (':''=' struct_init)?
                 ;
 
 user_defination_type_access       //SC DONE

@@ -95,6 +95,8 @@ public class TranslateFb_decl {
         for (PLCSymbol s : importTable.getSymbolIDHashMap().values()) {
             if (s instanceof PLCVariable v) {
                 if (v.getSymbolId() == fbSymbol.getSymbolId()) continue;
+                // 仅收集 VAR 局部变量，跳过 VAR_INPUT/VAR_OUTPUT/VAR_IN_OUT
+                if (v.getVarSections() != PLCModifierEnum.VarSections.VAR) continue;
                 String typeName = resolveFieldTypeName(v, gvlCtx);
                 String suffix = makeArraySuffix(v);
                 fields.add(new FBField(v.getName(), typeName, v.getAssignVar(), suffix));

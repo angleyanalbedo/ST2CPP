@@ -3,6 +3,7 @@ package staticCheckVisitor.strategy.var_decls.var_spec_init;
 import PLCException.PLCSemanticException;
 import PLCSymbolAndScope.PLCSymbolTables.PLCTotalSymbolTable;
 import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
+import PLCSymbolAndScope.PLCSymbols.PLCStructDeclSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCTypeDeclSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCVariable;
 import antlr4.PLCSTPARSERParser;
@@ -12,6 +13,7 @@ import staticCheckVisitor.register.StrategyForVisit;
 import staticCheckVisitor.strategy.Strategy;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 
 import static antlr4.PLCSTPARSERParser.RULE_user_defination_spec_init;
 
@@ -36,19 +38,18 @@ public class VisitUser_defination_spec_init implements Strategy {
         userDefinationVar.setAssignVar(userDefinationTypeSymbol.getInitVar());
         userDefinationVar.setRuntimeTypeName(userDefinationTypeSymbol.getRuntimeTypeName());
 
-        //如果存在constant_expr，则进行类型检查，并重新赋初始值
-        if(ctx.constant_expr() != null){
-            PLCVariable constExpr = (PLCVariable) visitor.visit(ctx.constant_expr()).get(0);
-            PLCTypeDeclSymbol symbolType = PLCTotalSymbolTable.getTypeByTypeID(typeId);
-            try{
-                if(!symbolType.checkCanAssignWith(constExpr.getTypeId())){
-                    throw new PLCSemanticException("type mismatch :" + ctx.getText());
+        //如果存在struct_init，则遍历命名参数，填充namedInit
+        if(ctx.struct_init() != null){
+            PLCVariable initVar = (PLCVariable) visitor.visit(ctx.struct_init()).get(0);
+            PLCStructDeclSymbol initStruct = (PLCStructDeclSymbol) initVar.getDeclSymbol();
+            if(initStruct != null){
+                LinkedHashMap<String, String> namedInit = new LinkedHashMap<>();
+                for(PLCVariable elem : initStruct.getVariables()){
+                    namedInit.put(elem.getName(), elem.getAssignVar());
                 }
-                //填入初始值
-                userDefinationVar.setAssignVar(constExpr.getAssignVar());
-            }catch(PLCSemanticException e){
-                System.err.println(e.getMessage());
-                throw new RuntimeException("ST2C: unsupported construct");
+                userDefinationVar.setAggregateInit(namedInit);
+                // 保留 assignVar 作为字符串后备（兼容旧代码路径）
+                userDefinationVar.setAssignVar(ctx.struct_init().getText());
             }
         }
 
