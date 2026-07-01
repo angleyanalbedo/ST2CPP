@@ -98,20 +98,18 @@ public class TranslateCallFunc {
         for (int i = 0; i < paramNames.size(); i++) {
             String paramName = paramNames.get(i);
             String paramValue = paramValues.get(i);
-            // 跳过输出参数的写入（它们将在 update 后读回）
             if (outputParams.containsKey(paramName)) continue;
-            Integer offset = gvlCtx.offsetMap.get(paramName);
-            String type = gvlCtx.typeMap.get(paramName);
-            if (offset == null && fbBase != null) {
-                Integer fieldOff = gvlCtx.getStructFieldOffset(fbTypeName, paramName);
-                if (fieldOff != null) {
-                    offset = fbBase + fieldOff;
-                    type = gvlCtx.getStructFieldType(fbTypeName, paramName);
-                }
-            }
-            if (offset != null && type != null) {
+            String type = gvlCtx.getStructFieldType(fbTypeName, paramName);
+            if (type != null && fbBase != null) {
                 sb.append("\n\t\tgvl.write<").append(type).append(">(")
-                  .append(offset).append(", ").append(paramValue).append(");");
+                  .append(fbBase).append(" + offsetof(").append(fbTypeName).append(", ").append(paramName).append("), ")
+                  .append(paramValue).append(");");
+            } else {
+                Integer offset = gvlCtx.offsetMap.get(paramName);
+                if (offset != null && type != null) {
+                    sb.append("\n\t\tgvl.write<").append(type).append(">(")
+                      .append(offset).append(", ").append(paramValue).append(");");
+                }
             }
         }
         // 调用 update
@@ -121,22 +119,17 @@ public class TranslateCallFunc {
         } else {
             sb.append("\n\t\t").append(fbInstanceName).append(".update(gvl, io, dt);");
         }
-        // 读回输出参数
+        // 读回输出参数：用 offsetof() 让 C++ 编译器计算偏移
         for (java.util.Map.Entry<String, String> entry : outputParams.entrySet()) {
             String paramName = entry.getKey();
             String targetVar = entry.getValue();
-            Integer offset = gvlCtx.offsetMap.get(paramName);
-            String type = gvlCtx.typeMap.get(paramName);
-            if (offset == null && fbBase != null) {
-                Integer fieldOff = gvlCtx.getStructFieldOffset(fbTypeName, paramName);
-                if (fieldOff != null) {
-                    offset = fbBase + fieldOff;
-                    type = gvlCtx.getStructFieldType(fbTypeName, paramName);
-                }
-            }
-            if (offset != null && type != null) {
+            String type = gvlCtx.getStructFieldType(fbTypeName, paramName);
+            if (type != null && fbBase != null) {
                 sb.append("\n\t\t").append(targetVar).append(" = gvl.read<").append(type).append(">(")
-                  .append(offset).append(");");
+                  .append(fbBase).append(" + offsetof(").append(fbTypeName).append(", ").append(paramName).append("));");
+            } else if (type != null) {
+                sb.append("\n\t\t").append(targetVar).append(" = gvl.read<").append(type).append(">(")
+                  .append(gvlCtx.offsetMap.getOrDefault(paramName, 0)).append(");");
             }
         }
         return sb.toString();
