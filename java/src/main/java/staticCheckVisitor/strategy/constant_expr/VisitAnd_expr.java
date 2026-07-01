@@ -27,31 +27,29 @@ public class VisitAnd_expr implements Strategy {
         if(ctx.compare_expr().size() == 1){ //只有一个节点时，不理会and expr的类型，直接访问返回
             return visitor.visit(ctx.getChild(0));
         }
-        else{  //有多个节点时，严格要求and expr为bool类型
+        else{  //有多个节点时
             StringBuilder andVar = new StringBuilder();
             boolean ifConst = true;
+            int resultTypeId = -1;
+            PLCModifierEnum.Sort resultSort = null;
             for(PLCSTPARSERParser.Compare_exprContext exprContext : ctx.compare_expr()){
                 PLCVariable compareSymbol = (PLCVariable) visitor.visit(exprContext).get(0);
                 if(!compareSymbol.getIfConst()){
                     ifConst = false;
                 }
-                try{
-                    if(compareSymbol.getTypeId() != IDGenerator.BOOL){
-                        throw new PLCSemanticException("type mismatch : " + ctx.getText());
-                    }
+                if(resultTypeId == -1){
+                    resultTypeId = compareSymbol.getTypeId();
+                    resultSort = compareSymbol.getSort();
                 }
-                catch (PLCSemanticException e){
-                    System.err.println(e.getMessage());
-                    throw new RuntimeException("ST2C: unsupported construct");
-                }
-
+                // IEC 61131-3: AND 是多态的 — BOOL 上是逻辑运算，ANY_BIT 上是位运算
                 andVar.append("(").append(compareSymbol.getAssignVar()).append(") & ");
             }
             andVar.delete(andVar.length()-2, andVar.length());
             //检查未发现错误，新建一个表示此层类型的符号，返回给上层
             PLCVariable boolSymbol = new PLCVariable();
-            boolSymbol.setTypeId(IDGenerator.BOOL);
-            boolSymbol.setSort(PLCModifierEnum.Sort.BOOL);
+            // 多态：BOOL 操作数返回 BOOL，ANY_BIT 返回操作数类型
+            boolSymbol.setTypeId(resultTypeId);
+            boolSymbol.setSort(resultSort);
             boolSymbol.setAssignVar(new String(andVar));
             boolSymbol.setIfConst(ifConst);
             return visitor.packSymbols(boolSymbol);

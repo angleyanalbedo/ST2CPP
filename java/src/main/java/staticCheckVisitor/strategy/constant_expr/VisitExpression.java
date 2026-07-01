@@ -29,33 +29,30 @@ public class VisitExpression implements Strategy {
         if(ctx.xor_expr().size() == 1){ //只有一个节点时，不理会xorexpr的类型，直接访问返回
             return visitor.visit(ctx.getChild(0));
         }
-        else{  //有多个节点时，严格要求xor expr为bool类型
+        else{  //有多个节点时
             StringBuilder exprVar = new StringBuilder();
             boolean ifConst = true;
+            int resultTypeId = -1;
+            PLCModifierEnum.Sort resultSort = null;
             for(PLCSTPARSERParser.Xor_exprContext exprContext : ctx.xor_expr()){
-                //进行类型检查
                 PLCVariable xorTypeSymbol = (PLCVariable) visitor.visit(exprContext).get(0);
                 if(!xorTypeSymbol.getIfConst()){
                     ifConst = false;
                 }
-                try{
-                    if(xorTypeSymbol.getTypeId() != IDGenerator.BOOL){
-                        throw new PLCSemanticException("type mismatch : " + ctx.getText());
-                    }
-                }
-                catch (PLCSemanticException e){
-                    System.err.println(e.getMessage());
-                    throw new RuntimeException(e);
+                if(resultTypeId == -1){
+                    resultTypeId = xorTypeSymbol.getTypeId();
+                    resultSort = xorTypeSymbol.getSort();
                 }
                 //检查无误，组装值信息
-                exprVar.append("(").append(xorTypeSymbol.getAssignVar()).append(") || ");
+                exprVar.append("(").append(xorTypeSymbol.getAssignVar()).append(") | ");
             }
-            //删除最后多余的" || "
-            exprVar.delete(exprVar.length()-4, exprVar.length());
+            //删除最后多余的" | "
+            exprVar.delete(exprVar.length()-2, exprVar.length());
             //检查未发现错误，新建一个表示此层类型的符号，返回给上层
             PLCVariable boolSymbol = new PLCVariable();
-            boolSymbol.setTypeId(IDGenerator.BOOL);
-            boolSymbol.setSort(PLCModifierEnum.Sort.BOOL);
+            // 多态：BOOL 操作数返回 BOOL，ANY_BIT 返回操作数类型
+            boolSymbol.setTypeId(resultTypeId);
+            boolSymbol.setSort(resultSort);
             boolSymbol.setAssignVar(new String(exprVar));
             boolSymbol.setIfConst(ifConst);
             return visitor.packSymbols(boolSymbol);

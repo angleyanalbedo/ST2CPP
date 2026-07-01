@@ -71,7 +71,10 @@ public class TranslateFunc_decl {
             for (String initSentence : this.funcCallInitSentences) {
                 sb.append(initSentence);
             }
+            int savedReturnTypeId = translatorNew.currentFuncReturnTypeId;
+            translatorNew.currentFuncReturnTypeId = funcSymbol.getReturnTypeId();
             String result = translatorNew.visit(ctx.func_body());
+            translatorNew.currentFuncReturnTypeId = savedReturnTypeId;
             sb.append(result);
             for (String funcCallOutputSentence : this.funcCallOutputSentences) {
                 sb.append(funcCallOutputSentence);

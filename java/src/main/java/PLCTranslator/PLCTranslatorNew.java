@@ -75,6 +75,9 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     // 标记当前是否在 CLASS 声明中（生成成员方法 vs 自由函数）
     public boolean inClassDecl = false;
 
+    // 当前 FC 的返回类型 ID（-1 表示 void），用于 TranslateReturn 判断
+    public int currentFuncReturnTypeId = -1;
+
     // 是否启用 cyclic 局部变量缓存（prologue 加载 / epilogue 写回）
     public boolean localCache = true;
 
