@@ -22,8 +22,10 @@ items should live in compiler docs unless they directly affect the runtime ABI.
 - [x] `IoManager` wrapper for TCI/CompositeTCI sync and safe-output staging
 - [x] `DiagManager` wrapper for diagnostics reset/recording and scheduler print snapshot
 - [x] Runtime error ring buffer and safe math helpers
+- [x] `ErrorPolicy` default fault-action table for record/error/safe-output decisions
 - [x] RETAIN region markers and in-memory backup/restore hooks
 - [x] `RetainManager` wrapper for startup clear, in-memory save, and restore
+- [x] `RuntimeValidator` startup gate for fatal configuration checks
 - [x] Diagnostics counters for scan time and overruns
 - [x] Desktop/Linux/bare-metal platform abstraction
 - [x] Linux `timerfd` + `SCHED_FIFO` runtime entry
@@ -53,6 +55,8 @@ items should live in compiler docs unless they directly affect the runtime ABI.
   - Decide whether an overrun skips the next period, catches up, latches ERROR,
     or enters a degraded mode.
   - Document behavior and add tests for each selected policy.
+  - First fault-action boundary exists as `ErrorPolicy`; detailed overrun
+    recovery policy still needs final product semantics.
 
 - [ ] Harden GVL/ProcessImage alignment contract
   - Add compile-time or runtime checks for generated offsets.
@@ -158,8 +162,10 @@ items should live in compiler docs unless they directly affect the runtime ABI.
 - [ ] Version the generated-code/runtime ABI
   - Include ABI version, GVL layout hash, ProcessImage size, and compiler ID.
 
-- [ ] Add config validation at startup
+- [x] Add config validation at startup
   - Task intervals, priorities, watchdog limits, RETAIN ranges, and TCI mappings.
+  - First runtime core gate is implemented by `RuntimeValidator`; target-level
+    generated TCI mapping validation still needs deeper binding metadata.
 
 - [ ] Document capacity limits
   - `MAX_TASKS`, `MAX_PROGRAMS`, `MAX_EVENTS`, `MAX_POUS_PER_TASK`, GVL size,
@@ -212,6 +218,8 @@ These were previously tracked here and are kept as context:
 - [x] IoManager extraction around TCI/CompositeTCI
 - [x] DiagManager extraction around diagnostic stats and print snapshot
 - [x] RetainManager extraction around RETAIN startup/save/restore lifecycle
+- [x] RuntimeValidator startup validation gate
+- [x] ErrorPolicy extraction for runtime fault actions
 - [x] GVL offset bounds checks
 - [x] ProcessImage offset bounds checks
 - [x] Task interval/priority validation

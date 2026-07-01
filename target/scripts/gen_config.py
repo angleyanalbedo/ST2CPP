@@ -12,7 +12,7 @@ Usage:
     python gen_config.py --target windows --input config/config.json
     python gen_config.py --target stm32f1 --input config/config.json --build-dir ../../output/flat/build
 
-Supported targets: windows, desktop, linux, rpi, stm32f1, bananapif3
+Supported targets: windows, desktop, linux, rpi, rk3588, stm32f1, bananapif3
 Supported drivers: gpio, ethercat, tcp, network
 """
 import json
@@ -97,6 +97,7 @@ TARGET_INCLUDES = {
     'windows': [],
     'desktop': [],
     'linux': [],
+    'rk3588': [],
     'rpi': ['"hal/gpio_tci.h"'],
     'bananapif3': ['"hal/gpio_tci.h"'],
     'stm32f1': [],
@@ -354,7 +355,7 @@ def generate(config, target, build_dir, stub=False, exclude=None):
 def main():
     parser = argparse.ArgumentParser(description="Generate runtime_config.gen.cpp from config.json")
     parser.add_argument("--target", required=True,
-                        choices=['windows', 'desktop', 'linux', 'rpi', 'stm32f1', 'bananapif3'],
+                        choices=['windows', 'desktop', 'linux', 'rpi', 'rk3588', 'stm32f1', 'bananapif3'],
                         help="Target platform")
     parser.add_argument("--input", default=None,
                         help="Path to config.json (default: config/config.json relative to target dir)")
