@@ -7,6 +7,7 @@
 | `desktop/` | Windows / macOS | 跨平台桌面测试，`runtime_main.cpp` |
 | `windows/` | Windows | MinGW 专用，QPC + WaitableTimer |
 | `linux/` | Linux 通用 | timerfd + SCHED_FIFO |
+| `rk3588/` | RK3588 PLC | PREEMPT_RT Linux, timerfd + SCHED_FIFO + CPU affinity |
 | `rpi/` | Raspberry Pi | GPIO + POSIX timer |
 | `bananapif3/` | Banana Pi BPI-F3 | Spacemit X60, 8× RV64, GPIO sysfs, RVV 1.0 |
 | `stm32f1/` | STM32F103C8T6 | 裸机，20KB RAM / 64KB Flash |
@@ -47,6 +48,9 @@ cd target/desktop && make stub
 
 # Linux
 cd target/linux && make stub
+
+# RK3588
+cd target/rk3588 && make stub
 
 # RPi
 cd target/rpi && make stub
