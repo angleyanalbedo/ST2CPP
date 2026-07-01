@@ -42,7 +42,9 @@ public class VisitAnd_expr implements Strategy {
                     resultSort = compareSymbol.getSort();
                 }
                 // IEC 61131-3: AND 是多态的 — BOOL 上是逻辑运算，ANY_BIT 上是位运算
-                andVar.append("(").append(compareSymbol.getAssignVar()).append(") & ");
+                // C++: && 用于 BOOL，& 用于整数位运算
+                String op = (resultTypeId == IDGenerator.BOOL) ? "&&" : "&";
+                andVar.append("(").append(compareSymbol.getAssignVar()).append(") ").append(op).append(" ");
             }
             andVar.delete(andVar.length()-2, andVar.length());
             //检查未发现错误，新建一个表示此层类型的符号，返回给上层

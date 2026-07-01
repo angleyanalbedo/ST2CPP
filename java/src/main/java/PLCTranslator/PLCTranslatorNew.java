@@ -8,6 +8,8 @@ import PLCSymbolAndScope.PLCSymbols.PLCStructDeclSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCTypeDeclSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCVariable;
 import PLCTranslator.TranslateType.Class_decl.TranslateClass_decl;
+import PLCTranslator.TranslateType.Expr.TranslateAnd_expr;
+import PLCTranslator.TranslateType.Expr.TranslateExpression;
 import java.util.List;
 import java.util.ArrayList;
 import PLCTranslator.TranslateType.Fb_body.TranslateFb_body;
@@ -152,16 +154,20 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
 
     public static String translateBinaryChain(ParserRuleContext ctx, int opStartIndex, int opStep,
                                                PLCTranslatorNew t) {
+        return translateBinaryChain(ctx, opStartIndex, opStep, t, true);
+    }
+
+    /** @param logicalContext true=逻辑运算(&&/||), false=位运算(&/|) */
+    public static String translateBinaryChain(ParserRuleContext ctx, int opStartIndex, int opStep,
+                                               PLCTranslatorNew t, boolean logicalContext) {
         StringBuilder sb = new StringBuilder();
         sb.append(t.visit(ctx.getChild(0)));
         for (int i = opStartIndex; i < ctx.getChildCount(); i += opStep) {
             String op = ctx.getChild(i).getText();
-            String mapped = mapOperator(op);
+            String mapped = mapOperator(op, logicalContext);
             if ("MOD".equals(mapped)) {
-                // IEC MOD → 函数调用 MOD(a, b)，保证非负结果
                 sb.insert(0, "MOD(");
                 sb.append(", ").append(t.visit(ctx.getChild(i + 1))).append(")");
-                // 跳过后续链式处理，MOD 只有两个操作数
                 break;
             }
             sb.append(" ").append(mapped).append(" ");
@@ -171,10 +177,14 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     }
 
     public static String mapOperator(String op) {
+        return mapOperator(op, true);
+    }
+
+    public static String mapOperator(String op, boolean logicalContext) {
         return switch (op) {
-            case "OR" -> "|";
+            case "OR" -> logicalContext ? "||" : "|";
             case "XOR" -> "^";
-            case "AND" -> "&";
+            case "AND" -> logicalContext ? "&&" : "&";
             case "=" -> "==";
             case "<>" -> "!=";
             case "MOD" -> "MOD";
@@ -186,7 +196,7 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     // ─── Expression visit overrides ───
 
     @Override public String visitExpression(PLCSTPARSERParser.ExpressionContext ctx) {
-        return new PLCTranslator.TranslateType.Expr.TranslateExpression().translateNode(ctx, this);
+        return new TranslateExpression().translateNode(ctx, this);
     }
 
     @Override public String visitXor_expr(PLCSTPARSERParser.Xor_exprContext ctx) {
@@ -194,7 +204,7 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     }
 
     @Override public String visitAnd_expr(PLCSTPARSERParser.And_exprContext ctx) {
-        return translateBinaryChain(ctx, 1, 2, this);
+        return new TranslateAnd_expr().translateNode(ctx, this);
     }
 
     @Override public String visitCompare_expr(PLCSTPARSERParser.Compare_exprContext ctx) {

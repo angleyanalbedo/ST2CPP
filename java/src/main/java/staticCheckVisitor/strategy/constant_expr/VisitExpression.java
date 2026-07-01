@@ -44,10 +44,12 @@ public class VisitExpression implements Strategy {
                     resultSort = xorTypeSymbol.getSort();
                 }
                 //检查无误，组装值信息
-                exprVar.append("(").append(xorTypeSymbol.getAssignVar()).append(") | ");
+                String op = (resultTypeId == IDGenerator.BOOL) ? "||" : "|";
+                exprVar.append("(").append(xorTypeSymbol.getAssignVar()).append(") ").append(op).append(" ");
             }
-            //删除最后多余的" | "
-            exprVar.delete(exprVar.length()-2, exprVar.length());
+            //删除最后多余的运算符
+            String deleteOp = (resultTypeId == IDGenerator.BOOL) ? "|| " : "| ";
+            exprVar.delete(exprVar.length() - deleteOp.length(), exprVar.length());
             //检查未发现错误，新建一个表示此层类型的符号，返回给上层
             PLCVariable boolSymbol = new PLCVariable();
             // 多态：BOOL 操作数返回 BOOL，ANY_BIT 返回操作数类型
