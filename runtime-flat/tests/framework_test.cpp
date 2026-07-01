@@ -20,6 +20,7 @@
  * 16.  错误操作数记录
  * 17.  IoManager TCI 委托与安全输出
  * 18.  Scheduler ERROR 安全输出
+ * 19.  RuntimeValidator 启动前配置门禁
  */
 #include "rt_runtime.h"
 #include <cstdio>
@@ -921,6 +922,37 @@ void test_scheduler_safe_outputs() {
           "启用 safe output 时应覆盖输出并调用 syncOutputs");
 }
 
+void test_runtime_validator() {
+    printf("\n--- 19. RuntimeValidator 启动前配置门禁 ---\n");
+
+    Scheduler warnOnly;
+    warnOnly.addCyclicTask("EmptyTask", 1, T_ms(10));
+    RuntimeValidationResult warningResult = warnOnly.validateConfig();
+
+    TEST("空任务产生 warning 但不阻断启动");
+    CHECK(warningResult.ok() && warningResult.warningCount > 0,
+          "空任务应是 warning 而不是 fatal");
+
+    warnOnly.start(StartupMode::COLD);
+    TEST("warning-only 配置可以进入 RUN");
+    CHECK(warnOnly.systemState == SystemState::RUN, "warning-only 配置应允许启动");
+    warnOnly.stop();
+
+    Scheduler invalid;
+    invalid.setBaseCycle(0);
+    RuntimeValidationResult fatalResult = invalid.validateConfig();
+
+    TEST("base cycle 非法产生 fatal");
+    CHECK(!fatalResult.ok() && fatalResult.fatalCount > 0,
+          "非法 base cycle 应产生 fatal");
+
+    invalid.start(StartupMode::COLD);
+    TEST("fatal 配置拒绝启动并进入 ERROR");
+    CHECK(invalid.systemState == SystemState::ERROR &&
+          invalid.errorMgr.lastError == ErrorCode::CONFIG_ERROR,
+          "fatal 配置应阻止启动并记录 CONFIG_ERROR");
+}
+
 
 // ═══════════════════════════════════════════════════════
 // main
@@ -948,6 +980,7 @@ int main() {
     test_error_operand_recording();
     test_io_manager();
     test_scheduler_safe_outputs();
+    test_runtime_validator();
 
     printf("\n═══════════════════════════════\n");
     printf("通过: %d  失败: %d  总计: %d\n", test_pass, test_fail, test_pass + test_fail);

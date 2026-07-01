@@ -8,6 +8,7 @@
 #include "core/program.h"
 #include "core/task.h"
 #include "core/task_executor.h"
+#include "core/runtime_validator.h"
 #include "core/event.h"
 #include "core/watchdog.h"
 #include "core/diag_manager.h"
@@ -21,6 +22,7 @@
 namespace rt_plc {
 
 class Scheduler {
+    friend class RuntimeValidator;
 public:
     ProcessImage  image;
     GVL           gvl;
@@ -114,6 +116,7 @@ public:
     const Task&      task(int idx)   const { return tasks_[idx]; }
     Task&            task(int idx)         { return tasks_[idx]; }
     const ProgramInstance& program(int idx) const { return programs_[idx]; }
+    RuntimeValidationResult validateConfig() const;
 
     // 诊断输出
     DiagSnapshot snapshotDiag() const;

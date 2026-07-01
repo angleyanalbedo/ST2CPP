@@ -101,12 +101,20 @@ void Scheduler::start(StartupMode mode) {
         sortNeeded_ = false;
     }
 
+    errorMgr.reset();
+    RuntimeValidationResult validation = validateConfig();
+    if (!validation.ok()) {
+        errorMgr.report(ErrorCode::CONFIG_ERROR, 0, 0,
+                        validation.firstFatalMessage(), systemTime);
+        enterErrorState();
+        return;
+    }
+
     // 1. 清零 / 保留 RETAIN
     retain.clearForStartup(mode);
     image.clearInputs();
     image.clearOutputs();
 
-    errorMgr.reset();
     diagManager.reset();
     watchdog.reset();
 
@@ -271,6 +279,10 @@ DiagSnapshot Scheduler::snapshotDiag() const {
                                              gvl,
                                              io.tci() != nullptr,
                                              io.safeOutputsEnabled());
+}
+
+RuntimeValidationResult Scheduler::validateConfig() const {
+    return RuntimeValidator::validate(*this);
 }
 
 void Scheduler::printDiag() const {
