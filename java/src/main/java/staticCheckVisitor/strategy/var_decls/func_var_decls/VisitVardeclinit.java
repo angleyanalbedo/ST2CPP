@@ -48,6 +48,14 @@ public class VisitVardeclinit  implements Strategy {
             returnVar.setDeclSymbol(typeInfoSymbol.getDeclSymbol());
             returnVar.setRuntimeTypeName(typeInfoSymbol.getRuntimeTypeName());
             returnVar.setArrayBounds(typeInfoSymbol.getArrayBounds());
+            // 复制结构化初始化信息（namedInit 等）
+            if (typeInfoSymbol.getInitKind() != PLCVariable.InitKind.NONE) {
+                if (typeInfoSymbol.getInitKind() == PLCVariable.InitKind.AGGREGATE) {
+                    returnVar.setAggregateInit(typeInfoSymbol.getNamedInit());
+                } else if (typeInfoSymbol.getInitKind() == PLCVariable.InitKind.SIMPLE) {
+                    returnVar.setSimpleInit(typeInfoSymbol.getSimpleInitValue());
+                }
+            }
 
             //检查名称
             visitor.visitorTool.checkNameOnly(PLCScopeStack.currentSymbolTable, returnVar.getName());

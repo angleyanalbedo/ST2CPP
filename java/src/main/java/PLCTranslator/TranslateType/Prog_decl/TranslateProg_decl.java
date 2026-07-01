@@ -7,6 +7,8 @@ import PLCTranslator.PLCTranslatorNew;
 import antlr4.PLCSTPARSERParser;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class TranslateProg_decl {
 
@@ -244,9 +246,8 @@ public class TranslateProg_decl {
 
         String nativeType = gvlCtx.toNativeType(typeName);
         gvlCtx.allocateOffset(name, nativeType);
-        String assignVar = varSymbol.getAssignVar();
-        if (assignVar != null && !assignVar.isEmpty() && !"0".equals(assignVar) && !"\"\"".equals(assignVar)) {
-            String initValue = assignVar.contains(":=") ? toAggregateInit(assignVar) : PLCVariable.stripParens(assignVar);
+        String initValue = resolveInitValue(varSymbol);
+        if (initValue != null && !initValue.isEmpty() && !"0".equals(initValue) && !"\"\"".equals(initValue)) {
             String type = gvlCtx.typeMap.get(name);
             Integer offset = gvlCtx.offsetMap.get(name);
             if (type != null && offset != null) {
@@ -259,9 +260,38 @@ public class TranslateProg_decl {
     }
 
     /**
-     * 将 ST 命名参数初始化转为 C++ 聚合初始化。
+     * 从 PLCVariable 解析初始值：
+     * 优先使用结构化 namedInit，退化到 assignVar 字符串解析。
+     * 输出格式：{val1, val2, ...}（C++ 聚合初始化）
+     */
+    private String resolveInitValue(PLCVariable varSymbol) {
+        // 优先：结构化 namedInit（来自 grammar struct_init）
+        if (varSymbol.getInitKind() == PLCVariable.InitKind.AGGREGATE && varSymbol.getNamedInit() != null) {
+            LinkedHashMap<String, String> named = varSymbol.getNamedInit();
+            if (!named.isEmpty()) {
+                StringBuilder sb = new StringBuilder("{");
+                boolean first = true;
+                for (java.util.Map.Entry<String, String> entry : named.entrySet()) {
+                    if (!first) sb.append(", ");
+                    sb.append(entry.getValue());
+                    first = false;
+                }
+                sb.append("}");
+                return sb.toString();
+            }
+        }
+        // 退化：字符串解析
+        String assignVar = varSymbol.getAssignVar();
+        if (assignVar == null || assignVar.isEmpty()) return null;
+        if (assignVar.contains(":=")) {
+            return toAggregateInit(assignVar);
+        }
+        return PLCVariable.stripParens(assignVar);
+    }
+
+    /**
+     * 将 ST 命名参数初始化转为 C++ 聚合初始化（字符串后备）。
      * 例: (KP:=2.0,KI:=0.5) → {2.0, 0.5}
-     * 非命名参数保持原样。
      */
     private String toAggregateInit(String initExpr) {
         if (initExpr == null) return "";

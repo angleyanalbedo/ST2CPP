@@ -43,6 +43,14 @@ public class VisitVar_decl implements Strategy {
             returnVar.setAssignVar(varInfo.getAssignVar());
             returnVar.setDeclSymbol(varInfo.getDeclSymbol());
             returnVar.setRuntimeTypeName(varInfo.getRuntimeTypeName());
+            // 复制结构化初始化信息
+            if (varInfo.getInitKind() != PLCVariable.InitKind.NONE) {
+                if (varInfo.getInitKind() == PLCVariable.InitKind.AGGREGATE) {
+                    returnVar.setAggregateInit(varInfo.getNamedInit());
+                } else if (varInfo.getInitKind() == PLCVariable.InitKind.SIMPLE) {
+                    returnVar.setSimpleInit(varInfo.getSimpleInitValue());
+                }
+            }
 
             //检查名称
             visitor.visitorTool.checkNameOnly(PLCScopeStack.currentSymbolTable, returnVar.getName());
