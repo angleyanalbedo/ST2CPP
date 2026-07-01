@@ -89,3 +89,56 @@ Load=25 以上 POU 执行时间接近或超过 2ms 预算。
 - **系统零崩溃**：即使 Load=35（FIR=214, Array=360）系统也不崩溃，仅丢步
 - **timerfd 优雅降级**：当 POU 执行超时时，timerfd 累积 expired 计数，系统不丢失节拍同步
 - 压力瓶颈排序：**8×8 矩阵乘法 > 大数组滑动平均 > 高阶 FIR > PID 级联**
+
+---
+
+## Xenomai Alchemy API 压力测试
+
+### 背景：三种定时方案对比
+
+| 方案 | 底层机制 | 链接库 |
+|------|---------|-------|
+| Linux timerfd | timerfd_create + poll + read | -lrt |
+| Cobalt POSIX wrap | clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME) | xeno-config --cobalt |
+| **Alchemy 原生** | **rt_task_set_periodic + rt_task_wait_period** | **xeno-config --alchemy** |
+
+### 对比测试结果（Load=5 @ 1ms）
+
+| 指标 | timerfd | Cobalt clock_nanosleep | **Alchemy rt_task_wait_period** |
+|:----:|:-------:|:----------------------:|:------------------------------:|
+| 正常抖动 | ±17µs | ±16µs | **-2µs ~ +10µs** |
+| 标准差 | ~1µs | ~11µs | **~700ns** |
+| 最大尖峰 | ±17µs | **±67ms** (偶尔) | 仅关机时 ~500µs |
+| 零丢步 | ✅ | ✅ | ✅ |
+| 平均偏移 | 0ns | -6500ns | **-850ns** |
+
+**关键发现**：Cobalt POSIX wrap 的 `clock_nanosleep` 在 RK3588 内核 5.10.199 + Xenomai 3.2.4 上有偶发性 67ms 定时器脱靶，即使 `--jitter-only`（纯定时器循环，不执行任何 PLC 代码）也会触发。这是 Cobalt POSIX 包装层在 ARM64 上的竞态问题——中断恢复路径偶尔丢失一个周期。Alchemy `rt_task_wait_period` 走原生内核调度路径，不经过 POSIX 翻译层，完全不受影响。
+
+正常抖动 Alchemy 也明显优于 timerfd：std=700ns（亚微秒级）vs 1µs，范围缩小到 -2µs ~ +10µs。
+
+### Alchemy Load=12/20 @ 1ms
+
+| Load | PID | FIR | Matrix | Array | Min | Max | Std | Overrun | 判定 |
+|:----:|:---:|:---:|:------:|:----:|:---:|:---:|:---:|:-------:|:----:|
+| 12 | 10 | 76 | 8×8 | 130 | -2.4µs | +8.5µs | **786ns** | 0 | ✅ 亚微秒级稳定 |
+| 20 | 10 | 124 | 8×8 | 210 | -2.1µs | +9.4µs | **1µs** | 0 | ✅ 极稳定 |
+
+对比 timerfd Load=12 @ 1ms：抖动从 ±14µs 缩小到 +8.5/-2.4µs，标准差从 1µs 缩小到 786ns。
+
+### Alchemy Load=35 @ 2ms（最大负载）
+
+| Load | PID | FIR | Matrix | Array | Min | Max | Std | Overrun | 判定 |
+|:----:|:---:|:---:|:------:|:----:|:---:|:---:|:---:|:-------:|:----:|
+| 35 | 10 | 214 | 8×8 | 360 | -3.2µs | +10.3µs | **1µs** | 0 | ✅ 超预算但仍零丢步 |
+
+对比 timerfd Load=35 @ 2ms：同样零丢步，但 Alchemy 抖动更小（-3/+10µs vs -259/+259µs）。
+
+### Alchemy 推荐配置
+
+| 周期 | timerfd 安全上限 | **Alchemy 安全上限** | 改善 |
+|:----:|:----------------:|:--------------------:|:----:|
+| 1000us | Load=5 | **≥Load=20** | 4× |
+| 2000us | Load=20 | **≥Load=35** | >1.75× |
+| 500us | Load=3~5 | 待测 | — |
+
+**结论**：RK3588 上始终使用 Alchemy `rt_task_set_periodic + rt_task_wait_period` 替代 timerfd。`clock_nanosleep(Cobalt POSIX wrap)` 在此内核配置下有缺陷，不可用于生产。
