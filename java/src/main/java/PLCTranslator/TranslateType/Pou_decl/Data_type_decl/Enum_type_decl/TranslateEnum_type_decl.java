@@ -28,7 +28,7 @@ public class TranslateEnum_type_decl {
 
         List<String> entries = new ArrayList<>();
         for (PLCVariable var : enumSymbol.getEnumValues()) {
-            String valueExpr = stripParens(var.getAssignVar());
+            String valueExpr = PLCVariable.stripParens(var.getAssignVar());
             if (valueExpr.equals("0")) {
                 entries.add(var.getName());
             } else {
@@ -43,14 +43,5 @@ public class TranslateEnum_type_decl {
         }
         sb.append("\n};\n");
         return sb.toString();
-    }
-
-    private String stripParens(String s) {
-        if (s == null) return "";
-        s = s.trim();
-        if (s.startsWith("(") && s.endsWith(")")) {
-            return s.substring(1, s.length() - 1).trim();
-        }
-        return s;
     }
 }

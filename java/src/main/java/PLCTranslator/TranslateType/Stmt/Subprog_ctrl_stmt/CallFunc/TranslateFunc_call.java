@@ -42,8 +42,7 @@ public class TranslateFunc_call {
                 sb.append(instanceName).append(".").append(methodName).append("(").append(args).append(")");
             } else {
                 // 普通函数调用
-                String assignVarStr = funcVar.getAssignVar();
-                String funcName = extractFuncName(assignVarStr);
+                String funcName = funcVar.extractFuncName();
                 StringBuilder args = new StringBuilder();
                 for (PLCSTPARSERParser.Param_assignContext param_assignContext : ctx.param_assign()) {
                     if(param_assignContext instanceof PLCSTPARSERParser.InputParamContext ip){
@@ -83,22 +82,6 @@ public class TranslateFunc_call {
         return sb.toString();
     }
 
-    private String extractFuncName(String assignVar) {
-        // assignVar 格式: *FUNC_NAME(&PARAM1, &PARAM2, )
-        // 或: *FUNC_NAME(&PARAM1, )
-        String cleaned = assignVar;
-        if (cleaned.startsWith("*")) cleaned = cleaned.substring(1);
-        int parenIdx = cleaned.indexOf('(');
-        if (parenIdx > 0) {
-            return cleaned.substring(0, parenIdx);
-        }
-        return cleaned;
-    }
-
-    /**
-     * 解析 CLASS 方法调用为 Instance.Method(args) 格式。
-     * runtimeTypeName 格式：ClassName.InstanceName.MethodName
-     */
     private String tryClassMethodCall(String runtimeTypeName, String args) {
         if (runtimeTypeName == null) return null;
         String[] parts = runtimeTypeName.split("\\.");

@@ -54,7 +54,7 @@ public class TranslateCallFunc {
                     }
                     sb.append("\n\t\t").append(instanceName).append(".").append(methodName).append("(").append(args).append(");");
                 } else {
-                    String funcName = extractFuncName(funcVar.getAssignVar());
+                    String funcName = funcVar.extractFuncName();
                     StringBuilder args = new StringBuilder();
                     for (PLCSTPARSERParser.Param_assignContext param_assignContext : childCtx.param_assign()) {
                         if (param_assignContext instanceof PLCSTPARSERParser.InputParamContext ip) {
@@ -80,14 +80,6 @@ public class TranslateCallFunc {
             }
         }
         return sb.toString();
-    }
-
-    private String extractFuncName(String assignVar) {
-        String cleaned = assignVar;
-        if (cleaned.startsWith("*")) cleaned = cleaned.substring(1);
-        int parenIdx = cleaned.indexOf('(');
-        if (parenIdx > 0) return cleaned.substring(0, parenIdx);
-        return cleaned;
     }
 
     public static String emitFBCall(String fbInstanceName, String fbTypeName,

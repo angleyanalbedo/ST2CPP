@@ -29,7 +29,7 @@ public class TranslateCase_stmt {
                     }
                 } else {
                     PLCVariable var = (PLCVariable) elem;
-                    sb.append("\n\t\tcase ").append(stripParens(var.getAssignVar())).append(":");
+                    sb.append("\n\t\tcase ").append(PLCVariable.stripParens(var.getAssignVar())).append(":");
                 }
             }
 
@@ -68,14 +68,5 @@ public class TranslateCase_stmt {
             }
         }
         return out.toString();
-    }
-
-    private String stripParens(String s) {
-        if (s == null) return "";
-        s = s.trim();
-        if (s.startsWith("(") && s.endsWith(")")) {
-            return s.substring(1, s.length() - 1).trim();
-        }
-        return s;
     }
 }

@@ -118,7 +118,7 @@ public class TranslateFunc_decl {
             for (PLCSymbol symbol : ioVarList) {
                 PLCVariable tempSymbol = (PLCVariable) symbol;
                 String nativeType = mapToNativeType(tempSymbol.getRuntimeTypeName(), translatorNew);
-                String initValue = stripParens(tempSymbol.getAssignVar());
+                String initValue = PLCVariable.stripParens(tempSymbol.getAssignVar());
                 this.funcCallInitSentences.add("\n\t" + nativeType + " " + tempSymbol.getName() + " = " + initValue + ";");
             }
         }
@@ -130,7 +130,7 @@ public class TranslateFunc_decl {
             for (PLCSymbol symbol : ioVarList) {
                 PLCVariable tempSymbol = (PLCVariable) symbol;
                 String nativeType = mapToNativeType(tempSymbol.getRuntimeTypeName(), translatorNew);
-                String initValue = stripParens(tempSymbol.getAssignVar());
+                String initValue = PLCVariable.stripParens(tempSymbol.getAssignVar());
                 this.funcCallInitSentences.add("\n\t" + nativeType + " " + tempSymbol.getName() + " = " + initValue + ";");
             }
         }
@@ -173,14 +173,5 @@ public class TranslateFunc_decl {
 //            return "return NULL;";
 //        }
 //    }
-
-    private String stripParens(String s) {
-        if (s == null) return "";
-        s = s.trim();
-        if (s.startsWith("(") && s.endsWith(")")) {
-            return s.substring(1, s.length() - 1).trim();
-        }
-        return s;
-    }
 
 }

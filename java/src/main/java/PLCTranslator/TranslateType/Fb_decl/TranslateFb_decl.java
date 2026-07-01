@@ -33,15 +33,10 @@ public class TranslateFb_decl {
                 sb.append("    ").append(f.typeName).append(" ").append(f.declName());
                 if (f.initValue != null && !f.initValue.isEmpty()) {
                     String init = f.initValue;
-                    // 简单值（数字、BOOL、无逗号表达式）用 C++ 成员初始化
                     if (!init.contains(",") && !init.contains(":=") && !init.contains("{")) {
-                        // 去掉外层括号：(0) → 0
-                        if (init.startsWith("(") && init.endsWith(")")) {
-                            init = init.substring(1, init.length() - 1);
-                        }
+                        init = PLCVariable.stripParens(init);
                         sb.append(" = ").append(init);
                     } else if (init.contains(":=")) {
-                        // ST 命名聚合初始化 (J1:=0.0,J2:=-45.0,...) → {0.0, -45.0, ...}
                         sb.append(" = ").append(toAggregateInit(init, fields));
                     } else {
                         sb.append(" = ").append(init);
@@ -151,10 +146,7 @@ public class TranslateFb_decl {
     private static String toAggregateInit(String init, List<FBField> fields) {
         // 解析命名参数 → Map<name, value>
         java.util.Map<String, String> namedValues = new java.util.LinkedHashMap<>();
-        String inner = init.trim();
-        if (inner.startsWith("(") && inner.endsWith(")")) {
-            inner = inner.substring(1, inner.length() - 1);
-        }
+        String inner = PLCVariable.stripParens(init);
         for (String part : inner.split(",")) {
             String trimmed = part.trim();
             int eq = trimmed.indexOf(":=");

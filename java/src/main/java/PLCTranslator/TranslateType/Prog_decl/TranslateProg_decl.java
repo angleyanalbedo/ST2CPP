@@ -246,7 +246,7 @@ public class TranslateProg_decl {
         gvlCtx.allocateOffset(name, nativeType);
         String assignVar = varSymbol.getAssignVar();
         if (assignVar != null && !assignVar.isEmpty() && !"0".equals(assignVar) && !"\"\"".equals(assignVar)) {
-            String initValue = assignVar.contains(":=") ? toAggregateInit(assignVar) : stripParens(assignVar);
+            String initValue = assignVar.contains(":=") ? toAggregateInit(assignVar) : PLCVariable.stripParens(assignVar);
             String type = gvlCtx.typeMap.get(name);
             Integer offset = gvlCtx.offsetMap.get(name);
             if (type != null && offset != null) {
@@ -258,15 +258,6 @@ public class TranslateProg_decl {
         }
     }
 
-    private String stripParens(String s) {
-        if (s == null) return "";
-        s = s.trim();
-        if (s.startsWith("(") && s.endsWith(")")) {
-            return s.substring(1, s.length() - 1).trim();
-        }
-        return s;
-    }
-
     /**
      * 将 ST 命名参数初始化转为 C++ 聚合初始化。
      * 例: (KP:=2.0,KI:=0.5) → {2.0, 0.5}
@@ -274,7 +265,7 @@ public class TranslateProg_decl {
      */
     private String toAggregateInit(String initExpr) {
         if (initExpr == null) return "";
-        String inner = stripParens(initExpr);
+        String inner = PLCVariable.stripParens(initExpr);
         if (inner.isEmpty()) return "{}";
         String[] parts = inner.split(",");
         StringBuilder sb = new StringBuilder("{");
