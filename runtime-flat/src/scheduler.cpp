@@ -102,15 +102,9 @@ void Scheduler::start(StartupMode mode) {
     }
 
     // 1. 清零 / 保留 RETAIN
-    if (mode == StartupMode::COLD) {
-        gvl.clear();
-        image.clearInputs();
-        image.clearOutputs();
-    } else {
-        gvl.clearNonRetain();
-        image.clearInputs();
-        image.clearOutputs();
-    }
+    retain.clearForStartup(mode);
+    image.clearInputs();
+    image.clearOutputs();
 
     errorMgr.reset();
     diagManager.reset();
@@ -141,6 +135,7 @@ void Scheduler::stop() {
     if (systemState != SystemState::RUN &&
         systemState != SystemState::ERROR) return;
 
+    bool saveRetainOnStop = systemState == SystemState::RUN;
     systemState = SystemState::STOPPING;
 
     // 执行所有 PROGRAM 的 Post 回调
@@ -149,6 +144,10 @@ void Scheduler::stop() {
             programs_[i].phase == ProgramPhase::FIRST_SCAN) {
             programs_[i].doPost(gvl, image);
         }
+    }
+
+    if (saveRetainOnStop) {
+        retain.save();
     }
 
     systemState = SystemState::STOP;
@@ -255,6 +254,23 @@ void Scheduler::tick() {
 
     totalTicks++;
     currentPhase = ScanPhase::IDLE;
+}
+
+DiagSnapshot Scheduler::snapshotDiag() const {
+    return diagManager.makeSchedulerSnapshot(systemState,
+                                             currentPhase,
+                                             totalTicks,
+                                             systemTime,
+                                             baseCycleTime,
+                                             watchdog,
+                                             errorMgr,
+                                             tasks_,
+                                             taskCount_,
+                                             programs_,
+                                             programCount_,
+                                             gvl,
+                                             io.tci() != nullptr,
+                                             io.safeOutputsEnabled());
 }
 
 void Scheduler::printDiag() const {
@@ -383,38 +399,6 @@ void Scheduler::syncInputs() {
 void Scheduler::syncOutputs() {
     syncTCIBinding();
     io.syncOutputs(image);
-}
-
-const char* Scheduler::stateName(SystemState s) {
-    switch (s) {
-        case SystemState::STOP:     return "STOP";
-        case SystemState::STARTING: return "STARTING";
-        case SystemState::RUN:      return "RUN";
-        case SystemState::STOPPING: return "STOPPING";
-        case SystemState::ERROR:    return "ERROR";
-        case SystemState::PAUSED:   return "PAUSED";
-    }
-    return "?";
-}
-
-const char* Scheduler::triggerName(TaskTrigger t) {
-    switch (t) {
-        case TaskTrigger::CYCLIC:       return "Cyclic";
-        case TaskTrigger::EVENT:        return "Event";
-        case TaskTrigger::FREEWHEELING: return "FreeWheel";
-    }
-    return "?";
-}
-
-const char* Scheduler::phaseName(ProgramPhase p) {
-    switch (p) {
-        case ProgramPhase::UNINIT:     return "UNINIT";
-        case ProgramPhase::INIT:       return "INIT";
-        case ProgramPhase::FIRST_SCAN: return "FIRST_SCAN";
-        case ProgramPhase::CYCLIC:     return "CYCLIC";
-        case ProgramPhase::STOPPED:    return "STOPPED";
-    }
-    return "?";
 }
 
 } // namespace rt_plc

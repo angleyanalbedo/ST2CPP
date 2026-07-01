@@ -1,4 +1,5 @@
 #include "core/diag_manager.h"
+#include <cstring>
 
 namespace rt_plc {
 
@@ -24,6 +25,75 @@ void DiagManager::recordScan(TIME scanTime) {
 
 void DiagManager::recordTaskOverrun() {
     stats_.totalOverruns++;
+}
+
+DiagSnapshot DiagManager::makeSchedulerSnapshot(SystemState systemState,
+                                                ScanPhase currentPhase,
+                                                uint64_t totalTicks,
+                                                TIME systemTime,
+                                                TIME baseCycleTime,
+                                                const Watchdog& watchdog,
+                                                const ErrorManager& errorMgr,
+                                                const Task* tasks,
+                                                int taskCount,
+                                                const ProgramInstance* programs,
+                                                int programCount,
+                                                const GVL& gvl,
+                                                bool tciBound,
+                                                bool safeOutputsEnabled) const {
+    DiagSnapshot snapshot;
+    snapshot.systemState = systemState;
+    snapshot.currentPhase = currentPhase;
+    snapshot.totalTicks = totalTicks;
+    snapshot.systemTime = systemTime;
+    snapshot.baseCycleTime = baseCycleTime;
+
+    snapshot.totalScanCount = stats_.totalScanCount;
+    snapshot.minScanTime = stats_.minScanTime;
+    snapshot.maxScanTime = stats_.maxScanTime;
+    snapshot.avgScanTime = stats_.avgScanTime();
+    snapshot.lastScanTime = stats_.lastScanTime;
+    snapshot.totalOverruns = stats_.totalOverruns;
+
+    snapshot.watchdogTripped = watchdog.tripped;
+    snapshot.watchdogDefaultLimit = watchdog.defaultLimit;
+    snapshot.errorCount = errorMgr.totalCount;
+    snapshot.lastError = errorMgr.lastError;
+    snapshot.fatalMode = errorMgr.fatalMode;
+
+    snapshot.gvlUsedBytes = gvl.usedBytes();
+    snapshot.gvlCapacityBytes = GVL_SIZE;
+    snapshot.retainStart = gvl.retainStart;
+    snapshot.retainEnd = gvl.retainEnd;
+
+    snapshot.tciBound = tciBound;
+    snapshot.safeOutputsEnabled = safeOutputsEnabled;
+
+    snapshot.taskCount = taskCount < MAX_TASKS ? taskCount : MAX_TASKS;
+    for (int i = 0; i < snapshot.taskCount; i++) {
+        const Task& task = tasks[i];
+        TaskDiagSnapshot& taskSnapshot = snapshot.tasks[i];
+        strncpy(taskSnapshot.name, task.name, sizeof(taskSnapshot.name) - 1);
+        taskSnapshot.trigger = task.trigger;
+        taskSnapshot.state = task.state;
+        taskSnapshot.priority = task.priority;
+        taskSnapshot.interval = task.interval;
+        taskSnapshot.cycleCount = task.cycleCount;
+        taskSnapshot.lastExecTime = task.lastExecTime;
+        taskSnapshot.maxExecTime = task.maxExecTime;
+        taskSnapshot.overrunCount = task.overrunCount;
+    }
+
+    snapshot.programCount = programCount < MAX_PROGRAMS ? programCount : MAX_PROGRAMS;
+    for (int i = 0; i < snapshot.programCount; i++) {
+        const ProgramInstance& program = programs[i];
+        ProgramDiagSnapshot& programSnapshot = snapshot.programs[i];
+        strncpy(programSnapshot.name, program.name, sizeof(programSnapshot.name) - 1);
+        programSnapshot.phase = program.phase;
+        programSnapshot.cycleCount = program.cycleCount;
+    }
+
+    return snapshot;
 }
 
 void DiagManager::printSchedulerSnapshot(SystemState systemState,

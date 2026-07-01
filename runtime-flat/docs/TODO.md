@@ -23,6 +23,7 @@ items should live in compiler docs unless they directly affect the runtime ABI.
 - [x] `DiagManager` wrapper for diagnostics reset/recording and scheduler print snapshot
 - [x] Runtime error ring buffer and safe math helpers
 - [x] RETAIN region markers and in-memory backup/restore hooks
+- [x] `RetainManager` wrapper for startup clear, in-memory save, and restore
 - [x] Diagnostics counters for scan time and overruns
 - [x] Desktop/Linux/bare-metal platform abstraction
 - [x] Linux `timerfd` + `SCHED_FIFO` runtime entry
@@ -84,6 +85,8 @@ items should live in compiler docs unless they directly affect the runtime ABI.
 - [ ] Replace RAM-only RETAIN backup with a storage interface
   - `RetainStore::load/save/commit/invalidate`
   - Backends: file, Flash, FRAM, or target-specific NVRAM.
+  - First lifecycle boundary exists as `RetainManager`; persistent backends are
+    still pending.
 
 - [ ] Add RETAIN integrity metadata
   - CRC, layout version, payload size, compiler build ID, and monotonic counter.
@@ -128,11 +131,10 @@ items should live in compiler docs unless they directly affect the runtime ABI.
 
 ## P2 — Diagnostics and Online Engineering Hooks
 
-- [ ] Add structured diagnostics API
+- [x] Add structured diagnostics API
   - Machine-readable snapshot instead of only `printDiag()`.
   - Include system state, task stats, scan stats, errors, watchdog, and IO state.
-  - First boundary exists as `DiagManager`; structured snapshot DTO is still
-    pending.
+  - Implemented as fixed-capacity `DiagSnapshot` via `Scheduler::snapshotDiag()`.
 
 - [ ] Add variable watch/trace hooks
   - Read GVL/ProcessImage by symbol metadata and offset.
@@ -209,6 +211,7 @@ These were previously tracked here and are kept as context:
 - [x] TaskExecutor extraction from Scheduler
 - [x] IoManager extraction around TCI/CompositeTCI
 - [x] DiagManager extraction around diagnostic stats and print snapshot
+- [x] RetainManager extraction around RETAIN startup/save/restore lifecycle
 - [x] GVL offset bounds checks
 - [x] ProcessImage offset bounds checks
 - [x] Task interval/priority validation

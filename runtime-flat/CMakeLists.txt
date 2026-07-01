@@ -38,6 +38,7 @@ set(RT_CORE_SOURCES
     ${RT_SRC_DIR}/gvl.cpp
     ${RT_SRC_DIR}/io_manager.cpp
     ${RT_SRC_DIR}/program.cpp
+    ${RT_SRC_DIR}/retain_manager.cpp
     ${RT_SRC_DIR}/task.cpp
     ${RT_SRC_DIR}/task_executor.cpp
     ${RT_SRC_DIR}/event.cpp

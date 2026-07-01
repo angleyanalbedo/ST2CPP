@@ -24,6 +24,7 @@
 #include "core/constants.h"
 #include "core/types.h"
 #include "core/gvl.h"
+#include "core/retain_manager.h"
 #include "core/program.h"
 #include "core/task.h"
 #include "core/event.h"

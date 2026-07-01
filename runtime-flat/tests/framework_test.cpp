@@ -481,6 +481,25 @@ void test_cold_warm_start() {
     TEST("再次冷启动后 RETAIN 也清零");
     CHECK(gvl.read<DINT>(OFF_RETAIN_V) == 0, "retain_v 应清零");
 
+    RetainManager retain(gvl);
+    retain.setRegion(RETAIN_START, RETAIN_END);
+    gvl.write<DINT>(OFF_RETAIN_V, 77);
+    gvl.write<DINT>(OFF_COUNTER, 11);
+    retain.save();
+    gvl.write<DINT>(OFF_RETAIN_V, 0);
+    gvl.write<DINT>(OFF_COUNTER, 22);
+    retain.clearForStartup(StartupMode::WARM);
+
+    TEST("RetainManager 暖启动恢复 RETAIN 并清零非 RETAIN");
+    CHECK(gvl.read<DINT>(OFF_RETAIN_V) == 77 &&
+          gvl.read<DINT>(OFF_COUNTER) == 0,
+          "暖启动应恢复 RETAIN 并清零非 RETAIN");
+
+    retain.clearForStartup(StartupMode::COLD);
+    TEST("RetainManager 冷启动清零并使备份失效");
+    CHECK(gvl.read<DINT>(OFF_RETAIN_V) == 0 && !retain.hasBackup(),
+          "冷启动应清零 RETAIN 并清除备份标记");
+
     // 测试 Scheduler 集成的 start(mode)
     Scheduler sched;
     SimTCI tci;

@@ -3,6 +3,7 @@
 #include "core/constants.h"
 #include "core/types.h"
 #include "core/gvl.h"
+#include "core/retain_manager.h"
 #include "core/io_manager.h"
 #include "core/program.h"
 #include "core/task.h"
@@ -23,6 +24,7 @@ class Scheduler {
 public:
     ProcessImage  image;
     GVL           gvl;
+    RetainManager retain{gvl};
     TCI*          tci          = nullptr;
     IoManager     io;
     SystemState   systemState  = SystemState::STOP;
@@ -48,7 +50,7 @@ public:
 
     // 设置 GVL RETAIN 区域
     void setRetainRegion(size_t start, size_t end) {
-        gvl.setRetainRegion(start, end);
+        retain.setRegion(start, end);
     }
 
     // 添加 PROGRAM 实例
@@ -114,6 +116,7 @@ public:
     const ProgramInstance& program(int idx) const { return programs_[idx]; }
 
     // 诊断输出
+    DiagSnapshot snapshotDiag() const;
     void printDiag() const;
 
 
@@ -150,9 +153,6 @@ private:
     void syncInputs();
     void syncOutputs();
 
-    static const char* stateName(SystemState s);
-    static const char* triggerName(TaskTrigger t);
-    static const char* phaseName(ProgramPhase p);
 };
 
 } // namespace rt_plc

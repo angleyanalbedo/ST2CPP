@@ -553,6 +553,10 @@ void test_cold_warm_start() {
     TEST("运行后 counter > 0");
     CHECK(counter_after_run > 0, "counter should be > 0");
 
+    sched.stop();
+    TEST("stop() 保存 RETAIN 备份");
+    CHECK(sched.retain.hasBackup(), "retain backup should be saved on clean stop");
+
     // 暖启动（start 不重置 totalTicks，但会 clearNonRetain）
     DINT prevTotalTicks = sched.totalTicks;
     sched.start(StartupMode::WARM);
@@ -658,6 +662,19 @@ void test_diagnostics() {
 
     TEST("Task lastExecTime 独立于 ENABLE_DIAG 更新");
     CHECK(sched.task(tIdx).lastExecTime >= 0, "execTime should be recorded");
+
+    DiagSnapshot snapshot = sched.snapshotDiag();
+    TEST("DiagSnapshot 包含调度器状态");
+    CHECK(snapshot.systemState == sched.systemState &&
+          snapshot.totalTicks == sched.totalTicks &&
+          snapshot.baseCycleTime == sched.baseCycleTime,
+          "snapshot should mirror scheduler state");
+
+    TEST("DiagSnapshot 包含任务摘要");
+    CHECK(snapshot.taskCount == 1 &&
+          snapshot.tasks[0].cycleCount == sched.task(tIdx).cycleCount &&
+          snapshot.tasks[0].lastExecTime == sched.task(tIdx).lastExecTime,
+          "snapshot should include task diagnostics");
 }
 
 
