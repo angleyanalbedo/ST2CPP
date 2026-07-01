@@ -15,8 +15,8 @@ import static antlr4.PLCSTPARSERParser.RULE_fb_output_decl;
 public class VisitFb_output_decl implements Strategy {
     @Override
     public ArrayList<PLCSymbol> invoke(ParserRuleContext parserCtx, PLCVisitor visitor) {
-        PLCSTPARSERParser.Fb_output_declContext ctx = (PLCSTPARSERParser.Fb_output_declContext)parserCtx;
+        PLCSTPARSERParser.Fb_output_declContext ctx = (PLCSTPARSERParser.Fb_output_declContext) parserCtx;
+        // fb_output_decl : var_decl_init | array_conform_decl
         return visitor.visit(ctx.getChild(0));
     }
 }
-

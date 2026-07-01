@@ -1,49 +1,53 @@
-(* test_fb_output.st — FB 输出参数 (=>) 测试 *)
+(* test_fb_output.st — 测试 FB 输出参数 => 在 update 后读回
+ *
+ * 问题：FB 调用时 => 参数在 update() 后没有从 FB 实例读回
+ * 预期：SM(STATUS => MyStatus) 应在 update 后将 FB 的 STATUS 字段读回 MyStatus
+ *)
 
-FUNCTION_BLOCK CALC_FB
+FUNCTION_BLOCK STATE_MACHINE
     VAR_INPUT
-        X       : DINT;
-        Y       : DINT;
+        CMD : INT;
     END_VAR
     VAR_OUTPUT
-        SUM     : DINT;
-        DIFF    : DINT;
-        PRODUCT : DINT;
+        STATUS : INT;
+        DONE   : BOOL;
+    END_VAR
+    VAR
+        MODE : INT := 0;
     END_VAR
 
-    SUM := X + Y;
-    DIFF := X - Y;
-    PRODUCT := X * Y;
+    CASE CMD OF
+        0:
+            MODE := 0;
+            STATUS := 0;
+            DONE := FALSE;
+        1:
+            MODE := 1;
+            STATUS := 10;
+            DONE := TRUE;
+        2:
+            MODE := 2;
+            STATUS := 20;
+            DONE := TRUE;
+    END_CASE
 END_FUNCTION_BLOCK
 
 PROGRAM TEST_FB_OUTPUT
     VAR
-        Calc        : CALC_FB;
-        InA         : DINT := 10;
-        InB         : DINT := 3;
-        OutSum      : DINT;
-        OutDiff     : DINT;
-        OutProduct  : DINT;
-        I           : INT;
+        SM       : STATE_MACHINE;
+        MyStatus : INT := 0;
+        MyDone   : BOOL := FALSE;
     END_VAR
 
-    (* 测试 1：FB 输出参数读取（通过字段访问） *)
-    Calc(X := InA, Y := InB);
-    OutSum := Calc.SUM;
-    OutDiff := Calc.DIFF;
-    OutProduct := Calc.PRODUCT;
-    ASSERT(OutSum = 13);
-    ASSERT(OutDiff = 7);
-    ASSERT(OutProduct = 30);
+    SM(CMD := 1, STATUS => MyStatus, DONE => MyDone);
+    ASSERT(MyStatus = 10);
+    ASSERT(MyDone = TRUE);
 
-    (* 测试 2：循环中的 FB 调用 *)
-    FOR I := 0 TO 4 DO
-        Calc(X := I * 10, Y := I * 5);
-        OutSum := Calc.SUM;
-        OutProduct := Calc.PRODUCT;
-        ASSERT(OutSum = I * 15);
-        ASSERT(OutProduct = I * 10 * I * 5);
-    END_FOR
+    SM(CMD := 2, STATUS => MyStatus, DONE => MyDone);
+    ASSERT(MyStatus = 20);
+    ASSERT(MyDone = TRUE);
 
-    ASSERT(TRUE);
+    SM(CMD := 0, STATUS => MyStatus, DONE => MyDone);
+    ASSERT(MyStatus = 0);
+    ASSERT(MyDone = FALSE);
 END_PROGRAM

@@ -6,6 +6,7 @@ import PLCTranslator.TranslateType.Stmt.Subprog_ctrl_stmt.TranslateCallFunc;
 import antlr4.PLCSTPARSERParser;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 public class TranslateInvocation2 {
@@ -28,6 +29,7 @@ public class TranslateInvocation2 {
             paramValues.add(paramValue);
         }
 
-        return TranslateCallFunc.emitFBCall(fbInstanceName, fbTypeName, paramNames, paramValues, translatorNew.gvlCtx);
+        // Invocation2 不支持 => 输出参数，传空 map
+        return TranslateCallFunc.emitFBCall(fbInstanceName, fbTypeName, paramNames, paramValues, new LinkedHashMap<>(), translatorNew.gvlCtx);
     }
 }
