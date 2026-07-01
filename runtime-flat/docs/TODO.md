@@ -27,6 +27,7 @@ items should live in compiler docs unless they directly affect the runtime ABI.
 - [x] `RetainManager` wrapper for startup clear, in-memory save, and restore
 - [x] `RuntimeValidator` startup gate for fatal configuration checks
 - [x] Diagnostics counters for scan time and overruns
+- [x] Scan phase timing diagnostics for ReadInputs, LogicSolve, WriteOutputs, and Housekeeping
 - [x] Desktop/Linux/bare-metal platform abstraction
 - [x] Linux `timerfd` + `SCHED_FIFO` runtime entry
 - [x] STM32-style timer interrupt runtime entry
@@ -68,9 +69,14 @@ items should live in compiler docs unless they directly affect the runtime ABI.
   - Track min/max/avg/stddev plus P95/P99/P99.9.
   - Keep fixed-size buckets to avoid heap allocation.
 
-- [ ] Add WCET measurement per task and per scan phase
-  - Record ReadInputs, LogicSolve, WriteOutputs, Housekeeping separately.
-  - Record max execution time per task and per PROGRAM.
+- [x] Add scan phase timing diagnostics
+  - Record ReadInputs, LogicSolve, WriteOutputs, and Housekeeping separately.
+  - Expose phase count, last, min, max, and average through `DiagSnapshot`.
+
+- [ ] Add full WCET measurement per task and per PROGRAM
+  - Task last/max execution time exists; define product-grade WCET semantics and
+    acceptance thresholds.
+  - Record max execution time per PROGRAM.
 
 - [ ] Add long-run stability test
   - 24h/72h run mode with periodic diagnostic snapshots.

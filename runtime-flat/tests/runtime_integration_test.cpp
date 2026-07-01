@@ -652,9 +652,25 @@ void test_diagnostics() {
     TEST("diag.maxScanTime >= avgScanTime");
     CHECK(sched.diag.maxScanTime >= sched.diag.avgScanTime(),
           "max should >= avg");
+
+    DiagSnapshot snapshot = sched.snapshotDiag();
+    TEST("DiagSnapshot 包含 scan phase 耗时");
+    CHECK(snapshot.phases[(int)ScanPhase::READ_INPUTS].count > 0 &&
+          snapshot.phases[(int)ScanPhase::LOGIC_SOLVE].count > 0 &&
+          snapshot.phases[(int)ScanPhase::WRITE_OUTPUTS].count > 0 &&
+          snapshot.phases[(int)ScanPhase::HOUSEKEEPING].count > 0,
+          "scan phase timings should be recorded");
 #else
     TEST("ENABLE_DIAG=OFF 时 scan 诊断统计保持关闭");
     CHECK(sched.diag.totalScanCount == 0, "scan diagnostics should be disabled");
+
+    DiagSnapshot snapshot = sched.snapshotDiag();
+    TEST("ENABLE_DIAG=OFF 时 scan phase 诊断统计保持关闭");
+    CHECK(snapshot.phases[(int)ScanPhase::READ_INPUTS].count == 0 &&
+          snapshot.phases[(int)ScanPhase::LOGIC_SOLVE].count == 0 &&
+          snapshot.phases[(int)ScanPhase::WRITE_OUTPUTS].count == 0 &&
+          snapshot.phases[(int)ScanPhase::HOUSEKEEPING].count == 0,
+          "scan phase diagnostics should be disabled");
 #endif
 
     TEST("Task cycleCount = 10");
@@ -663,7 +679,6 @@ void test_diagnostics() {
     TEST("Task lastExecTime 独立于 ENABLE_DIAG 更新");
     CHECK(sched.task(tIdx).lastExecTime >= 0, "execTime should be recorded");
 
-    DiagSnapshot snapshot = sched.snapshotDiag();
     TEST("DiagSnapshot 包含调度器状态");
     CHECK(snapshot.systemState == sched.systemState &&
           snapshot.totalTicks == sched.totalTicks &&

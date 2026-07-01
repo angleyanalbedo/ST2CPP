@@ -23,6 +23,10 @@ void DiagManager::recordScan(TIME scanTime) {
     stats_.recordScan(scanTime);
 }
 
+void DiagManager::recordPhase(ScanPhase phase, TIME elapsedUs) {
+    stats_.recordPhase(phase, elapsedUs);
+}
+
 void DiagManager::recordTaskOverrun() {
     stats_.totalOverruns++;
 }
@@ -54,6 +58,16 @@ DiagSnapshot DiagManager::makeSchedulerSnapshot(SystemState systemState,
     snapshot.avgScanTime = stats_.avgScanTime();
     snapshot.lastScanTime = stats_.lastScanTime;
     snapshot.totalOverruns = stats_.totalOverruns;
+    for (int i = 0; i < SCAN_PHASE_COUNT; i++) {
+        const PhaseDiagStats& phaseStats = stats_.phases[i];
+        PhaseDiagSnapshot& phaseSnapshot = snapshot.phases[i];
+        phaseSnapshot.phase = static_cast<ScanPhase>(i);
+        phaseSnapshot.count = phaseStats.count;
+        phaseSnapshot.lastTime = phaseStats.lastTime;
+        phaseSnapshot.minTime = phaseStats.count > 0 ? phaseStats.minTime : 0;
+        phaseSnapshot.maxTime = phaseStats.maxTime;
+        phaseSnapshot.avgTime = phaseStats.avgTime();
+    }
 
     snapshot.watchdogTripped = watchdog.tripped;
     snapshot.watchdogDefaultLimit = watchdog.defaultLimit;
@@ -122,6 +136,21 @@ void DiagManager::printSchedulerSnapshot(SystemState systemState,
            (long long)stats_.maxScanTime);
     RT_LOG_INFO("Total Overruns: %llu\n", (unsigned long long)stats_.totalOverruns);
 
+    RT_LOG_INFO("\n%-16s %-10s %-10s %-10s %-10s %-10s\n",
+           "Scan Phase", "Count", "Last(us)", "Avg(us)", "Min(us)", "Max(us)");
+    RT_LOG_INFO("%-16s %-10s %-10s %-10s %-10s %-10s\n",
+           "----------", "-----", "--------", "-------", "-------", "-------");
+    for (int i = 0; i < SCAN_PHASE_COUNT; i++) {
+        const PhaseDiagStats& phase = stats_.phases[i];
+        RT_LOG_INFO("%-16s %-10llu %-10lld %-10lld %-10lld %-10lld\n",
+               scanPhaseName(static_cast<ScanPhase>(i)),
+               (unsigned long long)phase.count,
+               (long long)phase.lastTime,
+               (long long)phase.avgTime(),
+               (long long)(phase.count > 0 ? phase.minTime : 0),
+               (long long)phase.maxTime);
+    }
+
     RT_LOG_INFO("\n%-20s %-10s %-8s %-10s %-10s %-10s %-8s\n",
            "Task", "Trigger", "Pri", "Cycles", "Last(us)", "Max(us)", "Overrun");
     RT_LOG_INFO("%-20s %-10s %-8s %-10s %-10s %-10s %-8s\n",
@@ -160,6 +189,17 @@ const char* DiagManager::stateName(SystemState s) {
         case SystemState::STOPPING: return "STOPPING";
         case SystemState::ERROR:    return "ERROR";
         case SystemState::PAUSED:   return "PAUSED";
+    }
+    return "?";
+}
+
+const char* DiagManager::scanPhaseName(ScanPhase p) {
+    switch (p) {
+        case ScanPhase::IDLE:           return "Idle";
+        case ScanPhase::READ_INPUTS:    return "ReadInputs";
+        case ScanPhase::LOGIC_SOLVE:    return "LogicSolve";
+        case ScanPhase::WRITE_OUTPUTS:  return "WriteOutputs";
+        case ScanPhase::HOUSEKEEPING:   return "Housekeeping";
     }
     return "?";
 }

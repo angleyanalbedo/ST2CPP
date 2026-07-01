@@ -218,6 +218,7 @@ void Scheduler::tick() {
 
 #ifdef ENABLE_DIAG
     int64_t scanStart = platform::steadyUs();
+    int64_t phaseStart = scanStart;
 #endif
 
     // Phase 1: Read Inputs
@@ -227,7 +228,9 @@ void Scheduler::tick() {
     // 更新系统时间（仅诊断模式下精确计时）
 #ifdef ENABLE_DIAG
     int64_t nowWall = platform::steadyUs();
+    diagManager.recordPhase(ScanPhase::READ_INPUTS, nowWall - phaseStart);
     systemTime = nowWall - runStartWall_;
+    phaseStart = platform::steadyUs();
 #else
     // 非诊断模式：用 tick 计数代替精确时间
     systemTime = totalTicks * baseCycleTime;
@@ -238,7 +241,12 @@ void Scheduler::tick() {
 
     // 检查事件触发（输入更新后才能检测）
     checkEvents();
-    if (systemState != SystemState::RUN) return;
+    if (systemState != SystemState::RUN) {
+#ifdef ENABLE_DIAG
+        diagManager.recordPhase(ScanPhase::LOGIC_SOLVE, platform::steadyUs() - phaseStart);
+#endif
+        return;
+    }
 
     for (int i = 0; i < taskCount_; i++) {
         int idx = taskOrder_[i];
@@ -246,12 +254,27 @@ void Scheduler::tick() {
 
         if (!shouldRun(task)) continue;
 
-        if (!executeTask(idx)) return;
+        if (!executeTask(idx)) {
+#ifdef ENABLE_DIAG
+            diagManager.recordPhase(ScanPhase::LOGIC_SOLVE, platform::steadyUs() - phaseStart);
+#endif
+            return;
+        }
     }
+
+#ifdef ENABLE_DIAG
+    diagManager.recordPhase(ScanPhase::LOGIC_SOLVE, platform::steadyUs() - phaseStart);
+    phaseStart = platform::steadyUs();
+#endif
 
     // Phase 3: Write Outputs
     currentPhase = ScanPhase::WRITE_OUTPUTS;
     syncOutputs();
+
+#ifdef ENABLE_DIAG
+    diagManager.recordPhase(ScanPhase::WRITE_OUTPUTS, platform::steadyUs() - phaseStart);
+    phaseStart = platform::steadyUs();
+#endif
 
     // Phase 4: Housekeeping
     currentPhase = ScanPhase::HOUSEKEEPING;
@@ -260,6 +283,7 @@ void Scheduler::tick() {
     int64_t scanEnd = platform::steadyUs();
     TIME scanTime = scanEnd - scanStart;
     diagManager.recordScan(scanTime);
+    diagManager.recordPhase(ScanPhase::HOUSEKEEPING, platform::steadyUs() - phaseStart);
 #endif
 
     totalTicks++;
