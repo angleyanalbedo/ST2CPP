@@ -182,6 +182,9 @@ ST2C-master/
 ├── docs/
 │   ├── compiler-to-runtime.md   # 编译器→运行时接口文档
 │   ├── architecture.md          # 架构详解（类图、序列图）
+│   ├── target-deployment.md     # 目标平台部署指南
+│   ├── runtime-api.md           # 运行时 API 参考手册
+│   ├── examples-index.md        # 43 个示例 ST 文件索引
 │   └── PLC运行时架构知识库.md    # PLC 架构背景知识
 └── AGENTS.md                    # AI 代理指令
 ```
@@ -189,22 +192,33 @@ ST2C-master/
 ## ST 语言支持
 
 **已支持**：
-- FUNCTION、PROGRAM 声明与调用
-- 基本类型：BOOL, INT, REAL, STRING, TIME
-- STRUCT 类型定义与字段访问
-- ARRAY 类型与元素访问
-- FOR / IF / ELSIF / ELSE / WHILE / REPEAT / CASE 控制流
-- 赋值、算术运算、比较运算
-- PRINT 调试输出
-- ASSERT 断言
-- 外部函数声明（无 body）
+
+| 类别 | 内容 |
+|------|------|
+| POU | FUNCTION, FUNCTION_BLOCK, PROGRAM, METHOD, CLASS, ACTION |
+| 基本类型 | BOOL, SINT, INT, DINT, LINT, USINT, UINT, UDINT, ULINT, REAL, LREAL, BYTE, WORD, DWORD, LWORD |
+| 复合类型 | STRUCT, CLASS (含继承 EXTENDS + SUPER), ENUM, ARRAY (含多维), 子区间类型 |
+| 时间/日期 | TIME (T#), DATE, TIME_OF_DAY (TOD#), DATE_AND_TIME (DT#) |
+| 字符串 | STRING, WSTRING — CONCAT, LEN, LEFT, RIGHT, MID, INSERT, DELETE, REPLACE, FIND |
+| 控制流 | IF / ELSIF / ELSE, FOR, WHILE, REPEAT, CASE, 赋值, 比较 |
+| 运算 | 算术(+-\*/), 位运算(AND, OR, XOR, NOT, SHL, SHR, ROL, ROR), MOD, EXPT |
+| 内置函数 | ABS, SQRT, LN, LOG, EXP, SIN, COS, TAN, ASIN, ACOS, ATAN, MIN, MAX, LIMIT, SEL, MUX, MOVE, TRUNC, FLOOR |
+| 类型转换 | 约 200 个标准转换: TO_INT, TO_DINT, TO_REAL, TO_LREAL, TO_STRING, TO_TIME, TO_BYTE, TO_WORD, TO_DWORD, TO_BOOL 等 + 各类型间双向 (DINT_TO_REAL, REAL_TO_DWORD 等) |
+| 标准 FB | TON, TOF, TP, CTU, CTD, CTUD, R_TRIG, F_TRIG, SR, RS |
+| 直接 I/O | AT %I, %Q, %IB, %IW, %ID, %IL, %IX.b, %QB, %QW, %QD, %QL, %QX.b |
+| RETAIN | VAR RETAIN 持久化区域, 暖启动恢复 |
+| 生命周期 | PRE / POST / FirstScan 程序段 |
+| 调试 | PRINT, ASSERT |
+| 跨文件 | 跨编译单元类型解析, METHOD `=>` 输出参数绑定 |
+| 字面量 | 十进制、十六进制(16#)、二进制(2#)、实数、科学计数法、TIME 字面量 |
+
+**部分支持**：
+- STRING/WSTRING 运行时边界检查（溢出截断）
 
 **未支持**：
-- FUNCTION_BLOCK（FB）
-- ENUM 类型声明
-- VAR_INPUT / VAR_OUTPUT / VAR_IN_OUT
-- RETAIN 变量区域标记（编译器有收集但 `setRetainRegion` 调用待验证）
 - 在线下载与热更新
+- REF / POINTER / REF_TO
+- UNION / ALIAS 类型
 
 ## 文档导航
 
@@ -213,6 +227,9 @@ ST2C-master/
 | [本文件](README.md) | 项目入口、架构概览、快速开始 |
 | [架构详解](docs/architecture.md) | 类图、序列图、状态图、依赖图（Mermaid） |
 | [编译器→运行时接口](docs/compiler-to-runtime.md) | 编译流程、接口契约、表达式转换、GVL 偏移量 |
+| [目标平台部署指南](docs/target-deployment.md) | 各平台构建/运行/部署命令、定时器配置、GPIO 映射 |
+| [运行时 API 参考](docs/runtime-api.md) | Scheduler、ProcessImage、GVL、ErrorManager 等完整 API |
+| [示例索引](docs/examples-index.md) | 43 个示例 ST 文件分类说明 |
 | [开发指南](CONTRIBUTING.md) | 环境搭建、如何加新语法/类型/FB、编码规范 |
 | [PLC 运行时架构知识库](docs/PLC运行时架构知识库.md) | 工业 PLC 架构背景知识 |
 | [Runtime 文档](runtime-flat/docs/README.md) | 运行时目录结构、构建、开发指南 |
