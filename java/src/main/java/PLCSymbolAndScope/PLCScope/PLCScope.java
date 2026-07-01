@@ -2,11 +2,13 @@ package PLCSymbolAndScope.PLCScope;
 
 import PLCSymbolAndScope.IDGenerator;
 import PLCSymbolAndScope.PLCScopeStack;
+import PLCSymbolAndScope.PLCSymbolTables.PLCTotalSymbolTable;
 import PLCSymbolAndScope.PLCSymbolTables.PLCSymbolTable;
 import PLCSymbolAndScope.PLCSymbols.PLCImportScopeTypeDeclType;
 import PLCSymbolAndScope.PLCSymbols.PLCModifierEnum.Sort;
 import PLCSymbolAndScope.PLCSymbols.PLCNamespaceDeclSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
+import PLCSymbolAndScope.PLCSymbols.PLCTypeDeclSymbol;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -123,7 +125,7 @@ public class PLCScope {
 
     /**
      * 名称：深搜索
-     * 浅搜索 -> 搜索validScopeFromParents -> 搜索validScopeFromNamespace
+     * 浅搜索 -> 搜索validScopeFromParents -> 搜索validScopeFromNamespace -> 搜索 PLCTotalSymbolTable
      * */
     public PLCSymbol deepFindSymbol(String name){
         //浅搜索
@@ -147,6 +149,14 @@ public class PLCScope {
                 return result;
             }
         }
+
+        //搜索全局类型表（跨文件编译时前面文件注册的类型）
+        for(PLCTypeDeclSymbol typeDecl : PLCTotalSymbolTable.totalTypeMap.values()){
+            if(typeDecl.getName().equals(name)){
+                return typeDecl;
+            }
+        }
+
         return null;
     }
 

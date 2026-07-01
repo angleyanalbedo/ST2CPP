@@ -34,6 +34,10 @@ public class TranslateFunc_call {
                     if (p instanceof PLCSTPARSERParser.InputParamContext ip) {
                         if (args.length() > 0) args.append(", ");
                         args.append(translatorNew.visit(ip.expression()));
+                    } else if (p instanceof PLCSTPARSERParser.OutParamContext op) {
+                        // 输出参数 => 变量：取目标变量名作为引用参数
+                        if (args.length() > 0) args.append(", ");
+                        args.append(op.variable().getText());
                     } else {
                         if (args.length() > 0) args.append(", ");
                         args.append(p.getText());
