@@ -21,6 +21,7 @@
  * 17.  IoManager TCI 委托与安全输出
  * 18.  Scheduler ERROR 安全输出
  * 19.  RuntimeValidator 启动前配置门禁
+ * 20.  ErrorPolicy 故障动作
  */
 #include "rt_runtime.h"
 #include <cstdio>
@@ -953,6 +954,36 @@ void test_runtime_validator() {
           "fatal 配置应阻止启动并记录 CONFIG_ERROR");
 }
 
+void test_error_policy() {
+    printf("\n--- 20. ErrorPolicy 故障动作 ---\n");
+
+    Scheduler recordOnly;
+    recordOnly.handleFault(ErrorCode::USER_ERROR, "operator note");
+
+    TEST("USER_ERROR 默认只记录不进入 ERROR");
+    CHECK(recordOnly.errorMgr.totalCount == 1 &&
+          recordOnly.errorMgr.lastError == ErrorCode::USER_ERROR &&
+          recordOnly.systemState == SystemState::STOP,
+          "USER_ERROR 应只记录，不应改变系统状态");
+
+    Scheduler watchdogFault;
+    SimTCI tci;
+    watchdogFault.setTCI(&tci);
+    watchdogFault.io.clearSafeOutputs();
+    watchdogFault.io.setSafeOutputByte(0, 0x55);
+    watchdogFault.io.enableSafeOutputs(true);
+    watchdogFault.image.outputs[0] = 0xAA;
+
+    int outBefore = tci.syncOutCount;
+    watchdogFault.handleFault(ErrorCode::WATCHDOG_TIMEOUT, "watchdog timeout");
+
+    TEST("WATCHDOG_TIMEOUT 进入 ERROR 并应用 safe output");
+    CHECK(watchdogFault.systemState == SystemState::ERROR &&
+          watchdogFault.image.outputs[0] == 0x55 &&
+          tci.syncOutCount == outBefore + 1,
+          "WATCHDOG_TIMEOUT 应进入 ERROR 并同步安全输出");
+}
+
 
 // ═══════════════════════════════════════════════════════
 // main
@@ -981,6 +1012,7 @@ int main() {
     test_io_manager();
     test_scheduler_safe_outputs();
     test_runtime_validator();
+    test_error_policy();
 
     printf("\n═══════════════════════════════\n");
     printf("通过: %d  失败: %d  总计: %d\n", test_pass, test_fail, test_pass + test_fail);

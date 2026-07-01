@@ -104,9 +104,7 @@ void Scheduler::start(StartupMode mode) {
     errorMgr.reset();
     RuntimeValidationResult validation = validateConfig();
     if (!validation.ok()) {
-        errorMgr.report(ErrorCode::CONFIG_ERROR, 0, 0,
-                        validation.firstFatalMessage(), systemTime);
-        enterErrorState();
+        handleFault(ErrorCode::CONFIG_ERROR, validation.firstFatalMessage());
         return;
     }
 
@@ -175,6 +173,10 @@ void Scheduler::resume() {
 
 void Scheduler::error() {
     enterErrorState();
+}
+
+void Scheduler::handleFault(ErrorCode code, const char* message) {
+    handleFaultInternal(code, message, false);
 }
 
 void Scheduler::resetError() {
@@ -367,7 +369,10 @@ bool Scheduler::executeTask(int taskIndex) {
     };
 
     if (!taskExecutor_.execute(task, taskIndex, ctx)) {
-        enterErrorState();
+        ErrorCode code = errorMgr.lastError != ErrorCode::NONE
+            ? errorMgr.lastError
+            : ErrorCode::MISC_ERROR;
+        handleFaultInternal(code, task.name, true);
         return false;
     }
 
@@ -385,10 +390,24 @@ void Scheduler::checkEvents() {
     }
 }
 
-void Scheduler::enterErrorState() {
+void Scheduler::handleFaultInternal(ErrorCode code, const char* message, bool alreadyRecorded) {
+    FaultPolicyDecision decision = errorPolicy.decide(code);
+
+    if (decision.recordError && !alreadyRecorded) {
+        errorMgr.report(code, 0, 0,
+                        message ? message : "runtime fault",
+                        systemTime);
+    }
+
+    if (decision.enterError) {
+        enterErrorState(decision.applySafeOutputs);
+    }
+}
+
+void Scheduler::enterErrorState(bool applySafeOutputs) {
     systemState = SystemState::ERROR;
 
-    if (io.safeOutputsEnabled()) {
+    if (applySafeOutputs && io.safeOutputsEnabled()) {
         currentPhase = ScanPhase::WRITE_OUTPUTS;
         io.applySafeOutputs(image);
         syncOutputs();

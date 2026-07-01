@@ -5,6 +5,7 @@
 #include "core/gvl.h"
 #include "core/retain_manager.h"
 #include "core/io_manager.h"
+#include "core/error_policy.h"
 #include "core/program.h"
 #include "core/task.h"
 #include "core/task_executor.h"
@@ -32,6 +33,7 @@ public:
     SystemState   systemState  = SystemState::STOP;
     Watchdog      watchdog;
     ErrorManager  errorMgr;
+    ErrorPolicy   errorPolicy;
     DiagStats     diag;
     DiagManager   diagManager{diag};
     plc_lock      gvlLock;     // GVL 访问互斥锁
@@ -93,6 +95,7 @@ public:
     void pause();
     void resume();
     void error();
+    void handleFault(ErrorCode code, const char* message = nullptr);
 
     // 从 ERROR 恢复（需要手动确认后调用）
     void resetError();
@@ -150,7 +153,8 @@ private:
 
     void checkEvents();
 
-    void enterErrorState();
+    void handleFaultInternal(ErrorCode code, const char* message, bool alreadyRecorded);
+    void enterErrorState(bool applySafeOutputs = true);
 
     void syncTCIBinding();
     void syncInputs();
