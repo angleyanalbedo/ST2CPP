@@ -6,7 +6,7 @@
             "priority": 5,
             "interval_us": 1000,
             "watchdog_us": 5000,
-            "pous": ["ROBOT_MAIN"]
+            "pous": ["WEATHER_STATION_MAIN"]
         }
     ],
     "bindings": []

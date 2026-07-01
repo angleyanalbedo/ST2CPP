@@ -16,11 +16,10 @@ PROGRAM WEATHER_STATION_MAIN
         Thresholds  : ALARM_THRESHOLDS;
         Alarm       : ALARM_STATE;
         AlarmCnt    : INT := 0;
-        AlarmSev    : SEVERITY;
 
         (* 数据记录 *)
         Logger      : DATA_LOGGER;
-        LogEntry    : LOG_ENTRY;
+        LastEntry   : LOG_ENTRY;
         LogFull     : BOOL := FALSE;
         LogCount    : DINT := 0;
 
@@ -75,7 +74,6 @@ PROGRAM WEATHER_STATION_MAIN
         Thresholds.PRESSURE_LOW := 980.0;
 
         PRINT("=== WEATHER STATION v2.0 ===");
-        PRINT("SITE_ID=" + CONFIG.SITE_ID);
     END_IF
 
     (* === 1. 传感器校准（FB + 输出参数 =>）=== *)
@@ -100,8 +98,7 @@ PROGRAM WEATHER_STATION_MAIN
         THRESHOLDS := Thresholds,
         ACK_CMD := ACK_CMD,
         ALARM => Alarm,
-        ALARM_CNT => AlarmCnt,
-        SEVERITY => AlarmSev
+        ALARM_CNT => AlarmCnt
     );
 
     (* === 3. 数据记录（FB + 输出参数 =>）=== *)
@@ -109,7 +106,7 @@ PROGRAM WEATHER_STATION_MAIN
         ENABLE := ENABLE,
         DATA := Weather,
         LOG_CMD := LOG_CMD,
-        LOG_ENTRY => LogEntry,
+        LAST_ENTRY => LastEntry,
         LOG_FULL => LogFull,
         LOG_COUNT => LogCount
     );
@@ -161,6 +158,6 @@ PROGRAM WEATHER_STATION_MAIN
     CYCLE := CYCLE + 1;
 
     IF CYCLE MOD 10 = 0 THEN
-        PRINT("CYCLE=" + CYCLE + " TEMP=" + Weather.TEMP + " Q=" + Quality);
+        PRINT("CYCLE=" + CYCLE + " Q=" + Quality);
     END_IF
 END_PROGRAM
