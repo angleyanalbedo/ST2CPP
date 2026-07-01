@@ -1,0 +1,13 @@
+{
+    "base_cycle_us": 1000,
+    "tasks": [
+        {
+            "name": "Main",
+            "priority": 5,
+            "interval_us": 1000,
+            "watchdog_us": 10000,
+            "pous": ["StressTest"]
+        }
+    ],
+    "bindings": []
+}

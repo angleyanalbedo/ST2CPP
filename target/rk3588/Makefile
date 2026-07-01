@@ -36,7 +36,7 @@ LDFLAGS   = $(OPT) -lpthread
 TARGET      = plc_runtime_rk3588
 STUB_TARGET = plc_runtime_rk3588_stub
 
-.PHONY: all stub run stub-run clean config deploy remote-run remote-jitter remote-shell
+.PHONY: all stub run stub-run clean config deploy remote-run remote-jitter remote-shell stress stress-run stress-clean remote-stress
 
 all: $(CONFIG_GEN) $(TARGET)
 
@@ -77,7 +77,38 @@ build:
 	mkdir -p build
 
 clean:
-	-rm -f $(TARGET) $(STUB_TARGET) $(CONFIG_GEN) $(CONFIG_GEN_STUB)
+	-rm -f $(TARGET) $(STUB_TARGET) $(STRESS_TARGET) $(CONFIG_GEN) $(CONFIG_GEN_STUB) $(STRESS_CONFIG_GEN)
+
+# ─── 压力测试目标 ───
+
+STRESS_CONFIG_JSON = config/stress_config.json
+STRESS_CONFIG_GEN  = build/runtime_config_stress.gen.cpp
+STRESS_POU_SRC     = stress_test_pou.cpp
+STRESS_TARGET      = plc_runtime_rk3588_stress
+
+$(STRESS_CONFIG_GEN): $(STRESS_CONFIG_JSON) $(STRESS_POU_SRC) | build
+	python3 ../scripts/gen_config.py --target rk3588 --build-dir . \
+		--input $(STRESS_CONFIG_JSON) --output $(STRESS_CONFIG_GEN) || \
+	python  ../scripts/gen_config.py --target rk3588 --build-dir . \
+		--input $(STRESS_CONFIG_JSON) --output $(STRESS_CONFIG_GEN)
+
+STRESS_SRCS = $(RT_SRCS) $(MAIN_SRC) $(STRESS_POU_SRC) $(STRESS_CONFIG_GEN) $(TCI_SRCS)
+
+$(STRESS_TARGET): $(STRESS_CONFIG_GEN) $(STRESS_POU_SRC)
+	$(CXX) $(CXXFLAGS) -DSTRESS_LOAD=$(STRESS_LOAD) -o $@ $(STRESS_SRCS) $(LDFLAGS)
+	@echo "=== Build (stress): $@ (load=$(STRESS_LOAD)) ==="
+
+STRESS_LOAD ?= 5
+
+stress: $(STRESS_CONFIG_GEN) $(STRESS_TARGET)
+
+stress-run: stress
+	sudo ./$(STRESS_TARGET) --cycle-us $(CYCLE_US) --rt-prio $(RT_PRIO) --cpu $(CPU) --diag-interval 5
+
+stress-clean:
+	-rm -f $(STRESS_TARGET) $(STRESS_CONFIG_GEN)
+
+# ─── 远程部署 ───
 
 RK_HOST ?= 192.168.5.130
 RK_USER ?= root
@@ -92,6 +123,9 @@ remote-run:
 
 remote-jitter:
 	ssh -t $(RK_USER)@$(RK_HOST) "cd $(RK_DIR)/target/rk3588 && make stub && sudo ./$(STUB_TARGET) --jitter-only --cycle-us $(CYCLE_US) --rt-prio $(RT_PRIO) --cpu $(CPU)"
+
+remote-stress:
+	ssh -t $(RK_USER)@$(RK_HOST) "cd $(RK_DIR)/target/rk3588 && make stress-run CYCLE_US=$(CYCLE_US) RT_PRIO=$(RT_PRIO) CPU=$(CPU) STRESS_LOAD=$(STRESS_LOAD)"
 
 remote-shell:
 	ssh -t $(RK_USER)@$(RK_HOST) "cd $(RK_DIR)/target/rk3588 && bash"
