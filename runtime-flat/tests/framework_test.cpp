@@ -432,10 +432,22 @@ void test_scan_phases() {
     DiagManager diagManager(stats);
     diagManager.reset();
     diagManager.recordScan(400);
+    diagManager.recordPhase(ScanPhase::READ_INPUTS, 10);
+    diagManager.recordPhase(ScanPhase::READ_INPUTS, 30);
+    diagManager.recordPhase(ScanPhase::LOGIC_SOLVE, 50);
     diagManager.recordTaskOverrun();
     TEST("DiagManager 包装 DiagStats");
     CHECK(stats.totalScanCount == 1 && stats.lastScanTime == 400 &&
           stats.totalOverruns == 1, "DiagManager 应更新同一份 DiagStats");
+
+    TEST("DiagManager 记录 ScanPhase 耗时");
+    CHECK(stats.phases[(int)ScanPhase::READ_INPUTS].count == 2 &&
+          stats.phases[(int)ScanPhase::READ_INPUTS].lastTime == 30 &&
+          stats.phases[(int)ScanPhase::READ_INPUTS].minTime == 10 &&
+          stats.phases[(int)ScanPhase::READ_INPUTS].maxTime == 30 &&
+          stats.phases[(int)ScanPhase::READ_INPUTS].avgTime() == 20 &&
+          stats.phases[(int)ScanPhase::LOGIC_SOLVE].count == 1,
+          "phase timing should be aggregated");
 }
 
 

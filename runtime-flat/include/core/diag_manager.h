@@ -29,6 +29,15 @@ struct ProgramDiagSnapshot {
     uint64_t     cycleCount = 0;
 };
 
+struct PhaseDiagSnapshot {
+    ScanPhase phase = ScanPhase::IDLE;
+    uint64_t  count = 0;
+    TIME      lastTime = 0;
+    TIME      minTime = 0;
+    TIME      maxTime = 0;
+    TIME      avgTime = 0;
+};
+
 struct DiagSnapshot {
     SystemState systemState = SystemState::STOP;
     ScanPhase   currentPhase = ScanPhase::IDLE;
@@ -43,6 +52,7 @@ struct DiagSnapshot {
     TIME     avgScanTime = 0;
     TIME     lastScanTime = 0;
     uint64_t totalOverruns = 0;
+    PhaseDiagSnapshot phases[SCAN_PHASE_COUNT] = {};
 
     bool      watchdogTripped = false;
     TIME      watchdogDefaultLimit = 0;
@@ -74,6 +84,7 @@ public:
 
     void reset();
     void recordScan(TIME scanTime);
+    void recordPhase(ScanPhase phase, TIME elapsedUs);
     void recordTaskOverrun();
 
     DiagSnapshot makeSchedulerSnapshot(SystemState systemState,
@@ -106,6 +117,7 @@ private:
     DiagStats& stats_;
 
     static const char* stateName(SystemState s);
+    static const char* scanPhaseName(ScanPhase p);
     static const char* triggerName(TaskTrigger t);
     static const char* phaseName(ProgramPhase p);
 };
