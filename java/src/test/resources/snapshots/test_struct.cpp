@@ -357,9 +357,9 @@ void PROGRAM_test_struct_MAIN_pre(GVL& gvl, ProcessImage& io) {
 }
 void PROGRAM_test_struct_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 	auto& gv = rt_plc::gvl_layout(gvl);
-		P.X = 10;
-		P.Y = 20;
-		gv.test_struct$MAIN$SUM = (P.X) + (P.Y);
+		gv.test_struct$MAIN$P.X = 10;
+		gv.test_struct$MAIN$P.Y = 20;
+		gv.test_struct$MAIN$SUM = gv.test_struct$MAIN$P.X + gv.test_struct$MAIN$P.Y;
 }
 void PROGRAM_test_struct_MAIN_post(GVL& gvl, ProcessImage& io) {
 }

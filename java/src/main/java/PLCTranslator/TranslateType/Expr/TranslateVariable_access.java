@@ -27,19 +27,34 @@ public class TranslateVariable_access {
         }
 
         // GVL 变量 → 通过 layout 直接访问
-        // Handle array subscript: extract base name before '['
+        // Handle array subscript (name[ ... ]) and struct member access (name.field):
+        // extract the base GVL variable name before the first separator
         String normalizedName = cleanName;
         while (normalizedName.startsWith("(") && normalizedName.endsWith(")")) {
             normalizedName = normalizedName.substring(1, normalizedName.length() - 1);
         }
         int bracketIdx = normalizedName.indexOf('[');
-        String lookupName = bracketIdx >= 0 ? normalizedName.substring(0, bracketIdx) : normalizedName;
+        int dotIdx = normalizedName.indexOf('.');
+        int firstSep = -1;
+        boolean isArray = false;
+        if (bracketIdx >= 0 && dotIdx >= 0) {
+            firstSep = Math.min(bracketIdx, dotIdx);
+            isArray = bracketIdx < dotIdx;
+        } else if (bracketIdx >= 0) {
+            firstSep = bracketIdx; isArray = true;
+        } else if (dotIdx >= 0) {
+            firstSep = dotIdx;
+        }
+        String lookupName = firstSep >= 0 ? normalizedName.substring(0, firstSep) : normalizedName;
 
         if (t.gvlCtx.typeMap.containsKey(lookupName) && !t.gvlCtx.shadowedGvlVars.contains(lookupName)) {
             String mangled = "gv." + t.gvlCtx.getMangledName(lookupName);
-            if (bracketIdx >= 0) {
-                String indexPart = t.gvlCtx.translateExpr(normalizedName.substring(bracketIdx));
-                return mangled + indexPart;
+            if (firstSep >= 0) {
+                String suffix = normalizedName.substring(firstSep);
+                if (isArray) {
+                    suffix = t.gvlCtx.translateExpr(suffix);
+                }
+                return mangled + suffix;
             }
             return mangled;
         }

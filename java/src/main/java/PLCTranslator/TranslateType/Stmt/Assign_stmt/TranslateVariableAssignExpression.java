@@ -46,15 +46,21 @@ public class TranslateVariableAssignExpression {
                     sb.append("\n\t\t").append(varName).append(" = ").append(rhs).append(";");
                 }
             } else {
-                // Handle array subscript: extract base name before '['
-                String arrBase = varName.replaceAll("\\[.*", "");
-                if (translatorNew.gvlCtx.typeMap.containsKey(arrBase)) {
-                    String mangledBase = "gv." + translatorNew.gvlCtx.getMangledName(arrBase);
-                    if (varName.equals(arrBase)) {
+                // Handle array subscript (name[...]) and struct member (name.field):
+                // extract base GVL variable name before first separator
+                String baseName = varName.replaceAll("[\\[.].*", "");
+                if (translatorNew.gvlCtx.typeMap.containsKey(baseName)) {
+                    String mangledBase = "gv." + translatorNew.gvlCtx.getMangledName(baseName);
+                    if (varName.equals(baseName)) {
                         sb.append("\n\t\t").append(mangledBase).append(" = ").append(rhs).append(";");
                     } else {
+                        String suffix = varName.substring(baseName.length());
+                        // Only translate index expressions inside brackets, not struct field names
+                        if (suffix.contains("[")) {
+                            suffix = translatorNew.gvlCtx.translateExpr(suffix);
+                        }
                         sb.append("\n\t\t").append(mangledBase)
-                          .append(translatorNew.gvlCtx.translateExpr(varName.substring(arrBase.length())))
+                          .append(suffix)
                           .append(" = ").append(rhs).append(";");
                     }
                 } else {
