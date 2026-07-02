@@ -15,6 +15,9 @@ public class TranslateProg_decl {
     public String translateNode(PLCSTPARSERParser.Prog_declContext ctx, PLCTranslatorNew translatorNew) {
         StringBuilder sb = new StringBuilder();
 
+        // gvl_layout.gen.h — 在 PROGRAM 函数之前引入（所有 FB 类型已定义）
+        sb.append(translatorNew.gvlCtx.emitGVLLayoutIncludeOnce());
+
         String progName = ctx.prog_type_name().identifier().getText();
         translatorNew.gvlCtx.addProgramName(progName);
         // 记录当前 PROGRAM，后续 allocateOffset 会据此生成 mangled 字段名

@@ -50,6 +50,27 @@ public class TranslateVariableAssignExpression {
                 // extract base GVL variable name before first separator
                 String baseName = varName.replaceAll("[\\[.].*", "");
                 if (translatorNew.gvlCtx.typeMap.containsKey(baseName)) {
+                    // FB 方法内：使用 gvl.write/ptr 偏移访问（避免 GVL_LAYOUT 循环依赖）
+                    if (translatorNew.inFB) {
+                        Integer offset = translatorNew.gvlCtx.offsetMap.get(baseName);
+                        String varType = translatorNew.gvlCtx.toNativeType(translatorNew.gvlCtx.typeMap.get(baseName));
+                        if (offset != null) {
+                            if (varName.equals(baseName)) {
+                                sb.append("\n\t\tgvl.write<").append(varType).append(">(")
+                                  .append(offset).append(", ").append(rhs).append(");");
+                            } else {
+                                String suffix = varName.substring(baseName.length());
+                                if (suffix.contains("[")) {
+                                    suffix = translatorNew.gvlCtx.translateExpr(suffix);
+                                }
+                                sb.append("\n\t\t(*gvl.ptr<").append(varType).append(">(")
+                                  .append(offset).append("))").append(suffix)
+                                  .append(" = ").append(rhs).append(";");
+                            }
+                            return sb.toString();
+                        }
+                    }
+                    // PROGRAM 函数内：通过 layout 直接访问
                     String mangledBase = "gv." + translatorNew.gvlCtx.getMangledName(baseName);
                     if (varName.equals(baseName)) {
                         sb.append("\n\t\t").append(mangledBase).append(" = ").append(rhs).append(";");

@@ -70,6 +70,10 @@ public class Main {
             fullCodeBuilder.append(processStream(charStream, plcVisitor, translatorNew, fileIndex++));
         }
 
+        // gvl_layout.gen.h include（如果尚未被 data_type_decl 发射）
+        fullCodeBuilder.append("\n");
+        fullCodeBuilder.append(gvlCtx.emitGVLLayoutIncludeOnce());
+
         // POU 注册
         fullCodeBuilder.append("\n");
         fullCodeBuilder.append(emitPOURegistration(cfg.resolvedFileId, gvlCtx));

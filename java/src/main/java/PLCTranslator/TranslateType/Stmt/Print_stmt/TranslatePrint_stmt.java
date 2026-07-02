@@ -26,14 +26,30 @@ public class TranslatePrint_stmt {
                 String varExpr = PLCVariable.stripParens(assignVar);
                 String baseName = varExpr.replaceAll("[\\[.].*", "");
                 if (translatorNew.gvlCtx.typeMap.containsKey(baseName)) {
-                    if (varExpr.equals(baseName)) {
-                        varExpr = "gv." + translatorNew.gvlCtx.getMangledName(baseName);
-                    } else {
-                        String suffix = varExpr.substring(baseName.length());
-                        if (suffix.contains("[")) {
-                            suffix = translatorNew.gvlCtx.translateExpr(suffix);
+                    if (translatorNew.inFB) {
+                        Integer offset = translatorNew.gvlCtx.offsetMap.get(baseName);
+                        String varType = translatorNew.gvlCtx.toNativeType(translatorNew.gvlCtx.typeMap.get(baseName));
+                        if (offset != null) {
+                            if (varExpr.equals(baseName)) {
+                                varExpr = "gvl.read<" + varType + ">(" + offset + ")";
+                            } else {
+                                String suffix = varExpr.substring(baseName.length());
+                                if (suffix.contains("[")) {
+                                    suffix = translatorNew.gvlCtx.translateExpr(suffix);
+                                }
+                                varExpr = "(*gvl.ptr<" + varType + ">(" + offset + "))" + suffix;
+                            }
                         }
-                        varExpr = "gv." + translatorNew.gvlCtx.getMangledName(baseName) + suffix;
+                    } else {
+                        if (varExpr.equals(baseName)) {
+                            varExpr = "gv." + translatorNew.gvlCtx.getMangledName(baseName);
+                        } else {
+                            String suffix = varExpr.substring(baseName.length());
+                            if (suffix.contains("[")) {
+                                suffix = translatorNew.gvlCtx.translateExpr(suffix);
+                            }
+                            varExpr = "gv." + translatorNew.gvlCtx.getMangledName(baseName) + suffix;
+                        }
                     }
                 }
                 sb.append("\n\t\tprintf(\"%d\", (int)(").append(varExpr).append("));");

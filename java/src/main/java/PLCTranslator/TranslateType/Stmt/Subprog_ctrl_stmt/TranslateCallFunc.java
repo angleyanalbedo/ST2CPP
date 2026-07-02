@@ -1,6 +1,8 @@
 package PLCTranslator.TranslateType.Stmt.Subprog_ctrl_stmt;
 
+import PLCSymbolAndScope.PLCSymbolTables.PLCTotalSymbolTable;
 import PLCSymbolAndScope.PLCSymbols.PLCFBCallSymbol;
+import PLCSymbolAndScope.PLCSymbols.PLCTypeDeclSymbol;
 import PLCSymbolAndScope.PLCSymbols.PLCVariable;
 import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
 import PLCTranslator.GvlContext;
@@ -19,6 +21,10 @@ public class TranslateCallFunc {
                 // FB 调用
                 String fbInstanceName = fbCallSym.getFbInstanceName();
                 String fbTypeName = translatorNew.gvlCtx.getVarType(fbInstanceName);
+                if (fbTypeName == null) {
+                    PLCTypeDeclSymbol typeDecl = PLCTotalSymbolTable.getTypeByTypeID(fbCallSym.getFbTypeId());
+                    if (typeDecl != null) fbTypeName = typeDecl.getName();
+                }
                 if(fbTypeName == null) fbTypeName = fbInstanceName;
                 List<String> paramNames = new ArrayList<>();
                 List<String> paramValues = new ArrayList<>();
@@ -40,7 +46,7 @@ public class TranslateCallFunc {
                 if(fbCallSym.isArrayElement()){
                     sb.append(emitFBArrayCall(fbCallSym, fbTypeName, paramNames, paramValues, translatorNew));
                 } else {
-                    sb.append(emitFBCall(fbInstanceName, fbTypeName, paramNames, paramValues, outputParams, translatorNew.gvlCtx));
+                    sb.append(emitFBCall(fbInstanceName, fbTypeName, paramNames, paramValues, outputParams, translatorNew.gvlCtx, translatorNew.inFB));
                 }
             }else if(firstSym instanceof PLCVariable funcVar){
                 // 检查 AST 是否为 Instance.Method() 模式
@@ -91,35 +97,92 @@ public class TranslateCallFunc {
     public static String emitFBCall(String fbInstanceName, String fbTypeName,
                                      List<String> paramNames, List<String> paramValues,
                                      java.util.LinkedHashMap<String, String> outputParams,
-                                     GvlContext gvlCtx) {
+                                     GvlContext gvlCtx, boolean inFB) {
         StringBuilder sb = new StringBuilder();
-        String fbMangled = gvlCtx.getMangledName(fbInstanceName);
+        boolean isGvlVar = gvlCtx.offsetMap.containsKey(fbInstanceName);
+        String fbRef;
+        if (isGvlVar && inFB) {
+            Integer offset = gvlCtx.offsetMap.get(fbInstanceName);
+            String fbType = gvlCtx.toNativeType(gvlCtx.typeMap.get(fbInstanceName));
+            fbRef = "gvl.ptr<" + fbType + ">(" + offset + ")";
+        } else {
+            fbRef = isGvlVar ? "gv." + gvlCtx.getMangledName(fbInstanceName) : fbInstanceName;
+        }
+        String fbAccess = isGvlVar && inFB ? "(*" + fbRef + ")" : fbRef;
+        // 查找 FB 结构体字段类型（判断数组参数需要 memcpy）
+        java.util.Map<String, String> fieldTypeMap = new java.util.HashMap<>();
+        GvlContext.StructLayout layout = gvlCtx.structLayoutMap.get(fbTypeName);
+        if (layout == null) {
+            // 回退：在所有 struct 布局中搜索以 fbInstanceName 为字段名的条目
+            for (GvlContext.StructLayout sl : gvlCtx.structLayoutMap.values()) {
+                for (GvlContext.StructField f : sl.fields) {
+                    if (f.name.equals(fbInstanceName)) {
+                        String t = f.type.replaceAll("\\[.*", "");
+                        layout = gvlCtx.structLayoutMap.get(t);
+                        break;
+                    }
+                }
+                if (layout != null) break;
+            }
+        }
+        if (layout != null) {
+            for (GvlContext.StructField f : layout.fields) {
+                fieldTypeMap.put(f.name, f.type);
+            }
+        }
         // 写入输入参数 → 直接结构体成员赋值
         for (int i = 0; i < paramNames.size(); i++) {
             String paramName = paramNames.get(i);
             String paramValue = paramValues.get(i);
             if (outputParams.containsKey(paramName)) continue;
-            sb.append("\n\t\tgv.").append(fbMangled).append(".").append(paramName)
-              .append(" = ").append(paramValue).append(";");
+            String fieldType = fieldTypeMap.get(paramName);
+            boolean isArray = fieldType != null && fieldType.contains("[");
+            if (isArray) {
+                sb.append("\n\t\tmemcpy(").append(fbAccess).append(".").append(paramName)
+                  .append(", ").append(paramValue).append(", sizeof(").append(fbAccess)
+                  .append(".").append(paramName).append("));");
+            } else {
+                sb.append("\n\t\t").append(fbAccess).append(".").append(paramName)
+                  .append(" = ").append(paramValue).append(";");
+            }
         }
         // 调用 update — 直接成员函数调用
-        sb.append("\n\t\tgv.").append(fbMangled).append(".update(gvl, io, dt);");
+        if (isGvlVar && inFB) {
+            sb.append("\n\t\t").append(fbAccess).append(".update(gvl, io, dt);");
+        } else {
+            sb.append("\n\t\t").append(fbRef).append(".update(gvl, io, dt);");
+        }
         // 读回输出参数 — 直接成员读取
         for (java.util.Map.Entry<String, String> entry : outputParams.entrySet()) {
             String paramName = entry.getKey();
             String targetVar = entry.getValue();
             String targetBase = targetVar.replaceAll("[\\[.].*", "");
             if (gvlCtx.typeMap.containsKey(targetBase)) {
-                if (targetVar.equals(targetBase)) {
-                    sb.append("\n\t\tgv.").append(gvlCtx.getMangledName(targetBase))
-                      .append(" = gv.").append(fbMangled).append(".").append(paramName).append(";");
+                String targetType = gvlCtx.toNativeType(gvlCtx.typeMap.get(targetBase));
+                Integer targetOffset = gvlCtx.offsetMap.get(targetBase);
+                if (inFB && targetOffset != null) {
+                    if (targetVar.equals(targetBase)) {
+                        sb.append("\n\t\tgvl.write<").append(targetType).append(">(")
+                          .append(targetOffset).append(", ").append(fbAccess)
+                          .append(".").append(paramName).append(");");
+                    } else {
+                        sb.append("\n\t\t(*gvl.ptr<").append(targetType).append(">(")
+                          .append(targetOffset).append("))")
+                          .append(targetVar.substring(targetBase.length()))
+                          .append(" = ").append(fbAccess).append(".").append(paramName).append(";");
+                    }
                 } else {
-                    sb.append("\n\t\tgv.").append(gvlCtx.getMangledName(targetBase))
-                      .append(targetVar.substring(targetBase.length()))
-                      .append(" = gv.").append(fbMangled).append(".").append(paramName).append(";");
+                    if (targetVar.equals(targetBase)) {
+                        sb.append("\n\t\tgv.").append(gvlCtx.getMangledName(targetBase))
+                          .append(" = ").append(fbAccess).append(".").append(paramName).append(";");
+                    } else {
+                        sb.append("\n\t\tgv.").append(gvlCtx.getMangledName(targetBase))
+                          .append(targetVar.substring(targetBase.length()))
+                          .append(" = ").append(fbAccess).append(".").append(paramName).append(";");
+                    }
                 }
             } else {
-                sb.append("\n\t\t").append(targetVar).append(" = gv.").append(fbMangled)
+                sb.append("\n\t\t").append(targetVar).append(" = ").append(fbAccess)
                   .append(".").append(paramName).append(";");
             }
         }
@@ -133,16 +196,27 @@ public class TranslateCallFunc {
         GvlContext gvlCtx = translatorNew.gvlCtx;
         String arrayName = fbCallSym.getFbInstanceName();
         String indexExpr = fbCallSym.getArrayIndexExpr();
-        String arrMangled = gvlCtx.getMangledName(arrayName);
+        boolean isGvlVar = gvlCtx.offsetMap.containsKey(arrayName);
+        String arrRef;
+        if (isGvlVar && translatorNew.inFB) {
+            Integer offset = gvlCtx.offsetMap.get(arrayName);
+            String elemType = gvlCtx.toNativeType(gvlCtx.typeMap.get(arrayName));
+            if (gvlCtx.arrayElemTypeMap != null && gvlCtx.arrayElemTypeMap.containsKey(arrayName)) {
+                elemType = gvlCtx.arrayElemTypeMap.get(arrayName);
+            }
+            arrRef = "gvl.ptr<" + elemType + ">(" + offset + ")[" + indexExpr + "]";
+        } else {
+            arrRef = isGvlVar ? "gv." + gvlCtx.getMangledName(arrayName) : arrayName;
+            arrRef = arrRef + "[" + indexExpr + "]";
+        }
 
         for (int i = 0; i < paramNames.size(); i++) {
             String paramName = paramNames.get(i);
             String paramValue = paramValues.get(i);
-            sb.append("\n\t\tgv.").append(arrMangled).append("[").append(indexExpr)
-              .append("].").append(paramName).append(" = ").append(paramValue).append(";");
+            sb.append("\n\t\t").append(arrRef).append(".").append(paramName)
+              .append(" = ").append(paramValue).append(";");
         }
-        sb.append("\n\t\tgv.").append(arrMangled).append("[").append(indexExpr)
-          .append("].update(gvl, io, dt);");
+        sb.append("\n\t\t").append(arrRef).append(".update(gvl, io, dt);");
         return sb.toString();
     }
 }

@@ -45,7 +45,9 @@ public class TranslateFb_decl {
                 sb.append(";\n");
             }
             sb.append("\n    void update(GVL& gvl, ProcessImage& io, TIME dt) {\n");
+            translatorNew.inFB = true;
             String body = translatorNew.visit(ctx.fb_body());
+            translatorNew.inFB = false;
             if (body != null) sb.append(body);
             sb.append("\n    }\n");
             sb.append("};\n");

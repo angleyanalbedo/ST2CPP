@@ -399,6 +399,14 @@ public class GvlContext {
         ioVarMap.put(cleanName, info);
     }
 
+    private boolean gvlLayoutIncludeEmitted = false;
+
+    public String emitGVLLayoutIncludeOnce() {
+        if (gvlLayoutIncludeEmitted) return "";
+        gvlLayoutIncludeEmitted = true;
+        return "#include \"gvl_layout.gen.h\"\n\n";
+    }
+
     public boolean isIOVariable(String varName) {
         if (varName == null) return false;
         String cleanName = varName.startsWith("*") ? varName.substring(1) : varName;

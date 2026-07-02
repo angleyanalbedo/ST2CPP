@@ -74,6 +74,9 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     // 标记当前是否在 PROGRAM cyclic 函数体内（影响变量翻译方式）
     public boolean inCyclic = false;
 
+    // 标记当前是否在 FB 方法体内（使用 gvl.read/write/ptr 而非 gv. 直接访问）
+    public boolean inFB = false;
+
     // 标记当前是否在 CLASS 声明中（生成成员方法 vs 自由函数）
     public boolean inClassDecl = false;
 

@@ -30,8 +30,10 @@ public class TranslateVariable_access {
         // Handle array subscript (name[ ... ]) and struct member access (name.field):
         // extract the base GVL variable name before the first separator
         String normalizedName = cleanName;
-        while (normalizedName.startsWith("(") && normalizedName.endsWith(")")) {
-            normalizedName = normalizedName.substring(1, normalizedName.length() - 1);
+        // 去除语义分析器预组装时添加的括号（如 (Robot.Planner).PROGRESS → Robot.Planner.PROGRESS）
+        normalizedName = normalizedName.replace("(", "").replace(")", "");
+        while (normalizedName.startsWith("*")) {
+            normalizedName = normalizedName.substring(1);
         }
         int bracketIdx = normalizedName.indexOf('[');
         int dotIdx = normalizedName.indexOf('.');
@@ -48,6 +50,22 @@ public class TranslateVariable_access {
         String lookupName = firstSep >= 0 ? normalizedName.substring(0, firstSep) : normalizedName;
 
         if (t.gvlCtx.typeMap.containsKey(lookupName) && !t.gvlCtx.shadowedGvlVars.contains(lookupName)) {
+            // FB 方法内：使用 gvl.read/ptr 偏移访问（避免 GVL_LAYOUT 循环依赖）
+            if (t.inFB) {
+                Integer offset = t.gvlCtx.offsetMap.get(lookupName);
+                String varType = t.gvlCtx.toNativeType(t.gvlCtx.typeMap.get(lookupName));
+                if (offset != null) {
+                    if (firstSep >= 0) {
+                        String suffix = normalizedName.substring(firstSep);
+                        if (isArray) {
+                            suffix = t.gvlCtx.translateExpr(suffix);
+                        }
+                        return "(*gvl.ptr<" + varType + ">(" + offset + "))" + suffix;
+                    }
+                    return "gvl.read<" + varType + ">(" + offset + ")";
+                }
+            }
+            // PROGRAM 函数内：通过 layout 直接访问
             String mangled = "gv." + t.gvlCtx.getMangledName(lookupName);
             if (firstSep >= 0) {
                 String suffix = normalizedName.substring(firstSep);
