@@ -24,12 +24,14 @@ CONFIG_GEN      = build/runtime_config.gen.cpp
 CONFIG_GEN_STUB = build/runtime_config_stub.gen.cpp
 TCI_DIR  = ../lib/tci
 TCI_SRCS = $(TCI_DIR)/network_tci.cpp $(TCI_DIR)/tcp_tci.cpp
+HAL_DIR  = hal
+HAL_SRCS = $(HAL_DIR)/gpio_hal.cpp $(HAL_DIR)/gpio_tci.cpp $(HAL_DIR)/gpio_scan.cpp
 
 OPT      ?= -O2
 CXXFLAGS  = $(OPT) -std=c++17 -D_GNU_SOURCE \
             -DRT_PLATFORM_LINUX -DRT_TARGET_RK3588 \
             -I$(RT_DIR)/include \
-            -I$(TCI_DIR) -I. \
+            -I$(TCI_DIR) -I. -I$(HAL_DIR) \
             -Wall -Wextra -Wno-unused-parameter
 LDFLAGS   = $(OPT) -lpthread
 
@@ -50,8 +52,8 @@ $(CONFIG_GEN_STUB): $(CONFIG_JSON) | build
 	python3 ../scripts/gen_config.py --target rk3588 --stub --input $(CONFIG_JSON) --output $(CONFIG_GEN_STUB) || \
 	python  ../scripts/gen_config.py --target rk3588 --stub --input $(CONFIG_JSON) --output $(CONFIG_GEN_STUB)
 
-SRCS = $(RT_SRCS) $(MAIN_SRC) $(POU_SRCS) $(CONFIG_GEN) $(TCI_SRCS)
-STUB_SRCS = $(RT_SRCS) $(MAIN_SRC) $(CONFIG_GEN_STUB) $(TCI_SRCS)
+SRCS = $(RT_SRCS) $(MAIN_SRC) $(POU_SRCS) $(CONFIG_GEN) $(TCI_SRCS) $(HAL_SRCS)
+STUB_SRCS = $(RT_SRCS) $(MAIN_SRC) $(CONFIG_GEN_STUB) $(TCI_SRCS) $(HAL_SRCS)
 
 $(TARGET): $(SRCS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
@@ -82,20 +84,21 @@ clean:
 # ─── Xenomai 硬实时（仅远程，在 RK3588 上编译） ───
 
 remote-rt-build:
-	ssh -t $(RK_USER)@$(RK_HOST) "cd $(RK_DIR)/target/rk3588 && \
+		ssh -t $(RK_USER)@$(RK_HOST) "cd $(RK_DIR)/target/rk3588 && \
 		python3 ../scripts/gen_config.py --target rk3588 --build-dir . \
 			--input config/stress_config.json --output build/runtime_config_stress.gen.cpp && \
 		g++ -O2 -std=c++17 -D_GNU_SOURCE -D_REENTRANT -D__COBALT__ \
 			-DRT_PLATFORM_LINUX -DRT_TARGET_RK3588 -DSTRESS_LOAD=$(STRESS_LOAD) \
 			-DPROCESS_IMAGE_SIZE_OVERRIDE=65536 \
 			-I/usr/xenomai/include/cobalt -I/usr/xenomai/include \
-			-I$(RK_DIR)/runtime-flat/include -I$(RK_DIR)/target/lib/tci -I. \
+			-I$(RK_DIR)/runtime-flat/include -I$(RK_DIR)/target/lib/tci -I. -I$(HAL_DIR) \
 			-Wall -Wextra -Wno-unused-parameter \
 			$(RK_DIR)/runtime-flat/src/*.cpp \
 			runtime_rk3588_rt.cpp \
 			stress_test_pou.cpp \
 			build/runtime_config_stress.gen.cpp \
 			$(RK_DIR)/target/lib/tci/*.cpp \
+			$(HAL_DIR)/gpio_hal.cpp $(HAL_DIR)/gpio_tci.cpp \
 			\$$(/usr/xenomai/bin/xeno-config --ldflags --cobalt) \
 			-o plc_runtime_rk3588_rt_stress 2>&1"
 
@@ -116,13 +119,14 @@ remote-alchemy-build:
 			-DRT_PLATFORM_LINUX -DRT_TARGET_RK3588 -DSTRESS_LOAD=$(STRESS_LOAD) \
 			-DPROCESS_IMAGE_SIZE_OVERRIDE=65536 \
 			-I/usr/xenomai/include/cobalt -I/usr/xenomai/include \
-			-I$(RK_DIR)/runtime-flat/include -I$(RK_DIR)/target/lib/tci -I. \
+			-I$(RK_DIR)/runtime-flat/include -I$(RK_DIR)/target/lib/tci -I. -I$(HAL_DIR) \
 			-Wall -Wextra -Wno-unused-parameter \
 			$(RK_DIR)/runtime-flat/src/*.cpp \
 			runtime_rk3588_alchemy.cpp \
 			stress_test_pou.cpp \
 			build/runtime_config_stress.gen.cpp \
 			$(RK_DIR)/target/lib/tci/*.cpp \
+			$(HAL_DIR)/gpio_hal.cpp $(HAL_DIR)/gpio_tci.cpp \
 			\$$(/usr/xenomai/bin/xeno-config --ldflags --alchemy) \
 			-o $(ALCHEMY_TARGET) 2>&1"
 
@@ -149,7 +153,7 @@ $(STRESS_CONFIG_GEN): $(STRESS_CONFIG_JSON) $(STRESS_POU_SRC) | build
 	python  ../scripts/gen_config.py --target rk3588 --build-dir . \
 		--input $(STRESS_CONFIG_JSON) --output $(STRESS_CONFIG_GEN)
 
-STRESS_SRCS = $(RT_SRCS) $(MAIN_SRC) $(STRESS_POU_SRC) $(STRESS_CONFIG_GEN) $(TCI_SRCS)
+STRESS_SRCS = $(RT_SRCS) $(MAIN_SRC) $(STRESS_POU_SRC) $(STRESS_CONFIG_GEN) $(TCI_SRCS) $(HAL_SRCS)
 
 $(STRESS_TARGET): $(STRESS_CONFIG_GEN) $(STRESS_POU_SRC)
 	$(CXX) $(CXXFLAGS) -DSTRESS_LOAD=$(STRESS_LOAD) -o $@ $(STRESS_SRCS) $(LDFLAGS)

@@ -9,5 +9,16 @@
             "pous": ["StressTest"]
         }
     ],
-    "bindings": []
+    "bindings": [
+        {
+            "driver": "gpio",
+            "inputs": [
+                {"addr": "%IX0.0", "gpio": 140, "active_low": true},
+                {"addr": "%IX0.1", "gpio": 141, "active_low": true}
+            ],
+            "outputs": [
+                {"addr": "%QX0.0", "gpio": 139}
+            ]
+        }
+    ]
 }

@@ -14,6 +14,7 @@ Usage:
 
 Supported targets: windows, desktop, linux, rpi, rk3588, stm32f1, bananapif3
 Supported drivers: gpio, ethercat, tcp, network
+Supported drivers: gpio, ethercat, tcp, network
 """
 import json
 import os
@@ -97,7 +98,7 @@ TARGET_INCLUDES = {
     'windows': [],
     'desktop': [],
     'linux': [],
-    'rk3588': [],
+    'rk3588': ['"hal/gpio_tci.h"'],
     'rpi': ['"hal/gpio_tci.h"'],
     'bananapif3': ['"hal/gpio_tci.h"'],
     'stm32f1': [],
@@ -113,27 +114,33 @@ def generate_gpio_code(binding, target):
         lines.append('    static BpiGpioTCI gpio;')
     elif target == 'rpi':
         lines.append('    static RpiGpioTCI gpio;')
+    elif target == 'rk3588':
+        lines.append('    static Rk3588GpioTCI gpio;')
     else:
-        lines.append(f"    // WARNING: gpio driver only supported on rpi/bananapif3 targets\n")
+        lines.append(f"    // WARNING: gpio driver only supported on rpi/bananapif3/rk3588 targets\n")
         return lines
 
     for inp in binding.get('inputs', []):
         addr = inp['addr']
         _, byte_off, bit_off = parse_addr(addr)
         pin = inp.get('bcm') or inp.get('line') or inp.get('gpio') or 0
+        active_low = inp.get('active_low') or inp.get('active-low') or False
+        al = 'true' if active_low else 'false'
         if bit_off >= 0:
-            lines.append(f'    gpio.addInputMapping({pin}, {byte_off}, {bit_off});  // {addr}')
+            lines.append(f'    gpio.addInputMapping({pin}, {byte_off}, {bit_off}, {al});  // {addr}')
         else:
-            lines.append(f'    gpio.addInputMapping({pin}, {byte_off}, 0);  // {addr}')
+            lines.append(f'    gpio.addInputMapping({pin}, {byte_off}, 0, {al});  // {addr}')
 
     for out in binding.get('outputs', []):
         addr = out['addr']
         _, byte_off, bit_off = parse_addr(addr)
         pin = out.get('bcm') or out.get('line') or out.get('gpio') or 0
+        active_low = out.get('active_low') or out.get('active-low') or False
+        al = 'true' if active_low else 'false'
         if bit_off >= 0:
-            lines.append(f'    gpio.addOutputMapping({pin}, {byte_off}, {bit_off});  // {addr}')
+            lines.append(f'    gpio.addOutputMapping({pin}, {byte_off}, {bit_off}, {al});  // {addr}')
         else:
-            lines.append(f'    gpio.addOutputMapping({pin}, {byte_off}, 0);  // {addr}')
+            lines.append(f'    gpio.addOutputMapping({pin}, {byte_off}, 0, {al});  // {addr}')
 
     lines.append('    if (gpio.init() == 0) { tci.add(&gpio); }')
     lines.append('    else { platform::logErr("GPIO TCI init failed\\n"); }')

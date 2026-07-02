@@ -27,6 +27,8 @@
 #include <sched.h>
 #include <signal.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -94,6 +96,17 @@ static void printJitter() {
 }
 
 static void sigHandler(int) { running = 0; }
+
+static void unbindGpioKeys() {
+    int fd = open("/sys/bus/platform/drivers/gpio-keys/unbind", O_WRONLY);
+    if (fd >= 0) {
+        if (write(fd, "gpio-keys", 9) > 0)
+            platform::logInfo("[RK3588_ALCHEMY] unbound gpio-keys driver\n");
+        else
+            platform::logInfo("[RK3588_ALCHEMY] unbind gpio-keys: %s\n", strerror(errno));
+        close(fd);
+    }
+}
 
 static bool setCpuAffinity(int cpu) {
     if (cpu < 0) return false;
@@ -170,6 +183,9 @@ int main(int argc, char** argv) {
     if (mlockall(MCL_CURRENT | MCL_FUTURE) != 0) {
         platform::logErr("[RK3588_ALCHEMY] mlockall failed: %s\n", strerror(errno));
     }
+
+    // 解绑 gpio-keys，释放 GPIO 引脚供扫描线程使用
+    unbindGpioKeys();
 
     // 用原生 pthread 设置 CPU 亲和性（Alchemy task 继承主线程的 affinity）
     setCpuAffinity(cpuAffinity);

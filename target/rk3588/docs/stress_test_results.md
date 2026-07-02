@@ -116,6 +116,17 @@ Load=25 以上 POU 执行时间接近或超过 2ms 预算。
 
 正常抖动 Alchemy 也明显优于 timerfd：std=700ns（亚微秒级）vs 1µs，范围缩小到 -2µs ~ +10µs。
 
+### Alchemy Load=5 @ 1ms（含 POU 全负载）
+
+| 指标 | jitter-only | **含 POU 负载** |
+|:----:|:-----------:|:----------------:|
+| Min | -1.5µs | **-2.3µs** |
+| Max | +8.5µs | **+15.5µs** |
+| Std | ~700ns | **~1500ns** |
+| Overrun | 0 | **0** |
+
+POU 执行增加了 ~800ns 抖动，但仍在 1ms 周期的 2% 以内。
+
 ### Alchemy Load=12/20 @ 1ms
 
 | Load | PID | FIR | Matrix | Array | Min | Max | Std | Overrun | 判定 |
@@ -142,3 +153,49 @@ Load=25 以上 POU 执行时间接近或超过 2ms 预算。
 | 500us | Load=3~5 | 待测 | — |
 
 **结论**：RK3588 上始终使用 Alchemy `rt_task_set_periodic + rt_task_wait_period` 替代 timerfd。`clock_nanosleep(Cobalt POSIX wrap)` 在此内核配置下有缺陷，不可用于生产。
+
+---
+
+## GPIO TCI 集成测试
+
+### 问题：Linux cdev ioctl 在 Xenomai 实时上下文中不可用
+
+当 PLC 运行时通过 GPIO cdev 接口（`/dev/gpiochipN` + ioctl）在 Alchemy 实时任务中做周期 I/O 时，每次 ioctl 调用都会导致 **Xenomai primary→secondary 域切换**：
+
+```
+Alchemy task (primary mode)
+  → syncInputs() 调用 ioctl(GPIOHANDLE_GET_LINE_VALUES_IOCTL)  → 陷入 Linux 内核
+  → 域切换回 primary
+  → syncOutputs() 调用 ioctl(GPIOHANDLE_SET_LINE_VALUES_IOCTL) → 再次陷入 Linux
+  → 域切换回 primary
+```
+
+每次切换的实际观测代价：
+
+| 指标 | 无 GPIO（纯 Alchemy） | 含 GPIO cdev |
+|:----:|:---------------------:|:------------:|
+| Min jitter | -2.3µs | -2µs |
+| Max jitter | +15.5µs | **+851ms** |
+| Std | ~1500ns | 无效 |
+| Overrun | 0 | **50** |
+
+Root cause：ARM64 GICv3 + IRQPIPE 下 primary→secondary 域切换依赖 IPI + Linux 调度器抢占耗时约 5-800ms，且不可预测。1ms cycle 每周期切换 2 次导致系统被域切换完全淹没，最终整个系统（含 SSHD）不可响应，需要物理断电重启。
+
+### 可用的 GPIO 替代方案
+
+| 方案 | 实时 | 复杂性 | 状态 |
+|:----|:----:|:------:|:----:|
+| GPIO cdev ioctl | ❌ 域切换 ~500ms | 低 | **废弃** |
+| /dev/mem mmap 直读 | ✅ 无 syscall | 中 | 可读但写被 pinctrl 拦截 |
+| **RTDM GPIO 驱动** | ✅ 纯 primary mode | **高** | **待实现** |
+| gpio-keys 输入事件 | ❌ 非确定性 | 低 | /dev/input/event 也不可用 |
+
+### MatriBox 硬件约束
+
+- gpio140/141（plc_run/plc_stop）被 `gpio-keys` 驱动以 ACTIVE LOW 模式消费，运行时需 `echo "gpio-keys" > /sys/bus/platform/drivers/gpio-keys/unbind` 释放
+- gpio130（reset）被 `reset` 消费（gpio-hog），释放方法同上
+- 解绑后可通过 cdev V1/V2 接口正常访问，但 **不能在 Alchemy 实时任务中调用 ioctl**
+
+### 下一步
+
+编写 RK3588 GPIO RTDM 驱动，在 Xenomai primary mode 下通过 mmap + 直接寄存器读写实现实时安全 GPIO I/O，或寻找其他无需 domain switch 的地址映射方法。
