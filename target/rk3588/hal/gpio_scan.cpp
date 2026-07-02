@@ -59,7 +59,7 @@ int GpioScanThread::start(const rk_gpio_pin_t* pins, int count) {
         return -1;
     }
 
-    fprintf(stdout, TAG " started: %d pins, interval=%dus\n", count, intervalUs);
+    fprintf(stdout, TAG " started: %d pins (spin loop, no usleep)\n", count);
     return 0;
 }
 

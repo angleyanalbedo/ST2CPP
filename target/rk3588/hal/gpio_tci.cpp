@@ -72,9 +72,8 @@ int Rk3588GpioTCI::init() {
 
     rebuildHalConfig();
 
-    /* 启动非实时扫描线程（Linux 域，可自由使用 cdev ioctl） */
     /* 启动非实时 GPIO 扫描线程（SCHED_FIFO 1，远低于 PLC 任务的 90） */
-    int ret = m_scanThread.start(m_halPins, m_halCount, 0);
+    int ret = m_scanThread.start(m_halPins, m_halCount);
     if (ret != 0) {
         fprintf(stderr, TAG " GpioScanThread::start() failed\n");
         return -1;
