@@ -196,21 +196,21 @@ seconds
 // seconds : ( fix_point 's' ) | ( unsigned_int 's' '_' ? )? milliseconds ?;
 
 milliseconds
-            : ( fix_point 'm''s' )
-            | Unsigned_int 'm''s'
+            : ( fix_point MS_SUFFIX )
+            | Unsigned_int MS_SUFFIX
               ( '_' microseconds )?
             ;
 // milliseconds : ( fix_point 'ms' ) | ( unsigned_int 'ms' '_' ? )? microseconds ?;
 
 microseconds
-            : ( fix_point 'u''s' )
-            | Unsigned_int 'u''s'
+            : ( fix_point US_SUFFIX )
+            | Unsigned_int US_SUFFIX
               ( '_' nanoseconds )?
             ;
 // microseconds : ( fix_point 'us' ) | ( unsigned_int 'us' '_' ? )? nanoseconds ?;
 
 nanoseconds
-            : fix_point 'n''s'
+            : fix_point NS_SUFFIX
             ;
 
 time_of_day

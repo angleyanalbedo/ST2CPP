@@ -97,7 +97,12 @@ REPEAT              : 'REPEAT';
 UNTIL               : 'UNTIL';
 END_REPEAT          : 'END_REPEAT';
 
-// 标识符 — 必须在关键字之后定义
+// 时间单位后缀（必须在 Identifier 之前定义，确保 ms/us/ns 优先于 Identifier 匹配）
+MS_SUFFIX : 'ms';
+US_SUFFIX : 'us';
+NS_SUFFIX : 'ns';
+
+// 标识符 — 必须在关键字和时间后缀之后定义
 Identifier
   : IdentifierStart IdentifierPart* ;
 
