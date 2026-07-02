@@ -45,13 +45,22 @@ public class TranslateVariableAssignExpression {
                 } else {
                     sb.append("\n\t\t").append(varName).append(" = ").append(rhs).append(";");
                 }
-            } else if (translatorNew.gvlCtx.typeMap.containsKey(varName)) {
-                // GVL 变量 → 直接成员写入
-                sb.append("\n\t\tgv.").append(translatorNew.gvlCtx.getMangledName(varName))
-                  .append(" = ").append(rhs).append(";");
             } else {
-                // 局部变量或参数
-                sb.append("\n\t\t").append(varName).append(" = ").append(rhs).append(";");
+                // Handle array subscript: extract base name before '['
+                String arrBase = varName.replaceAll("\\[.*", "");
+                if (translatorNew.gvlCtx.typeMap.containsKey(arrBase)) {
+                    String mangledBase = "gv." + translatorNew.gvlCtx.getMangledName(arrBase);
+                    if (varName.equals(arrBase)) {
+                        sb.append("\n\t\t").append(mangledBase).append(" = ").append(rhs).append(";");
+                    } else {
+                        sb.append("\n\t\t").append(mangledBase)
+                          .append(translatorNew.gvlCtx.translateExpr(varName.substring(arrBase.length())))
+                          .append(" = ").append(rhs).append(";");
+                    }
+                } else {
+                    // 局部变量或参数
+                    sb.append("\n\t\t").append(varName).append(" = ").append(rhs).append(";");
+                }
             }
         }else{
             // 在 FC/METHOD 内部

@@ -359,11 +359,11 @@ void PROGRAM_test_arr_struct_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 	auto& gv = rt_plc::gvl_layout(gvl);
 		INT I = 0;
 		for( ; I <= 4;I = I + 1){
-		P_ARR[I].X = I * 10;
-		P_ARR[I].Y = I * 20;
+		gv.test_arr_struct$MAIN$P_ARR[I].X = I * 10;
+		gv.test_arr_struct$MAIN$P_ARR[I].Y = I * 20;
 		}
 		gv.test_arr_struct$MAIN$I = I;
-		gv.test_arr_struct$MAIN$SUM_X = (P_ARR[0].X) + (P_ARR[1].X);
+		gv.test_arr_struct$MAIN$SUM_X = gv.test_arr_struct$MAIN$P_ARR[0].X + gv.test_arr_struct$MAIN$P_ARR[1].X;
 }
 void PROGRAM_test_arr_struct_MAIN_post(GVL& gvl, ProcessImage& io) {
 }

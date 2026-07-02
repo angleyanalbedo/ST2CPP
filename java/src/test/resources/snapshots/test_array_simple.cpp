@@ -354,8 +354,8 @@ void PROGRAM_test_array_simple_P_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 	auto& gv = rt_plc::gvl_layout(gvl);
 		gv.test_array_simple$P$SUM = 0;
 		gv.test_array_simple$P$I = 0;
-		ARR[I] = gv.test_array_simple$P$I * 10;
-		gv.test_array_simple$P$SUM = gv.test_array_simple$P$SUM + (ARR[I]);
+		gv.test_array_simple$P$ARR[gv.test_array_simple$P$I] = gv.test_array_simple$P$I * 10;
+		gv.test_array_simple$P$SUM = gv.test_array_simple$P$SUM + gv.test_array_simple$P$ARR[gv.test_array_simple$P$I];
 }
 void PROGRAM_test_array_simple_P_post(GVL& gvl, ProcessImage& io) {
 }

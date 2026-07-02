@@ -355,8 +355,8 @@ void PROGRAM_test_array_P_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {
 		gv.test_array$P$SUM = 0;
 		INT I = 0;
 		for( ; I <= 4;I++){
-		ARR[I] = I * 10;
-		gv.test_array$P$SUM = gv.test_array$P$SUM + (ARR[I]);
+		gv.test_array$P$ARR[I] = I * 10;
+		gv.test_array$P$SUM = gv.test_array$P$SUM + gv.test_array$P$ARR[I];
 		}
 		gv.test_array$P$I = I;
 }

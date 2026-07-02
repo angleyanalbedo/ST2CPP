@@ -493,11 +493,11 @@ void PROGRAM_test_tricky_TRICKY_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt)
 		printf("\n");
 		INT I = 0;
 		for( ; I <= 2;I = I + 1){
-		MATRIX[I].TAG = I * 100;
+		gv.test_tricky$TRICKY_MAIN$MATRIX[I].TAG = I * 100;
 		INT J = 0;
 		for( ; J <= 3;J = J + 1){
-		MATRIX[I].VALUES[J] = (I * 10) + J;
-		gv.test_tricky$TRICKY_MAIN$TOTAL = gv.test_tricky$TRICKY_MAIN$TOTAL + (MATRIX[I].VALUES[J]);
+		gv.test_tricky$TRICKY_MAIN$MATRIX[I].VALUES[J] = (I * 10) + J;
+		gv.test_tricky$TRICKY_MAIN$TOTAL = gv.test_tricky$TRICKY_MAIN$TOTAL + gv.test_tricky$TRICKY_MAIN$MATRIX[I].VALUES[J];
 		}
 		gv.test_tricky$TRICKY_MAIN$J = J;
 		}
@@ -535,7 +535,7 @@ void PROGRAM_test_tricky_TRICKY_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt)
 		gv.test_tricky$TRICKY_MAIN$SM.update(gvl, io, dt);
 		gv.test_tricky$TRICKY_MAIN$K = 0;
 		do{
-		RESULT_ARR[K] = DOUBLE_IT(gv.test_tricky$TRICKY_MAIN$K * 10);
+		gv.test_tricky$TRICKY_MAIN$RESULT_ARR[gv.test_tricky$TRICKY_MAIN$K] = DOUBLE_IT(gv.test_tricky$TRICKY_MAIN$K * 10);
 		gv.test_tricky$TRICKY_MAIN$K = gv.test_tricky$TRICKY_MAIN$K + 1;
 		}while(!(gv.test_tricky$TRICKY_MAIN$K >= 6));
 		gv.test_tricky$TRICKY_MAIN$ARR_VAL = 42;
@@ -577,12 +577,12 @@ void PROGRAM_test_tricky_TRICKY_MAIN_cyclic(GVL& gvl, ProcessImage& io, TIME dt)
 		    printf("  [PASS] assert (line 227)\n");
 		  else
 		    printf("  [FAIL] assert (line 227): AVG>15.0\n"); }
-		{ bool _st_assert = ((MATRIX[0].TAG) == 0);
+		{ bool _st_assert = (gv.test_tricky$TRICKY_MAIN$MATRIX[0].TAG == 0);
 		  if(_st_assert)
 		    printf("  [PASS] assert (line 228)\n");
 		  else
 		    printf("  [FAIL] assert (line 228): MATRIX[0].TAG=0\n"); }
-		{ bool _st_assert = ((MATRIX[2].VALUES[3]) == 23);
+		{ bool _st_assert = (gv.test_tricky$TRICKY_MAIN$MATRIX[2].VALUES[3] == 23);
 		  if(_st_assert)
 		    printf("  [PASS] assert (line 229)\n");
 		  else

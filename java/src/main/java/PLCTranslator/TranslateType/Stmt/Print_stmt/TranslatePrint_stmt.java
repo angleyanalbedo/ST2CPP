@@ -24,8 +24,14 @@ public class TranslatePrint_stmt {
                 sb.append("\n\t\tprintf(").append(assignVar).append(");");
             } else {
                 String varExpr = PLCVariable.stripParens(assignVar);
-                if (translatorNew.gvlCtx.typeMap.containsKey(varExpr)) {
-                    varExpr = "gv." + translatorNew.gvlCtx.getMangledName(varExpr);
+                String baseName = varExpr.replaceAll("\\[.*", "");
+                if (translatorNew.gvlCtx.typeMap.containsKey(baseName)) {
+                    if (varExpr.equals(baseName)) {
+                        varExpr = "gv." + translatorNew.gvlCtx.getMangledName(baseName);
+                    } else {
+                        varExpr = "gv." + translatorNew.gvlCtx.getMangledName(baseName)
+                                + translatorNew.gvlCtx.translateExpr(varExpr.substring(baseName.length()));
+                    }
                 }
                 sb.append("\n\t\tprintf(\"%d\", (int)(").append(varExpr).append("));");
             }

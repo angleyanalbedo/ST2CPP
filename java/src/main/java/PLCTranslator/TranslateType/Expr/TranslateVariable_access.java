@@ -27,8 +27,21 @@ public class TranslateVariable_access {
         }
 
         // GVL 变量 → 通过 layout 直接访问
-        if (t.gvlCtx.typeMap.containsKey(cleanName) && !t.gvlCtx.shadowedGvlVars.contains(cleanName)) {
-            return "gv." + t.gvlCtx.getMangledName(cleanName);
+        // Handle array subscript: extract base name before '['
+        String normalizedName = cleanName;
+        while (normalizedName.startsWith("(") && normalizedName.endsWith(")")) {
+            normalizedName = normalizedName.substring(1, normalizedName.length() - 1);
+        }
+        int bracketIdx = normalizedName.indexOf('[');
+        String lookupName = bracketIdx >= 0 ? normalizedName.substring(0, bracketIdx) : normalizedName;
+
+        if (t.gvlCtx.typeMap.containsKey(lookupName) && !t.gvlCtx.shadowedGvlVars.contains(lookupName)) {
+            String mangled = "gv." + t.gvlCtx.getMangledName(lookupName);
+            if (bracketIdx >= 0) {
+                String indexPart = t.gvlCtx.translateExpr(normalizedName.substring(bracketIdx));
+                return mangled + indexPart;
+            }
+            return mangled;
         }
 
         return cleanName;
