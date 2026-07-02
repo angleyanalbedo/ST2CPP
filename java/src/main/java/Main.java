@@ -74,10 +74,18 @@ public class Main {
         fullCodeBuilder.append("\n");
         fullCodeBuilder.append(emitPOURegistration(cfg.resolvedFileId, gvlCtx));
 
-        // 写文件
+        // 写 .cpp 文件
         String fullCode = fullCodeBuilder.toString();
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(cfg.resolvedOutputFile))) {
             writer.write(fullCode != null ? fullCode : "");
+        }
+
+        // 生成 gvl_layout.gen.h（Direct-access GVL struct）
+        String gvlHeader = gvlCtx.emitGVLLayoutHeader();
+        File outFile = new File(cfg.resolvedOutputFile);
+        File headerFile = new File(outFile.getParentFile(), "gvl_layout.gen.h");
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(headerFile))) {
+            writer.write(gvlHeader);
         }
 
         long elapsed = System.currentTimeMillis() - startTime;

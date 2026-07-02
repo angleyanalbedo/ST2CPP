@@ -17,10 +17,13 @@ public class TranslateProg_decl {
 
         String progName = ctx.prog_type_name().identifier().getText();
         translatorNew.gvlCtx.addProgramName(progName);
+        // 记录当前 PROGRAM，后续 allocateOffset 会据此生成 mangled 字段名
+        translatorNew.gvlCtx.setCurrentProgram(progName);
 
         String mangled = translatorNew.gvlCtx.mangleProgName(progName);
 
         sb.append("\nvoid PROGRAM_").append(mangled).append("_init(GVL& gvl, ProcessImage& io) {");
+        sb.append("\n\tauto& gv = rt_plc::gvl_layout(gvl);");
         sb.append(emitVarInit(ctx, translatorNew));
         sb.append(emitRetainRegion(ctx, translatorNew));
         sb.append(emitInitRetainLoad(ctx, translatorNew));
@@ -30,19 +33,11 @@ public class TranslateProg_decl {
         sb.append("\n}");
 
         sb.append("\nvoid PROGRAM_").append(mangled).append("_cyclic(GVL& gvl, ProcessImage& io, TIME dt) {");
-        if (translatorNew.localCache) {
-            // 开头：声明局部变量 + 从 GVL 加载
-            sb.append(emitCyclicPrologue(translatorNew));
-            // 设置 inCyclic 标志，让变量翻译直接使用变量名
-            translatorNew.inCyclic = true;
-        }
+        sb.append("\n\tauto& gv = rt_plc::gvl_layout(gvl);");
+        translatorNew.inCyclic = true;
         String result = translatorNew.visit(ctx.fb_body());
         translatorNew.inCyclic = false;
         sb.append(result);
-        if (translatorNew.localCache) {
-            // 结尾：将局部变量写回 GVL
-            sb.append(emitCyclicEpilogue(translatorNew));
-        }
         sb.append("\n}");
 
         sb.append("\nvoid PROGRAM_").append(mangled).append("_post(GVL& gvl, ProcessImage& io) {");
@@ -171,23 +166,23 @@ public class TranslateProg_decl {
         }
 
         if (!retainVars.isEmpty()) {
-            java.util.Map<String, Integer> offsets = translatorNew.gvlCtx.getOffsetMap();
-            java.util.Map<String, String> types = translatorNew.gvlCtx.getTypeMap();
-
-            int retainStart = Integer.MAX_VALUE;
-            int retainEnd = 0;
+            GvlContext gvlCtx = translatorNew.gvlCtx;
+            PLCVariable first = null;
+            PLCVariable last = null;
             for (PLCVariable rv : retainVars) {
-                if (translatorNew.gvlCtx.isIOVariable(rv.getName())) continue;
-                Integer off = offsets.get(rv.getName());
-                if (off != null) {
-                    retainStart = Math.min(retainStart, off);
-                    String type = types.getOrDefault(rv.getName(), "INT");
-                    int size = translatorNew.gvlCtx.getTypeSize(type);
-                    retainEnd = Math.max(retainEnd, off + size);
-                }
+                if (gvlCtx.isIOVariable(rv.getName())) continue;
+                if (first == null) first = rv;
+                last = rv;
             }
-            if (retainStart < Integer.MAX_VALUE && retainEnd > retainStart) {
-                sb.append("\n\t\tgvl.setRetainRegion(").append(retainStart).append(", ").append(retainEnd).append(");");
+            if (first != null && last != null) {
+                String firstM = gvlCtx.getMangledName(first.getName());
+                String lastM = gvlCtx.getMangledName(last.getName());
+                String lastType = gvlCtx.typeMap.get(last.getName());
+                if (lastType == null) lastType = "INT";
+                sb.append("\n\t\tgvl.setRetainRegion(");
+                sb.append("(uint8_t*)&gv.").append(firstM).append(" - gvl.memory, ");
+                sb.append("(uint8_t*)&gv.").append(lastM).append(" - gvl.memory + sizeof(").append(lastType).append(")");
+                sb.append(");");
             }
         }
 
@@ -215,7 +210,6 @@ public class TranslateProg_decl {
 
     private void emitVarDeclInline(StringBuilder sb, PLCVariable varSymbol, GvlContext gvlCtx) {
         String name = varSymbol.getName();
-        String typeName = varSymbol.getRuntimeTypeName();
         int typeId = varSymbol.getTypeId();
         int[][] arrayBounds = varSymbol.getArrayBounds();
 
@@ -229,10 +223,7 @@ public class TranslateProg_decl {
                     elemTypeNative = gvlCtx.toNativeType(elemTypeDecl.getName());
                 }
             }
-            int totalCount = varSymbol.getArrayTotalCount();
-            int elemSize = gvlCtx.getTypeSize(elemTypeNative);
-            int totalSize = elemSize * totalCount;
-            gvlCtx.allocateArrayOffset(name, totalCount, elemTypeNative, arrayBounds);
+            gvlCtx.allocateArrayOffset(name, varSymbol.getArrayTotalCount(), elemTypeNative, arrayBounds);
             return;
         }
 
@@ -244,18 +235,12 @@ public class TranslateProg_decl {
             }
         }
 
-        String nativeType = gvlCtx.toNativeType(typeName);
+        String nativeType = gvlCtx.toNativeType(varSymbol.getRuntimeTypeName());
         gvlCtx.allocateOffset(name, nativeType);
         String initValue = resolveInitValue(varSymbol);
         if (initValue != null && !initValue.isEmpty() && !"0".equals(initValue) && !"\"\"".equals(initValue)) {
-            String type = gvlCtx.typeMap.get(name);
-            Integer offset = gvlCtx.offsetMap.get(name);
-            if (type != null && offset != null) {
-                sb.append("\n\t\tgvl.write<").append(type).append(">(")
-                  .append(offset).append(", ").append(initValue).append(");");
-            } else {
-                sb.append("\n\t\t").append(name).append(" = ").append(initValue).append(";");
-            }
+            String mangled = gvlCtx.getMangledName(name);
+            sb.append("\n\t\tgv.").append(mangled).append(" = ").append(initValue).append(";");
         }
     }
 
@@ -313,56 +298,6 @@ public class TranslateProg_decl {
     }
 
     /**
-     * cyclic 开头：为每个 GVL 变量生成局部 C++ 变量声明并从 GVL 加载
-     */
-    private String emitCyclicPrologue(PLCTranslatorNew translatorNew) {
-        StringBuilder sb = new StringBuilder();
-        GvlContext gvlCtx = translatorNew.gvlCtx;
-        for (java.util.Map.Entry<String, Integer> entry : gvlCtx.offsetMap.entrySet()) {
-            String varName = entry.getKey();
-            int offset = entry.getValue();
-            String type = gvlCtx.typeMap.get(varName);
-            if (type == null) continue;
-            if (gvlCtx.ioVarMap.containsKey(varName)) continue;
-            if (type.startsWith("ARRAY[")) {
-                int[][] bounds = gvlCtx.arrayBoundsMap.get(varName);
-                String elemType = gvlCtx.arrayElemTypeMap.getOrDefault(varName, "INT");
-                int totalCount = (bounds != null) ? bounds[0][2] : 0;
-                if (totalCount > 0) {
-                    int elemSize = gvlCtx.getTypeSize(elemType);
-                    sb.append("\n\t").append(elemType).append(" ")
-                      .append(varName).append("[").append(totalCount).append("];");
-                    for (int i = 0; i < totalCount; i++) {
-                        int elemOffset = offset + i * elemSize;
-                        sb.append("\n\t").append(varName).append("[").append(i)
-                          .append("] = gvl.read<").append(elemType).append(">(")
-                          .append(elemOffset).append(");");
-                    }
-                }
-                continue;
-            }
-            sb.append("\n\t").append(type).append(" ").append(varName).append(" = gvl.read<")
-              .append(type).append(">(").append(offset).append(");");
-            gvlCtx.locallyDeclaredGvlVars.add(varName);
-        }
-        for (java.util.Map.Entry<String, GvlContext.IOInfo> ioEntry : gvlCtx.ioVarMap.entrySet()) {
-            String varName = ioEntry.getKey();
-            GvlContext.IOInfo info = ioEntry.getValue();
-            if (info.bitOffset >= 0) {
-                sb.append("\n\tBOOL ").append(varName).append(" = io.");
-                sb.append(info.dir == GvlContext.IODirection.INPUT ? "readInputBit(" : "readOutputBit(");
-                sb.append(info.byteOffset).append(", ").append(info.bitOffset).append(");");
-            } else {
-                sb.append("\n\t").append(info.typeName).append(" ").append(varName).append(" = io.");
-                sb.append(info.dir == GvlContext.IODirection.INPUT ? "readInput<" : "readOutput<");
-                sb.append(info.typeName).append(">(").append(info.byteOffset).append(");");
-            }
-            gvlCtx.locallyDeclaredGvlVars.add(varName);
-        }
-        return sb.toString();
-    }
-
-    /**
      * _post：自动保存 RETAIN 变量到非易失存储
      */
     private String emitPostRetainSave(PLCSTPARSERParser.Prog_declContext ctx, PLCTranslatorNew translatorNew) {
@@ -386,49 +321,4 @@ public class TranslateProg_decl {
         return sb.toString();
     }
 
-    /**
-     * cyclic 结尾：将所有局部变量写回 GVL
-     */
-    private String emitCyclicEpilogue(PLCTranslatorNew translatorNew) {
-        StringBuilder sb = new StringBuilder();
-        GvlContext gvlCtx = translatorNew.gvlCtx;
-        for (java.util.Map.Entry<String, Integer> entry : gvlCtx.offsetMap.entrySet()) {
-            String varName = entry.getKey();
-            int offset = entry.getValue();
-            String type = gvlCtx.typeMap.get(varName);
-            if (type == null) continue;
-            if (gvlCtx.ioVarMap.containsKey(varName)) continue;
-            if (type.startsWith("ARRAY[")) {
-                int[][] bounds = gvlCtx.arrayBoundsMap.get(varName);
-                String elemType = gvlCtx.arrayElemTypeMap.getOrDefault(varName, "INT");
-                int totalCount = (bounds != null) ? bounds[0][2] : 0;
-                if (totalCount > 0) {
-                    int elemSize = gvlCtx.getTypeSize(elemType);
-                    for (int i = 0; i < totalCount; i++) {
-                        int elemOffset = offset + i * elemSize;
-                        sb.append("\n\tgvl.write<").append(elemType).append(">(")
-                          .append(elemOffset).append(", ").append(varName).append("[")
-                          .append(i).append("]);");
-                    }
-                }
-                continue;
-            }
-            sb.append("\n\tgvl.write<").append(type).append(">(").append(offset)
-              .append(", ").append(varName).append(");");
-        }
-        for (java.util.Map.Entry<String, GvlContext.IOInfo> ioEntry : gvlCtx.ioVarMap.entrySet()) {
-            String varName = ioEntry.getKey();
-            GvlContext.IOInfo info = ioEntry.getValue();
-            if (info.dir == GvlContext.IODirection.OUTPUT) {
-                if (info.bitOffset >= 0) {
-                    sb.append("\n\tio.writeOutputBit(").append(info.byteOffset)
-                      .append(", ").append(info.bitOffset).append(", ").append(varName).append(");");
-                } else {
-                    sb.append("\n\tio.writeOutput<").append(info.typeName).append(">(")
-                      .append(info.byteOffset).append(", ").append(varName).append(");");
-                }
-            }
-        }
-        return sb.toString();
-    }
 }

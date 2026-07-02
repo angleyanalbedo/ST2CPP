@@ -93,44 +93,23 @@ public class TranslateCallFunc {
                                      java.util.LinkedHashMap<String, String> outputParams,
                                      GvlContext gvlCtx) {
         StringBuilder sb = new StringBuilder();
-        Integer fbBase = gvlCtx.offsetMap.get(fbInstanceName);
-        // 写入输入参数
+        String fbMangled = gvlCtx.getMangledName(fbInstanceName);
+        // 写入输入参数 → 直接结构体成员赋值
         for (int i = 0; i < paramNames.size(); i++) {
             String paramName = paramNames.get(i);
             String paramValue = paramValues.get(i);
             if (outputParams.containsKey(paramName)) continue;
-            String type = gvlCtx.getStructFieldType(fbTypeName, paramName);
-            if (type != null && fbBase != null) {
-                sb.append("\n\t\tgvl.write<").append(type).append(">(")
-                  .append(fbBase).append(" + offsetof(").append(fbTypeName).append(", ").append(paramName).append("), ")
-                  .append(paramValue).append(");");
-            } else {
-                Integer offset = gvlCtx.offsetMap.get(paramName);
-                if (offset != null && type != null) {
-                    sb.append("\n\t\tgvl.write<").append(type).append(">(")
-                      .append(offset).append(", ").append(paramValue).append(");");
-                }
-            }
+            sb.append("\n\t\tgv.").append(fbMangled).append(".").append(paramName)
+              .append(" = ").append(paramValue).append(";");
         }
-        // 调用 update
-        if (fbBase != null) {
-            sb.append("\n\t\tgvl.ptr<").append(fbTypeName).append(">(")
-              .append(fbBase).append(")->update(gvl, io, dt);");
-        } else {
-            sb.append("\n\t\t").append(fbInstanceName).append(".update(gvl, io, dt);");
-        }
-        // 读回输出参数：用 offsetof() 让 C++ 编译器计算偏移
+        // 调用 update — 直接成员函数调用
+        sb.append("\n\t\tgv.").append(fbMangled).append(".update(gvl, io, dt);");
+        // 读回输出参数 — 直接成员读取
         for (java.util.Map.Entry<String, String> entry : outputParams.entrySet()) {
             String paramName = entry.getKey();
             String targetVar = entry.getValue();
-            String type = gvlCtx.getStructFieldType(fbTypeName, paramName);
-            if (type != null && fbBase != null) {
-                sb.append("\n\t\t").append(targetVar).append(" = gvl.read<").append(type).append(">(")
-                  .append(fbBase).append(" + offsetof(").append(fbTypeName).append(", ").append(paramName).append("));");
-            } else if (type != null) {
-                sb.append("\n\t\t").append(targetVar).append(" = gvl.read<").append(type).append(">(")
-                  .append(gvlCtx.offsetMap.getOrDefault(paramName, 0)).append(");");
-            }
+            sb.append("\n\t\t").append(targetVar).append(" = gv.").append(fbMangled)
+              .append(".").append(paramName).append(";");
         }
         return sb.toString();
     }
@@ -142,51 +121,16 @@ public class TranslateCallFunc {
         GvlContext gvlCtx = translatorNew.gvlCtx;
         String arrayName = fbCallSym.getFbInstanceName();
         String indexExpr = fbCallSym.getArrayIndexExpr();
-
-        Integer arrayBase = gvlCtx.offsetMap.get(arrayName);
-        if(arrayBase == null){
-            arrayBase = gvlCtx.resolveStructMemberOffset(arrayName);
-        }
-        if(arrayBase == null){
-            String elemTypeName = fbTypeName;
-            if(fbTypeName != null && fbTypeName.startsWith("ARRAY[")){
-                int ofIdx = fbTypeName.indexOf(" OF ");
-                if(ofIdx >= 0) elemTypeName = fbTypeName.substring(ofIdx + 4).trim();
-            }
-            for (int i = 0; i < paramNames.size(); i++) {
-                String paramName = paramNames.get(i);
-                String paramValue = paramValues.get(i);
-                sb.append("\n\t\t").append(arrayName).append("[").append(indexExpr)
-                  .append("].").append(paramName).append(" = ").append(paramValue).append(";");
-            }
-            sb.append("\n\t\t").append(arrayName).append("[").append(indexExpr)
-              .append("].update(gvl, io, dt);");
-            return sb.toString();
-        }
-
-        String elemTypeName = fbTypeName;
-        if(fbTypeName != null && fbTypeName.startsWith("ARRAY[")){
-            int ofIdx = fbTypeName.indexOf(" OF ");
-            if(ofIdx >= 0) elemTypeName = fbTypeName.substring(ofIdx + 4).trim();
-        }
-
-        int elemSize = gvlCtx.getTypeSize(elemTypeName);
-        if(elemSize == 0) elemSize = 64;
+        String arrMangled = gvlCtx.getMangledName(arrayName);
 
         for (int i = 0; i < paramNames.size(); i++) {
             String paramName = paramNames.get(i);
             String paramValue = paramValues.get(i);
-            Integer fieldOff = gvlCtx.getStructFieldOffset(elemTypeName, paramName);
-            String type = gvlCtx.getStructFieldType(elemTypeName, paramName);
-            if(fieldOff != null && type != null){
-                sb.append("\n\t\tgvl.write<").append(type).append(">(")
-                  .append(arrayBase).append(" + (").append(indexExpr).append(") * ").append(elemSize)
-                  .append(" + ").append(fieldOff).append(", ").append(paramValue).append(");");
-            }
+            sb.append("\n\t\tgv.").append(arrMangled).append("[").append(indexExpr)
+              .append("].").append(paramName).append(" = ").append(paramValue).append(";");
         }
-        sb.append("\n\t\tgvl.ptr<").append(elemTypeName).append(">(")
-          .append(arrayBase).append(" + (").append(indexExpr).append(") * ").append(elemSize)
-          .append(")->update(gvl, io, dt);");
+        sb.append("\n\t\tgv.").append(arrMangled).append("[").append(indexExpr)
+          .append("].update(gvl, io, dt);");
         return sb.toString();
     }
 }

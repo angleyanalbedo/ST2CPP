@@ -37,24 +37,21 @@ public class TranslateVariableAssignExpression {
                 varName = varName.substring(1, varName.length() - 1);
             }
 
-            if (translatorNew.inCyclic) {
-                sb.append("\n\t\t").append(varName).append(" = ").append(rhs).append(";");
-            } else if (translatorNew.gvlCtx.isIOVariable(varName)) {
+            if (translatorNew.gvlCtx.isIOVariable(varName)) {
+                // I/O 映射变量 → io.writeOutput
                 String ioWrite = translatorNew.gvlCtx.emitIOWrite(varName, rhs);
                 if (ioWrite != null) {
                     sb.append("\n\t\t").append(ioWrite).append(";");
                 } else {
                     sb.append("\n\t\t").append(varName).append(" = ").append(rhs).append(";");
                 }
+            } else if (translatorNew.gvlCtx.typeMap.containsKey(varName)) {
+                // GVL 变量 → 直接成员写入
+                sb.append("\n\t\tgv.").append(translatorNew.gvlCtx.getMangledName(varName))
+                  .append(" = ").append(rhs).append(";");
             } else {
-                Integer offset = translatorNew.gvlCtx.offsetMap.get(varName);
-                String type = translatorNew.gvlCtx.typeMap.get(varName);
-                if (offset != null && type != null) {
-                    sb.append("\n\t\tgvl.write<").append(type).append(">(")
-                      .append(offset).append(", ").append(rhs).append(");");
-                } else {
-                    sb.append("\n\t\t").append(varName).append(" = ").append(rhs).append(";");
-                }
+                // 局部变量或参数
+                sb.append("\n\t\t").append(varName).append(" = ").append(rhs).append(";");
             }
         }else{
             // 在 FC/METHOD 内部

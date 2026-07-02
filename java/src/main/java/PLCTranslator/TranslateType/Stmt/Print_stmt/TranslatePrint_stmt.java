@@ -23,12 +23,9 @@ public class TranslatePrint_stmt {
             if (isString) {
                 sb.append("\n\t\tprintf(").append(assignVar).append(");");
             } else {
-                // identifier 变量：查 offsetMap 决定输出 gvl.read 或直接用变量名
                 String varExpr = PLCVariable.stripParens(assignVar);
-                String type = translatorNew.gvlCtx.typeMap.get(varExpr);
-                Integer offset = translatorNew.gvlCtx.offsetMap.get(varExpr);
-                if (type != null && offset != null) {
-                    varExpr = "gvl.read<" + type + ">(" + offset + ")";
+                if (translatorNew.gvlCtx.typeMap.containsKey(varExpr)) {
+                    varExpr = "gv." + translatorNew.gvlCtx.getMangledName(varExpr);
                 }
                 sb.append("\n\t\tprintf(\"%d\", (int)(").append(varExpr).append("));");
             }

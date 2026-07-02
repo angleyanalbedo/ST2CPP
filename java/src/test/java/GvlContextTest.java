@@ -85,16 +85,16 @@ public class GvlContextTest {
         assertEquals(4, g.getTypeSize("Point"));
     }
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void testGetTypeSizeUnknown() {
         GvlContext g = gen();
-        assertEquals(4, g.getTypeSize("UnknownType"));
+        g.getTypeSize("UnknownType");
     }
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void testGetTypeSizeNull() {
         GvlContext g = gen();
-        assertEquals(4, g.getTypeSize(null));
+        g.getTypeSize(null);
     }
 
     // ─── readExpr / writeExpr ───
@@ -245,7 +245,7 @@ public class GvlContextTest {
         GvlContext g = gen();
         g.allocateOffset("A", "INT");
         String result = g.translateExpr("A + B");
-        assertTrue(result.contains("gvl.read<INT>(0)"));
+        assertTrue(result.contains("gv.gbl$A"));
         assertTrue(result.contains("+"));
     }
 
@@ -255,8 +255,8 @@ public class GvlContextTest {
         g.allocateOffset("X", "INT");
         g.allocateOffset("Y", "INT");
         String result = g.translateExpr("X * Y");
-        assertTrue(result.contains("gvl.read<INT>(0)"));
-        assertTrue(result.contains("gvl.read<INT>(2)"));
+        assertTrue(result.contains("gv.gbl$X"));
+        assertTrue(result.contains("gv.gbl$Y"));
     }
 
     // ─── translateExpr: array ───
@@ -267,7 +267,7 @@ public class GvlContextTest {
         g.offsetMap.put("ARR", 0);
         g.typeMap.put("ARR", "ARRAY[5] OF INT");
         String result = g.translateExpr("ARR[I]");
-        assertTrue(result.contains("gvl.safeArrayAt<INT>"));
+        assertTrue(result.contains("gv.gbl$ARR["));
     }
 
     // ─── getOffsetDefinitions ───

@@ -52,8 +52,8 @@ public class TranslateFor_stmt {
         if (!gvlCtx.shadowStack.isEmpty()) {
             GvlContext.ShadowEntry entry = gvlCtx.shadowStack.removeLast();
             gvlCtx.shadowedGvlVars.remove(entry.varName);
-            sb.append("\n\t\tgvl.write<").append(entry.type).append(">(")
-              .append(entry.offset).append(", ").append(entry.varName).append(");");
+            sb.append("\n\t\tgv.").append(gvlCtx.getMangledName(entry.varName))
+              .append(" = ").append(entry.varName).append(";");
         }
         return sb.toString();
     }
