@@ -48,6 +48,12 @@ public class GenerateBasicTypes {
                 new int[]{},
                 new int[]{IDGenerator.SSTRING},
                 new int[]{IDGenerator.SSTRING});
+
+        addBasicSymbol(IDGenerator.TIME, "TIME", PLCModifierEnum.Sort.TIME, "TIME#0s", "TIME",
+                new int[]{},
+                new int[]{},
+                new int[]{IDGenerator.TIME},
+                new int[]{IDGenerator.TIME});
         //添加基本类型
 
     }
