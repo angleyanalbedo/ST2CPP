@@ -108,8 +108,20 @@ public class TranslateCallFunc {
         for (java.util.Map.Entry<String, String> entry : outputParams.entrySet()) {
             String paramName = entry.getKey();
             String targetVar = entry.getValue();
-            sb.append("\n\t\t").append(targetVar).append(" = gv.").append(fbMangled)
-              .append(".").append(paramName).append(";");
+            String targetBase = targetVar.replaceAll("[\\[.].*", "");
+            if (gvlCtx.typeMap.containsKey(targetBase)) {
+                if (targetVar.equals(targetBase)) {
+                    sb.append("\n\t\tgv.").append(gvlCtx.getMangledName(targetBase))
+                      .append(" = gv.").append(fbMangled).append(".").append(paramName).append(";");
+                } else {
+                    sb.append("\n\t\tgv.").append(gvlCtx.getMangledName(targetBase))
+                      .append(targetVar.substring(targetBase.length()))
+                      .append(" = gv.").append(fbMangled).append(".").append(paramName).append(";");
+                }
+            } else {
+                sb.append("\n\t\t").append(targetVar).append(" = gv.").append(fbMangled)
+                  .append(".").append(paramName).append(";");
+            }
         }
         return sb.toString();
     }
