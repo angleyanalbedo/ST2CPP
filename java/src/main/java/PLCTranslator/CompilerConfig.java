@@ -21,6 +21,8 @@ public class CompilerConfig {
     public String customStdlib = null;
     public boolean verbose = false;
     public boolean localCache = true;
+    public boolean emitLineDirectives = false;
+    public boolean generateDebug = false;
 
     // ── 派生字段（parse 后自动填充）──
     public String resolvedOutputFile;
@@ -56,6 +58,10 @@ public class CompilerConfig {
                     verbose = true; break;
                 case "--no-local-cache":
                     localCache = false; break;
+                case "--emit-line-directives":
+                    emitLineDirectives = true; break;
+                case "--generate-debug":
+                    generateDebug = true; break;
                 default:
                     System.err.println("Unknown option: " + arg);
                     System.err.println("Use --help for usage information.");
@@ -137,6 +143,10 @@ public class CompilerConfig {
         System.out.println("  --stdlib <file>         Override built-in stdlib with custom file");
         System.out.println("  --no-local-cache        Disable cyclic local variable caching");
         System.out.println("                          Variables access gvl/io directly instead of locals");
+        System.out.println("  --emit-line-directives  Emit #line directives for GDB source-level");
+        System.out.println("                          debugging (map C++ back to ST source lines)");
+        System.out.println("  --generate-debug        Generate debug metadata files:");
+        System.out.println("                          debug_table.cpp + debug_map.json");
         System.out.println("  --verbose               Print detailed translation statistics");
         System.out.println();
         System.out.println("Examples:");
@@ -144,5 +154,6 @@ public class CompilerConfig {
         System.out.println("  java -jar st2c.jar --input test.st --output-dir output/flat/build");
         System.out.println("  java -jar st2c.jar --input pou.st --no-stdlib");
         System.out.println("  java -jar st2c.jar --input plc.st --no-local-cache");
+        System.out.println("  java -jar st2c.jar --input test.st --output-dir build --emit-line-directives");
     }
 }

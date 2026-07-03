@@ -52,6 +52,7 @@ public class Main {
         PLCVisitor plcVisitor = new PLCVisitor(property);
         PLCTranslatorNew translatorNew = new PLCTranslatorNew(property, gvlCtx);
         translatorNew.setLocalCache(cfg.localCache);
+        translatorNew.setEmitLineDirectives(cfg.emitLineDirectives);
 
         StringBuilder fullCodeBuilder = new StringBuilder();
         int fileIndex = 0;
@@ -60,6 +61,7 @@ public class Main {
         if (!cfg.noStdlib) {
             CharStream stdlibStream = loadStdlib(cfg.customStdlib);
             if (stdlibStream != null) {
+                translatorNew.setCurrentSourceName("iec_stdlib.st");
                 fullCodeBuilder.append(processStream(stdlibStream, plcVisitor, translatorNew, fileIndex++));
             }
         }
@@ -67,6 +69,7 @@ public class Main {
         // 用户源文件
         for (String inputPath : cfg.inputFiles) {
             CharStream charStream = CharStreams.fromFileName(inputPath);
+            translatorNew.setCurrentSourceName(inputPath);
             fullCodeBuilder.append(processStream(charStream, plcVisitor, translatorNew, fileIndex++));
         }
 
@@ -90,6 +93,25 @@ public class Main {
         File headerFile = new File(outFile.getParentFile(), "gvl_layout.gen.h");
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(headerFile))) {
             writer.write(gvlHeader);
+        }
+
+        // 生成调试元数据
+        if (cfg.generateDebug) {
+            String debugTable = gvlCtx.dumpDebugTable();
+            File debugTableFile = new File(outFile.getParentFile(), "debug_table.cpp");
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(debugTableFile))) {
+                writer.write(debugTable);
+            }
+
+            String debugMap = gvlCtx.dumpDebugMap();
+            File debugMapFile = new File(outFile.getParentFile(), "debug_map.json");
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(debugMapFile))) {
+                writer.write(debugMap);
+            }
+
+            if (cfg.verbose) {
+                System.out.println("[Debug]  Generated debug_table.cpp + debug_map.json");
+            }
         }
 
         long elapsed = System.currentTimeMillis() - startTime;

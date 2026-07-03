@@ -89,6 +89,10 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     // 是否启用 cyclic 局部变量缓存（prologue 加载 / epilogue 写回）
     public boolean localCache = true;
 
+    // 是否输出 #line 指令（GDB 源码级调试）
+    private boolean emitLineDirectives = false;
+    private String currentSourceName = null;
+
     public PLCTranslatorNew(ParseTreeProperty<java.util.ArrayList<PLCSymbol>> properties) {
         PLCTranslatorNew.properties = properties;
         PLCTranslatorNew.gvlCtx = new GvlContext();
@@ -121,6 +125,24 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
 
     public void setLocalCache(boolean localCache) {
         this.localCache = localCache;
+    }
+
+    public void setEmitLineDirectives(boolean emit) {
+        this.emitLineDirectives = emit;
+    }
+
+    public void setCurrentSourceName(String name) {
+        this.currentSourceName = name;
+    }
+
+    /**
+     * 在语句级插入 #line 指令，将生成的 C++ 映射回 ST 源码行号。
+     * 仅当 emitLineDirectives=true 且 currentSourceName != null 时生效。
+     */
+    public String lineDirective(ParserRuleContext ctx) {
+        if (!emitLineDirectives || currentSourceName == null) return "";
+        int line = ctx.getStart().getLine();
+        return "\n#line " + line + " \"" + currentSourceName + "\"\n";
     }
 
     public boolean shouldEmitHeader() {
@@ -333,8 +355,10 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
      */
     @Override
     public String visitStmt(PLCSTPARSERParser.StmtContext ctx) {
+        String directive = lineDirective(ctx);
         TranslateStmt translateStmt = new TranslateStmt();
-        return translateStmt.translateNode(ctx, this);
+        String result = translateStmt.translateNode(ctx, this);
+        return directive + (result != null ? result : "");
     }
 
     /**

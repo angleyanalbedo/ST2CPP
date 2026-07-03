@@ -47,6 +47,7 @@ CXXFLAGS  = $(OPT) -std=c++17 \
             -I$(RT_DIR)/include \
             -I$(TCI_DIR) -I. \
             -Wall -Wextra -Wno-unused-parameter
+LDFLAGS   = $(OPT) -lwinmm -lws2_32  # Windows 默认，Linux 在下文覆盖
 
 UNAME    := $(shell uname -s 2>/dev/null || echo "Windows")
 ifeq ($(UNAME),Linux)
@@ -59,9 +60,15 @@ endif
 
 TARGET   = plc_runtime_desktop$(EXE)
 
-.PHONY: all stub run clean config
+.PHONY: all stub run clean config debug debug-run
 
 all: $(CONFIG_GEN) $(TARGET)
+
+debug: OPT = -O0 -g -ggdb
+debug: all
+
+debug-run: debug
+	./$(TARGET)
 
 STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) $(CONFIG_GEN_STUB) $(TCI_SRCS)
 STUB_TARGET = plc_runtime_desktop_stub$(EXE)
