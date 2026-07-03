@@ -5,6 +5,7 @@ import org.eclipse.lsp4j.CompletionOptions;
 import org.eclipse.lsp4j.InitializeParams;
 import org.eclipse.lsp4j.InitializeResult;
 import org.eclipse.lsp4j.ServerCapabilities;
+import org.eclipse.lsp4j.SetTraceParams;
 import org.eclipse.lsp4j.TextDocumentSyncKind;
 import org.eclipse.lsp4j.services.LanguageClient;
 import org.eclipse.lsp4j.services.LanguageServer;
@@ -41,7 +42,6 @@ public class ST2CLanguageServer implements LanguageServer {
 
         capabilities.setCompletionProvider(new CompletionOptions());
         capabilities.setHoverProvider(true);
-        capabilities.setDefinitionProvider(true);
 
         InitializeResult result = new InitializeResult(capabilities);
         return CompletableFuture.completedFuture(result);
@@ -69,6 +69,11 @@ public class ST2CLanguageServer implements LanguageServer {
 
     public int getProcessId() {
         return processId;
+    }
+
+    @Override
+    public void setTrace(SetTraceParams params) {
+        // VS Code 会发 $/setTrace，静默忽略
     }
 
     public static void main(String[] args) {

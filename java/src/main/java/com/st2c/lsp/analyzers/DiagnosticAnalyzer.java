@@ -17,9 +17,18 @@ import antlr4.PLCSTPARSERLexer;
 import antlr4.PLCSTPARSERParser;
 import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
 import staticCheckVisitor.PLCVisitor;
+import staticCheckVisitor.register.Registrant;
 
 public class DiagnosticAnalyzer {
     private final Map<String, List<Diagnostic>> diagnosticsMap = new ConcurrentHashMap<>();
+
+    static {
+        try {
+            new Registrant().autoRegister();
+        } catch (Exception e) {
+            System.err.println("[DiagnosticAnalyzer] Failed to register strategies: " + e.getMessage());
+        }
+    }
 
     public void analyze(String uri, String content) {
         List<Diagnostic> diagnostics = new ArrayList<>();

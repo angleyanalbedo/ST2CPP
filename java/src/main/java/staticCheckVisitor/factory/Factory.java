@@ -1,5 +1,7 @@
 package staticCheckVisitor.factory;
 
+import java.util.ArrayList;
+
 import staticCheckVisitor.strategy.Strategy;
 
 import java.util.HashMap;
@@ -51,7 +53,8 @@ public class Factory {
     public Strategy getStrategy(int ruleIndex){
         Strategy strategy = this.strategyHashMap.get(ruleIndex);
         if(strategy == null){
-            throw new RuntimeException("can not find default strategy for ruleIndex = " + ruleIndex);
+            // 无策略的规则跳过语义检查（不影响语法解析和代码生成）
+            return (ctx, visitor) -> new ArrayList<>();
         }
         return strategy;
     }
@@ -64,7 +67,8 @@ public class Factory {
             strategy = this.branchStrategyMap.get(ruleIndex).get(branch);
         }
         if(strategy == null){
-            throw new RuntimeException("can not find strategy for ruleIndex = " + ruleIndex + ", branch = " + branch );
+            // 无策略的规则跳过语义检查
+            return (ctx, visitor) -> new ArrayList<>();
         }
         return strategy;
     }
