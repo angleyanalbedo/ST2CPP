@@ -10,10 +10,8 @@
   "categories": ["Programming Languages", "Linters"],
   "activationEvents": [
     "onLanguage:st",
-    "onCommand:st2c.compileFile",
-    "onCommand:st2c.compileDebug",
-    "onCommand:st2c.buildRuntime",
-    "onCommand:st2c.debugRuntime",
+    "onCommand:st2c.compileCurrent",
+    "onCommand:st2c.compileProject",
     "onDebugInitialConfigurations"
   ],
   "main": "./extension.js",
@@ -35,29 +33,19 @@
     ],
     "commands": [
       {
-        "command": "st2c.compileFile",
-        "title": "ST2C: Compile Current File",
+        "command": "st2c.compileCurrent",
+        "title": "ST2C: Compile Current File → Build Runtime",
         "icon": "$(gear)"
       },
       {
-        "command": "st2c.compileDebug",
-        "title": "ST2C: Compile for Debug (with #line directives)",
-        "icon": "$(bug)"
-      },
-      {
-        "command": "st2c.buildRuntime",
-        "title": "ST2C: Build Runtime Debug-Server",
+        "command": "st2c.compileProject",
+        "title": "ST2C: Compile All ST Files → Build Runtime",
         "icon": "$(tools)"
-      },
-      {
-        "command": "st2c.debugRuntime",
-        "title": "ST2C: Compile + Build + Debug",
-        "icon": "$(debug-alt)"
       }
     ],
     "keybindings": [
       {
-        "command": "st2c.compileFile",
+        "command": "st2c.compileCurrent",
         "key": "ctrl+shift+b",
         "when": "editorLangId == st"
       }
@@ -134,6 +122,11 @@
           "type": "string",
           "default": "",
           "markdownDescription": "Path to custom IEC stdlib .st file. If empty, uses built-in stdlib from classpath."
+        },
+        "st2c.pythonPath": {
+          "type": "string",
+          "default": "python",
+          "markdownDescription": "Path to Python interpreter used for config generation (gen_config.py). Default: `python`."
         }
       }
     }

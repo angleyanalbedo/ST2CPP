@@ -92,6 +92,8 @@ public class DiagnosticAnalyzer {
             PLCVisitor visitor = new PLCVisitor(property);
 
             // 解析支持文件（仅建符号表，不产生诊断）
+            // 包含已打开文档——它们的符号必须贡献给共享符号表，
+            // 否则依赖它们的其他文件（如 utils.st → types.st 的类型）无法解析
             List<String> ordered = supportFiles.stream()
                 .sorted((a, b) -> {
                     String fa = Paths.get(a).getFileName().toString().toLowerCase();
@@ -104,7 +106,7 @@ public class DiagnosticAnalyzer {
                 })
                 .collect(Collectors.toList());
 
-            // 第一步：解析所有支持文件（不管是否也在已打开列表中），建立完整符号表
+            // 第一步：解析所有支持文件（含打开文档，从磁盘读取），建立完整符号表
             for (String path : ordered) {
                 try {
                     String content = new String(Files.readAllBytes(Paths.get(path)));
@@ -114,7 +116,11 @@ public class DiagnosticAnalyzer {
                 } catch (Exception ignored) {}
             }
 
-            // 第二步：分析已打开的文件（共享符号表，跨文件类型可解析）
+            // 第二步：分析已打开的文件（使用内存中的内容，可能与磁盘不同）
+            // 注意：打开文档的符号在 step 1 已从磁盘注册，step 2 重新解析时
+            // 会触发 "duplication of name" 错误——这些是 LSP 多文件场景的误报，
+            // 因为同一文件被解析了两次（step 1 从磁盘，step 2 从内存）。
+            // 这些误报需要被过滤掉，不作为诊断报告给用户。
             for (var entry : documents.entrySet()) {
                 List<Diagnostic> diags = new ArrayList<>();
                 try {
@@ -123,11 +129,18 @@ public class DiagnosticAnalyzer {
                     visitor.visit(parser.startpoint());
                 } catch (Exception e) {
                     Diagnostic d = createDiagnostic(e);
-                    if (d != null) diags.add(d);
+                    if (d != null && !isDuplicateError(d)) {
+                        diags.add(d);
+                    }
                 }
                 diagnosticsMap.put(entry.getKey(), diags);
             }
         }
+    }
+
+    private boolean isDuplicateError(Diagnostic d) {
+        String msg = d.getMessage();
+        return msg != null && msg.contains("duplication of name");
     }
 
     private String getDirFromUri(String uri) {
@@ -139,6 +152,17 @@ public class DiagnosticAnalyzer {
                      : decoded;
             Path parent = Paths.get(path).getParent();
             return parent != null ? parent.toString() : "";
+        } catch (Exception e) { return ""; }
+    }
+
+    private String getPathFromUri(String uri) {
+        try {
+            String decoded = java.net.URLDecoder.decode(uri, "UTF-8");
+            String path = decoded.startsWith("file:///") ? decoded.substring(8).replace('/', '\\')
+                     : decoded.startsWith("file:/") ? decoded.substring(6).replace('/', '\\')
+                     : decoded;
+            // Normalize to handle / vs \ differences
+            return Paths.get(path).normalize().toString();
         } catch (Exception e) { return ""; }
     }
 

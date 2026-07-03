@@ -30,6 +30,10 @@ function resolveGdbPath() {
     return vscode.workspace.getConfiguration('st2c').get('gdbPath') || 'gdb.exe';
 }
 
+function resolvePythonPath() {
+    return vscode.workspace.getConfiguration('st2c').get('pythonPath') || 'python';
+}
+
 function getWorkspaceRoot() {
     return vscode.workspace.rootPath || process.cwd();
 }
@@ -68,6 +72,21 @@ function runMake(args, cwd) {
     });
 }
 
+function runPython(args, cwd) {
+    const python = resolvePythonPath();
+    return new Promise((resolve, reject) => {
+        const child = spawn(python, args, { cwd, shell: true });
+        let stdout = '', stderr = '';
+        child.stdout.on('data', d => { stdout += d.toString(); log(d.toString().trimEnd()); });
+        child.stderr.on('data', d => { stderr += d.toString(); log(d.toString().trimEnd()); });
+        child.on('close', code => {
+            if (code === 0) resolve(stdout);
+            else reject(new Error(`python exited with code ${code}\n${stderr}`));
+        });
+        child.on('error', reject);
+    });
+}
+
 async function ensureJar(jar) {
     if (!fs.existsSync(jar)) {
         const build = await vscode.window.showWarningMessage(
@@ -95,12 +114,11 @@ async function ensureJar(jar) {
     return true;
 }
 
-async function doCompile(jar, flags) {
-    const editor = vscode.window.activeTextEditor;
-    if (!editor) { vscode.window.showWarningMessage('No active editor'); return; }
-
-    const input = editor.document.fileName;
-    if (!input.endsWith('.st')) { vscode.window.showWarningMessage('Not an .st file'); return; }
+async function doCompile(jar, inputFiles, flags) {
+    if (!inputFiles || inputFiles.length === 0) {
+        vscode.window.showWarningMessage('No input files');
+        return;
+    }
 
     const outputDir = resolveOutputDir();
     fs.mkdirSync(outputDir, { recursive: true });
@@ -114,17 +132,38 @@ async function doCompile(jar, flags) {
     }
 
     const args = [
-        '--input', input,
+        ...inputFiles.flatMap(f => ['--input', f]),
         '--output-dir', outputDir,
         '--verbose',
         ...flags,
     ];
 
-    log(`[ST2C] Compiling: ${input}`);
+    log(`[ST2C] Compiling: ${inputFiles.length} file(s)`);
+    for (const f of inputFiles) log(`  input: ${f}`);
     log(`[ST2C] Output:   ${outputDir}`);
     await runJavaJar(jar, args, getWorkspaceRoot());
     log('[ST2C] Compilation OK');
-    vscode.window.showInformationMessage('ST2C: Compilation successful');
+}
+
+async function buildRuntime(context) {
+    const target = resolveMakeTarget();
+    const targetDir = context.asAbsolutePath(`../../target/${target}`);
+    if (!fs.existsSync(targetDir)) {
+        throw new Error(`Target directory not found: ${targetDir}`);
+    }
+
+    // Step: run gen_config.py
+    log('[ST2C] Generating runtime config...');
+    const scriptDir = context.asAbsolutePath('../../target/scripts');
+    await runPython([
+        path.join(scriptDir, 'gen_config.py'),
+        '--target', target,
+    ], scriptDir);
+
+    // Step: make debug-server
+    log('[ST2C] Building runtime (debug-server)...');
+    await runMake(['debug-server'], targetDir);
+    log('[ST2C] Runtime build OK');
 }
 
 function activate(context) {
@@ -143,100 +182,58 @@ function activate(context) {
     client = new lsp.LanguageClient('st2c', 'ST2C', serverOptions, clientOptions);
     client.start();
 
-    // ─── Command: compile ───
-    context.subscriptions.push(vscode.commands.registerCommand('st2c.compileFile', async () => {
+    // ─── Command: compile current .st → build runtime ───
+    context.subscriptions.push(vscode.commands.registerCommand('st2c.compileCurrent', async () => {
         try {
             outputChannel.show();
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) { vscode.window.showWarningMessage('No active editor'); return; }
+            const input = editor.document.fileName;
+            if (!input.endsWith('.st')) { vscode.window.showWarningMessage('Not an .st file'); return; }
+
             const j = resolveJar(context);
             if (!(await ensureJar(j))) return;
-            await doCompile(j, []);
+
+            log('=== Step 1: Compile ST → C++ ===');
+            await doCompile(j, [input], ['--emit-line-directives', '--generate-debug']);
+
+            log('=== Step 2: Generate runtime config + Build runtime ===');
+            await buildRuntime(context);
+
+            vscode.window.showInformationMessage('ST2C: Compile Current + Build successful');
         } catch (e) {
             log(`[ERROR] ${e.message}`);
-            vscode.window.showErrorMessage(`ST2C: Compile failed — ${e.message}`);
+            vscode.window.showErrorMessage(`ST2C: Compile Current failed — ${e.message}`);
         }
     }));
 
-    // ─── Command: compile for debug (with #line directives) ───
-    context.subscriptions.push(vscode.commands.registerCommand('st2c.compileDebug', async () => {
+    // ─── Command: compile all project .st → build runtime ───
+    context.subscriptions.push(vscode.commands.registerCommand('st2c.compileProject', async () => {
         try {
             outputChannel.show();
-            const j = resolveJar(context);
-            if (!(await ensureJar(j))) return;
-            await doCompile(j, ['--emit-line-directives', '--generate-debug']);
-        } catch (e) {
-            log(`[ERROR] ${e.message}`);
-            vscode.window.showErrorMessage(`ST2C: Debug compile failed — ${e.message}`);
-        }
-    }));
-
-    // ─── Command: build runtime (make debug-server) ───
-    context.subscriptions.push(vscode.commands.registerCommand('st2c.buildRuntime', async () => {
-        try {
-            outputChannel.show();
-            const target = resolveMakeTarget();
-            const targetDir = context.asAbsolutePath(`../../target/${target}`);
-            if (!fs.existsSync(targetDir)) {
-                vscode.window.showErrorMessage(`Target directory not found: ${targetDir}`);
+            const wsRoot = getWorkspaceRoot();
+            const files = await vscode.workspace.findFiles(
+                new vscode.RelativePattern(wsRoot, '**/*.st'),
+                '**/node_modules/**'
+            );
+            if (files.length === 0) {
+                vscode.window.showWarningMessage('No .st files found in workspace');
                 return;
             }
-            log(`[ST2C] Building runtime (${target}/debug-server)...`);
-            await runMake(['debug-server'], targetDir);
-            log('[ST2C] Runtime build OK');
-            vscode.window.showInformationMessage('ST2C: Runtime build successful');
-        } catch (e) {
-            log(`[ERROR] ${e.message}`);
-            vscode.window.showErrorMessage(`ST2C: Runtime build failed — ${e.message}`);
-        }
-    }));
 
-    // ─── Command: compile + build + debug (one-click) ───
-    context.subscriptions.push(vscode.commands.registerCommand('st2c.debugRuntime', async () => {
-        try {
-            outputChannel.show();
             const j = resolveJar(context);
             if (!(await ensureJar(j))) return;
 
-            // Step 1: compile with debug flags
-            log('=== Step 1: Compile with #line directives ===');
-            await doCompile(j, ['--emit-line-directives', '--generate-debug']);
+            log('=== Step 1: Compile all ST files → C++ ===');
+            await doCompile(j, files.map(f => f.fsPath), ['--emit-line-directives', '--generate-debug']);
 
-            // Step 2: build runtime
-            log('=== Step 2: Build runtime debug-server ===');
-            const target = resolveMakeTarget();
-            const targetDir = context.asAbsolutePath(`../../target/${target}`);
-            await runMake(['debug-server'], targetDir);
+            log('=== Step 2: Generate runtime config + Build runtime ===');
+            await buildRuntime(context);
 
-            // Step 3: launch debug
-            log('=== Step 3: Launch GDB ===');
-            const exeName = target === 'desktop'
-                ? 'plc_runtime_desktop_dbg.exe'
-                : 'plc_runtime_windows_dbg.exe';
-            const exePath = path.join(targetDir, 'build', exeName);
-            if (!fs.existsSync(exePath)) {
-                throw new Error(`Executable not found: ${exePath}`);
-            }
-
-            const wsFolder = getWorkspaceRoot();
-            await vscode.debug.startDebugging(undefined, {
-                type: 'cppdbg',
-                name: 'ST2C Debug',
-                request: 'launch',
-                program: exePath,
-                args: ['--cycle-us', '1000'],
-                cwd: wsFolder,
-                MIMode: 'gdb',
-                miDebuggerPath: resolveGdbPath(),
-                setupCommands: [
-                    {
-                        description: 'Enable pretty-printing',
-                        text: '-enable-pretty-printing',
-                        ignoreFailures: true,
-                    },
-                ],
-            });
+            vscode.window.showInformationMessage('ST2C: Compile Project + Build successful');
         } catch (e) {
             log(`[ERROR] ${e.message}`);
-            vscode.window.showErrorMessage(`ST2C: Debug launch failed — ${e.message}`);
+            vscode.window.showErrorMessage(`ST2C: Compile Project failed — ${e.message}`);
         }
     }));
 
