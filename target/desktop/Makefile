@@ -29,6 +29,7 @@ CONFIG_GEN      = build/runtime_config.gen.cpp
 CONFIG_GEN_STUB = build/runtime_config_stub.gen.cpp
 TCI_DIR  = ../lib/tci
 TCI_SRCS = $(TCI_DIR)/network_tci.cpp $(TCI_DIR)/tcp_tci.cpp
+BUILD_WIN = $(subst /,\,$(BUILD))
 
 config: $(CONFIG_GEN)
 
@@ -64,7 +65,7 @@ DBG_TARGET  = build/plc_runtime_desktop_dbg$(EXE)
 
 .PHONY: all stub run clean config debug debug-run
 
-all: $(CONFIG_GEN) $(TARGET)
+all: clean-pou $(CONFIG_GEN) $(TARGET)
 
 debug: OPT = -O0 -g -ggdb
 debug: all
@@ -82,7 +83,10 @@ $(DBG_TARGET): $(DEBUG_SRCS) | build
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	@echo "=== Build (debug-server): $@ ==="
 
-debug-server: $(CONFIG_GEN) $(DBG_TARGET)
+debug-server: clean-pou $(CONFIG_GEN) $(DBG_TARGET)
+
+clean-pou:
+	cmd /c "if exist $(BUILD_WIN) del /Q $(BUILD_WIN)\*.* 2>NUL & if exist $(BUILD_WIN) for /d %%p in ($(BUILD_WIN)\*) do rd /Q %%p 2>NUL"
 
 STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) $(CONFIG_GEN_STUB) $(TCI_SRCS)
 

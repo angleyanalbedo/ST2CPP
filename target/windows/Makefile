@@ -28,6 +28,7 @@ CONFIG_GEN      = build/runtime_config.gen.cpp
 CONFIG_GEN_STUB = build/runtime_config_stub.gen.cpp
 TCI_DIR  = ../lib/tci
 TCI_SRCS = $(TCI_DIR)/network_tci.cpp $(TCI_DIR)/tcp_tci.cpp
+BUILD_WIN = $(subst /,\,$(BUILD))
 
 config: $(CONFIG_GEN)
 
@@ -53,7 +54,10 @@ TARGET   = plc_runtime_windows.exe
 
 .PHONY: all stub run clean config
 
-all: $(CONFIG_GEN) $(TARGET)
+all: clean-pou $(CONFIG_GEN) $(TARGET)
+
+clean-pou:
+	cmd /c "if exist $(BUILD_WIN) del /Q $(BUILD_WIN)\*.* 2>NUL & if exist $(BUILD_WIN) for /d %%p in ($(BUILD_WIN)\*) do rd /Q %%p 2>NUL"
 
 STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) $(TCI_SRCS) $(CONFIG_GEN_STUB)
 STUB_TARGET = plc_runtime_windows_stub.exe

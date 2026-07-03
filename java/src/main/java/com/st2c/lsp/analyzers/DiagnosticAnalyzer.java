@@ -44,7 +44,9 @@ public class DiagnosticAnalyzer {
             boolean isNew = !documents.containsKey(uri);
             documents.put(uri, content);
             if (isNew && supportFiles.isEmpty()) {
-                loadSupportFiles(getDirFromUri(uri));
+                String dir = getDirFromUri(uri);
+                System.err.println("[LSP] Opening: " + uri + " -> dir: " + dir);
+                loadSupportFiles(dir);
             }
         }
         reanalyzeAll();
@@ -62,13 +64,21 @@ public class DiagnosticAnalyzer {
     private void loadSupportFiles(String dir) {
         if (dir.isEmpty()) return;
         Path dirPath = Paths.get(dir);
-        if (!Files.isDirectory(dirPath)) return;
+        if (!Files.isDirectory(dirPath)) {
+            System.err.println("[LSP] Directory not found: " + dir);
+            return;
+        }
         try (Stream<Path> stream = Files.list(dirPath)) {
-            stream.filter(p -> p.toString().endsWith(".st"))
-                  .map(Path::toString)
-                  .sorted()
-                  .forEach(supportFiles::add);
-        } catch (IOException e) {}
+            List<String> files = stream
+                .filter(p -> p.toString().endsWith(".st"))
+                .map(Path::toString)
+                .sorted()
+                .collect(Collectors.toList());
+            supportFiles.addAll(files);
+            System.err.println("[LSP] Loaded " + files.size() + " support files from " + dir);
+        } catch (IOException e) {
+            System.err.println("[LSP] Failed to scan: " + dir + " - " + e.getMessage());
+        }
     }
 
     private void reanalyzeAll() {
@@ -122,9 +132,11 @@ public class DiagnosticAnalyzer {
 
     private String getDirFromUri(String uri) {
         try {
-            String path = uri.startsWith("file:///") ? uri.substring(8).replace('/', '\\')
-                     : uri.startsWith("file:/") ? uri.substring(6).replace('/', '\\')
-                     : uri;
+            // VS Code 发送的 URI 是 URL 编码的（d%3A → d:），需要解码
+            String decoded = java.net.URLDecoder.decode(uri, "UTF-8");
+            String path = decoded.startsWith("file:///") ? decoded.substring(8).replace('/', '\\')
+                     : decoded.startsWith("file:/") ? decoded.substring(6).replace('/', '\\')
+                     : decoded;
             Path parent = Paths.get(path).getParent();
             return parent != null ? parent.toString() : "";
         } catch (Exception e) { return ""; }
