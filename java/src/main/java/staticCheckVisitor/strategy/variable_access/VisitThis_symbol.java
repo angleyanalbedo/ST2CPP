@@ -53,7 +53,7 @@ public class VisitThis_symbol implements Strategy {
                     tempFoundSymbol = new PLCVariable(castedSymbol);
                     tempFoundSymbol.setName(symbolItself.getLocalScope() == currentScope ? "*"+varName : castedSymbol.getUniqueName());
                 }else{
-                    throw new PLCSemanticException("can not find variable named " + varName + " FROM : " + ctx.getText());
+                    throw new PLCSemanticException("can not find variable named " + varName + " FROM : " + ctx.getText(), ctx);
                 }
             }
         }
@@ -114,7 +114,7 @@ public class VisitThis_symbol implements Strategy {
                         tempVar.setAssignVar("(" + currentName + "[" + indexExpr + "])");
                     }
                 } else {
-                    throw new PLCSemanticException("type " + typeSymbol.getName() + " is not subscriptable: " + ctx.getText());
+                    throw new PLCSemanticException("type " + typeSymbol.getName() + " is not subscriptable: " + ctx.getText(), ctx);
                 }
             }
         }
@@ -139,7 +139,7 @@ public class VisitThis_symbol implements Strategy {
                 }
                 if (fieldVar == null) {
                     throw new PLCSemanticException("struct " + typeSymbol.getName()
-                            + " has no member named " + fieldName + " FROM : " + ctx.getText());
+                            + " has no member named " + fieldName + " FROM : " + ctx.getText(), ctx);
                 }
 
                 // 更新为字段的类型信息
@@ -165,7 +165,7 @@ public class VisitThis_symbol implements Strategy {
                 PLCVariable fieldVar = (fieldSym instanceof PLCVariable) ? (PLCVariable) fieldSym : null;
                 if (fieldVar == null) {
                     throw new PLCSemanticException("type " + typeSymbol.getName()
-                            + " has no member named " + fieldName + " FROM : " + ctx.getText());
+                            + " has no member named " + fieldName + " FROM : " + ctx.getText(), ctx);
                 }
 
                 tempFoundSymbol.setTypeId(fieldVar.getTypeId());
@@ -184,10 +184,10 @@ public class VisitThis_symbol implements Strategy {
                 }
             } else if (typeSymbol == null) {
                 throw new PLCSemanticException("variable " + tempFoundSymbol.getName()
-                        + " has unknown type (typeId=" + currentTypeId + ") FROM : " + ctx.getText());
+                        + " has unknown type (typeId=" + currentTypeId + ") FROM : " + ctx.getText(), ctx);
             } else {
                 throw new PLCSemanticException("variable " + tempFoundSymbol.getName()
-                        + " is not a struct type FROM : " + ctx.getText());
+                        + " is not a struct type FROM : " + ctx.getText(), ctx);
             }
         }
 
