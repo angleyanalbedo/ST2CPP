@@ -42,6 +42,6 @@ public class VisitGlobal_var_decls implements Strategy {
             visitor.visitorTool.settleVarAttrs(infoVar, (PLCVariable) var);
         }
 
-        return null;
+        return vars;
     }
 }

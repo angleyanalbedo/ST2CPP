@@ -44,7 +44,7 @@ public class VisitInstance_name implements Strategy {
         String typeName = ctx.class_name().getText();
         PLCTypeDeclSymbol basicType = (PLCTypeDeclSymbol) npScope.deepFindSymbol(typeName);
         if (basicType == null) {
-            throw new PLCSemanticException("\ncan not find type : " + typeName);
+            throw new PLCSemanticException("\ncan not find type : " + typeName, ctx);
         }
         //检查无误，进行组装
         PLCTypeDeclSymbol targetVar = new PLCTypeDeclSymbol(basicType);

@@ -48,7 +48,7 @@ public class VisitStruct_type_access implements Strategy {
         String typeName = ctx.struct_type_name().getText();
         PLCStructDeclSymbol basicType = (PLCStructDeclSymbol) npScope.deepFindSymbol(typeName, PLCModifierEnum.Sort.STRUCT_DECL);
         if(basicType == null){
-            throw new PLCSemanticException("can not find type : " + typeName);
+            throw new PLCSemanticException("can not find type : " + typeName, ctx);
         }
 
         //检查无误，进行组装

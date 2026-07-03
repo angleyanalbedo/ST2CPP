@@ -70,7 +70,7 @@ public class VisitSimple_type_access implements Strategy {
             }
         }
         if(basicType == null){
-            throw new PLCSemanticException("\ncan not find type : " + typeName);
+            throw new PLCSemanticException("\ncan not find type : " + typeName, ctx);
         }
         //检查无误，进行组装
         PLCTypeDeclSymbol targetVar = new PLCTypeDeclSymbol(basicType);

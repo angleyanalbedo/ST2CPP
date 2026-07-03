@@ -37,6 +37,6 @@ public class VisitTemp_var_decls implements Strategy {
         for (PLCSymbol var : vars) {
             visitor.visitorTool.settleVarAttrs(tempVarInfo, (PLCVariable) var);
         }
-        return null;
+        return vars;
     }
 }

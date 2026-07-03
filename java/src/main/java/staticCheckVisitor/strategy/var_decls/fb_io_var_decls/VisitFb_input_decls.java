@@ -41,7 +41,7 @@ public class VisitFb_input_decls implements Strategy {
         for (PLCSymbol var : vars) {
             visitor.visitorTool.settleVarAttrs(varInfo, (PLCVariable) var);
         }
-        return null;
+        return vars;
 
     }
 }

@@ -50,7 +50,7 @@ public class VisitSubrange_type_access implements Strategy {
         String typeName = ctx.subrange_type_name().getText();
         PLCTypeDeclSymbol basicType = (PLCTypeDeclSymbol) npScope.deepFindSymbol(typeName);
         if(basicType == null){
-            throw new PLCSemanticException("can not find type : " + typeName);
+            throw new PLCSemanticException("can not find type : " + typeName, ctx);
         }
         //检查无误，进行组装
         PLCTypeDeclSymbol targetVar = new PLCTypeDeclSymbol(basicType);

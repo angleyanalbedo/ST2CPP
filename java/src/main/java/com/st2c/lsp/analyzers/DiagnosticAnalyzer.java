@@ -15,6 +15,7 @@ import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import antlr4.PLCSTPARSERLexer;
 import antlr4.PLCSTPARSERParser;
+import PLCException.PLCSemanticException;
 import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
 import staticCheckVisitor.PLCVisitor;
 import staticCheckVisitor.register.Registrant;
@@ -66,6 +67,14 @@ public class DiagnosticAnalyzer {
                                re.getOffendingToken().getCharPositionInLine());
             end = new Position(start.getLine(),
                              start.getCharacter() + re.getOffendingToken().getText().length());
+        } else if (e instanceof PLCSemanticException) {
+            PLCSemanticException se = (PLCSemanticException) e;
+            if (se.getCtx() != null) {
+                var ctx = se.getCtx();
+                start = new Position(ctx.getStart().getLine() - 1, ctx.getStart().getCharPositionInLine());
+                end = new Position(ctx.getStop().getLine() - 1,
+                    ctx.getStop().getCharPositionInLine() + ctx.getStop().getText().length());
+            }
         }
 
         Range range = new Range(start, end);
