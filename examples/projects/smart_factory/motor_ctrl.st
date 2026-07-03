@@ -45,8 +45,7 @@ FUNCTION_BLOCK MOTOR_CTRL
                 CURRENT_SPD := TARGET_SPEED;
             END_IF
         END_IF
-    END_IF
-
+    END_IF 
     ACTUAL_SPEED := CURRENT_SPD;
 
     (* 填充状态 *)

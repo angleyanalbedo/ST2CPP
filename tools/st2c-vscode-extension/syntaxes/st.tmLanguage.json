@@ -1,0 +1,49 @@
+{
+  "scopeName": "source.st",
+  "name": "Structured Text",
+  "fileTypes": [".st"],
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#constants" },
+    { "include": "#operators" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        { "begin": "\\(\\*", "end": "\\*\\)", "name": "comment.block.st" },
+        { "begin": "//", "end": "$", "name": "comment.line.double-slash.st" },
+        { "begin": "--", "end": "$", "name": "comment.line.double-dash.st" }
+      ]
+    },
+    "strings": {
+      "name": "string.quoted.double.st",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [{ "match": "''", "name": "constant.character.escape.st" }]
+    },
+    "numbers": {
+      "match": "\\b([0-9]+#[0-9A-Fa-f]+|\\d+\\.?\\d*([eE][+-]?\\d+)?)\\b",
+      "name": "constant.numeric.st"
+    },
+    "keywords": {
+      "match": "\\b(?i:PROGRAM|END_PROGRAM|FUNCTION|END_FUNCTION|FUNCTION_BLOCK|END_FUNCTION_BLOCK|VAR|END_VAR|VAR_INPUT|VAR_OUTPUT|VAR_IN_OUT|VAR_TEMP|VAR_GLOBAL|RETAIN|CONSTANT|IF|THEN|ELSIF|ELSE|END_IF|FOR|TO|BY|DO|END_FOR|WHILE|END_WHILE|REPEAT|UNTIL|END_REPEAT|CASE|OF|END_CASE|RETURN|TYPE|END_TYPE|STRUCT|END_STRUCT|ARRAY|OF|AT|NAMESPACE|END_NAMESPACE|USING|NOT|AND|OR|XOR|MOD|TRUE|FALSE)\\b",
+      "name": "keyword.control.st"
+    },
+    "types": {
+      "match": "\\b(?i:BOOL|SINT|INT|DINT|LINT|USINT|UINT|UDINT|ULINT|REAL|LREAL|STRING|WSTRING|BYTE|WORD|DWORD|LWORD|TIME|LTIME|DATE|LDATE|TIME_OF_DAY|TOD|DATE_AND_TIME|DT|CHAR|WCHAR)\\b",
+      "name": "storage.type.st"
+    },
+    "constants": {
+      "match": "\\b(?i:TRUE|FALSE|T#[0-9]+(ms|s|m|h|d))\\b",
+      "name": "constant.language.st"
+    },
+    "operators": {
+      "match": ":=|[=<>+\\-*/]|<>|<=|>=",
+      "name": "keyword.operator.st"
+    }
+  }
+}

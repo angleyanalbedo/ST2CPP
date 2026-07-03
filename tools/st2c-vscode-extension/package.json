@@ -1,0 +1,46 @@
+{
+  "name": "st2c",
+  "displayName": "ST2C — IEC 61131-3 ST Language",
+  "description": "结构化文本语言支持：语法高亮、悬停提示、自动补全、实时诊断",
+  "version": "1.0.0",
+  "publisher": "st2c",
+  "private": true,
+  "license": "GPL-2.0",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Programming Languages", "Linters"],
+  "activationEvents": ["onLanguage:st"],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "st",
+        "aliases": ["Structured Text", "ST", "IEC 61131-3"],
+        "extensions": [".st"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "st",
+        "scopeName": "source.st",
+        "path": "./syntaxes/st.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "ST2C",
+      "properties": {
+        "st2c.jarPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "st2c.jar 路径。留空自动使用扩展目录 `../../java/target/st2c-jar-with-dependencies.jar`"
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0"
+  }
+}
