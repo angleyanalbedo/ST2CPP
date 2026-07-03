@@ -58,7 +58,9 @@ LDFLAGS   = $(OPT) -lwinmm -lws2_32
 EXE       = .exe
 endif
 
-TARGET   = plc_runtime_desktop$(EXE)
+TARGET   = build/plc_runtime_desktop$(EXE)
+STUB_TARGET = build/plc_runtime_desktop_stub$(EXE)
+DBG_TARGET  = build/plc_runtime_desktop_dbg$(EXE)
 
 .PHONY: all stub run clean config debug debug-run
 
@@ -73,29 +75,26 @@ debug-run: debug
 # ─── Debug Server (with DebugEngine) ───
 DEBUG_SRCS = $(RT_SRCS) $(PLAT_SRC) $(POU_SRCS) $(CONFIG_GEN) $(TCI_SRCS) \
              $(RT_DIR)/src/debug_engine.cpp debug_tcp_server.cpp
-DBG_TARGET = plc_runtime_desktop_dbg$(EXE)
-
 $(DBG_TARGET): CXXFLAGS = -O0 -g -ggdb -std=c++17 -DENABLE_DEBUG \
                           -I$(RT_DIR)/include -I$(TCI_DIR) -I. -I$(BUILD) \
                           -Wall -Wextra -Wno-unused-parameter
-$(DBG_TARGET): $(DEBUG_SRCS)
+$(DBG_TARGET): $(DEBUG_SRCS) | build
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	@echo "=== Build (debug-server): $@ ==="
 
 debug-server: $(CONFIG_GEN) $(DBG_TARGET)
 
 STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) $(CONFIG_GEN_STUB) $(TCI_SRCS)
-STUB_TARGET = plc_runtime_desktop_stub$(EXE)
 
 stub: $(CONFIG_GEN_STUB) $(STUB_TARGET)
 
-$(STUB_TARGET): $(STUB_SRCS)
+$(STUB_TARGET): $(STUB_SRCS) | build
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	@echo "=== Build (stub): $@ ==="
 
 SRCS = $(RT_SRCS) $(PLAT_SRC) $(POU_SRCS) $(CONFIG_GEN) $(TCI_SRCS)
 
-$(TARGET): $(SRCS)
+$(TARGET): $(SRCS) | build
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	@echo "=== Build: $@ ==="
 
@@ -159,7 +158,7 @@ ECAT_CXXFLAGS = -DRT_ETHERCAT_ENABLED \
 ifeq ($(SOEM_OSHWDIR),win32)
 ECAT_CXXFLAGS += -I$(SOEM_DIR)/oshw/win32/wpcap/Include
 endif
-ECAT_TARGET = plc_runtime_desktop_ecat$(EXE)
+ECAT_TARGET = build/plc_runtime_desktop_ecat$(EXE)
 
 SOEM_C_OBJS = $(patsubst $(SOEM_DIR)/src/%.c,build/soem_desk_%.o,$(wildcard $(SOEM_DIR)/src/*.c)) \
               $(SOEM_OBJ_OSHW) $(SOEM_OBJ_OSAL) $(SOEM_OBJ_NIC)
@@ -196,10 +195,10 @@ ECAT_IF     ?= eth0
 ethercat-run: ethercat
 	./$(ECAT_TARGET) --cycle-us $(ECAT_CYCLES) --tci ethercat --ecat-if $(ECAT_IF)
 
-NET_TEST_TARGET = network_test$(EXE)
+NET_TEST_TARGET = build/network_test$(EXE)
 NET_TEST_SRCS   = ../network_test.cpp $(TCI_SRCS)
 
-$(NET_TEST_TARGET): $(NET_TEST_SRCS)
+$(NET_TEST_TARGET): $(NET_TEST_SRCS) | build
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	@echo "=== Build: $@ ==="
 

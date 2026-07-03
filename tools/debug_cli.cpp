@@ -356,44 +356,43 @@ static std::string shortName(const std::string& fullName) {
 }
 
 static void drawTable() {
-    // 清屏 + 光标归位
-    printf("\033[2J\033[H");
+    // 光标归位（不清屏，避免闪烁）
+    printf("\033[H");
 
     // 标题
-    printf("\033[1;36m ST2C Debug Monitor\033[0m");
+    printf("\033[K\033[1;36m ST2C Debug Monitor\033[0m");
     printf("  cycle=\033[33m%llu\033[0m", (unsigned long long)mon.cycle);
     printf("  ticks=\033[33m%llu\033[0m", (unsigned long long)mon.totalTicks);
     printf("  refresh=%dms", mon.refreshMs);
     printf("  %s\033[0m\n", mon.paused ? "\033[31m[PAUSED]" : "");
 
     // 分隔线
-    printf("\033[90m");
+    printf("\033[K\033[90m");
     for (int i = 0; i < 70; i++) printf("-");
     printf("\033[0m\n");
 
     // 表头
-    printf(" %-20s %-8s %-12s %-10s %s\n",
+    printf("\033[K %-20s %-8s %-12s %-10s %s\n",
            "Variable", "Type", "Value", "Storage", "Forced");
 
     // 变量行
     if (mon.watchList.empty()) {
-        printf("\n  \033[90m(no variables in watch list — use 'add <name>')\033[0m\n");
+        printf("\033[K\n  \033[90m(no variables — use 'add <name>')\033[0m\n");
     } else {
         for (auto& w : mon.watchList) {
             const VarInfo* vi = findById(w.id);
             if (!vi) {
-                printf(" [%d] ???\n", w.id);
+                printf("\033[K [%d] ???\n", w.id);
                 continue;
             }
             std::string valStr;
             if (vi->count > 1) {
-                // 数组：只显示第一个元素
                 valStr = fmtValue(*vi, w.hex) + " ...";
             } else {
                 valStr = fmtValue(*vi, w.hex);
             }
             std::string forceMark = w.forced ? "\033[31;1m► FORCED\033[0m" : "";
-            printf(" %-20s \033[90m%-8s\033[0m \033[37m%-12s\033[0m \033[90m%-10s\033[0m %s\n",
+            printf("\033[K %-20s \033[90m%-8s\033[0m \033[37m%-12s\033[0m \033[90m%-10s\033[0m %s\n",
                    shortName(vi->name).c_str(),
                    vi->typeName.c_str(),
                    valStr.c_str(),
@@ -403,17 +402,19 @@ static void drawTable() {
     }
 
     // 分隔线
-    printf("\033[90m");
+    printf("\033[K\033[90m");
     for (int i = 0; i < 70; i++) printf("-");
     printf("\033[0m\n");
 
     // 状态行
     if (!mon.lastStatus.empty()) {
-        printf(" \033[33m%s\033[0m\n", mon.lastStatus.c_str());
+        printf("\033[K \033[33m%s\033[0m\n", mon.lastStatus.c_str());
+    } else {
+        printf("\033[K\n");
     }
 
     // 命令行
-    printf("\n \033[1;32m>\033[0m %s", mon.inputBuf.c_str());
+    printf("\033[K\n \033[1;32m>\033[0m %s\033[K", mon.inputBuf.c_str());
     fflush(stdout);
 }
 
@@ -518,6 +519,9 @@ static void monitorMode() {
     bool isTTY = isatty(STDIN_FILENO) != 0;
 #endif
 
+    // 清屏一次
+    printf("\033[2J");
+
     // 自动加所有标量变量到 watch list
     for (auto& v : varInfos) {
         if (v.count == 1) {
@@ -601,9 +605,9 @@ static void monitorMode() {
 
         // 短暂等待（避免 CPU 100%）
 #ifdef _WIN32
-        Sleep(50);
+        Sleep(20);
 #else
-        usleep(50000);
+        usleep(20000);
 #endif
     }
 
