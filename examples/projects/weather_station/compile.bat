@@ -45,6 +45,7 @@ java -jar "%JAR%" ^
     --input "%PROJECT_DIR%\alarm_eval.st" ^
     --input "%PROJECT_DIR%\main.st" ^
     --output-dir "%OUTPUT_DIR%" ^
+    --file-id weather ^
     --verbose
 if errorlevel 1 (
     echo ERROR: ST compilation failed

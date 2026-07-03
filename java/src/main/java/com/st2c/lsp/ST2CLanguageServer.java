@@ -43,11 +43,6 @@ public class ST2CLanguageServer implements LanguageServer {
         capabilities.setCompletionProvider(new CompletionOptions());
         capabilities.setHoverProvider(true);
 
-        // 传递工作区路径给诊断分析器（用于自动加载同目录 .st 文件）
-        if (params != null && params.getWorkspaceFolders() != null) {
-            textDocumentService.setWorkspaceFolders(params.getWorkspaceFolders());
-        }
-
         InitializeResult result = new InitializeResult(capabilities);
         return CompletableFuture.completedFuture(result);
     }

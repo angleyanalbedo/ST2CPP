@@ -1,7 +1,6 @@
 package com.st2c.lsp.analyzers;
 
 import java.io.IOException;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -32,8 +31,8 @@ import staticCheckVisitor.register.Registrant;
 
 public class DiagnosticAnalyzer {
     private final Map<String, String> documents = new HashMap<>();
+    private final Map<String, String> supportFiles = new HashMap<>();
     private final Map<String, List<Diagnostic>> diagnosticsMap = new HashMap<>();
-    private String workspaceRoot;
     private boolean strategiesRegistered = false;
 
     private synchronized void ensureStrategies() {
@@ -46,35 +45,12 @@ public class DiagnosticAnalyzer {
         }
     }
 
-    public synchronized void setWorkspaceRoot(String root) {
-        workspaceRoot = root;
-    }
-
-    public synchronized void setWorkspaceFolders(List<org.eclipse.lsp4j.WorkspaceFolder> folders) {
-        if (folders != null && !folders.isEmpty()) {
-            String path = uriToPath(folders.get(0).getUri());
-            if (path != null) {
-                workspaceRoot = path;
-            }
-        }
-    }
-
     public void updateDocument(String uri, String content) {
         synchronized (this) {
             documents.put(uri, content);
-            // 初次打开文件时用文件目录作为 workspaceRoot
-            if (workspaceRoot == null) {
-                try {
-                    String path = uriToPath(uri);
-                    if (path != null) {
-                        Path parent = Paths.get(path).getParent();
-                        if (parent != null && Files.isDirectory(parent)) {
-                            workspaceRoot = parent.toString();
-                        }
-                    }
-                } catch (Exception e) {
-                    // URI 无法解析为本地路径时跳过
-                }
+            // 首次打开文件时自动加载同目录 .st 支持文件
+            if (supportFiles.isEmpty()) {
+                loadSupportFiles(getDirFromUri(uri));
             }
         }
         reanalyzeAll();
@@ -93,6 +69,18 @@ public class DiagnosticAnalyzer {
         }
     }
 
+    private void loadSupportFiles(String dir) {
+        if (dir.isEmpty()) return;
+        Path dirPath = Paths.get(dir);
+        if (!Files.isDirectory(dirPath)) return;
+        try (Stream<Path> stream = Files.list(dirPath)) {
+            stream.filter(p -> p.toString().endsWith(".st"))
+                  .forEach(p -> supportFiles.put(p.toString(), ""));
+        } catch (IOException e) {
+        }
+        // 延迟加载内容（首次 reanalyzeAll 时读）
+    }
+
     private void reanalyzeAll() {
         ensureStrategies();
         synchronized (this) {
@@ -101,101 +89,78 @@ public class DiagnosticAnalyzer {
 
             // 重置全局编译器状态
             CompilerState.reset();
-
             ParseTreeProperty<ArrayList<PLCSymbol>> property = new ParseTreeProperty<>();
             PLCVisitor visitor = new PLCVisitor(property);
 
-            // 1. 先加载同目录下的其他 .st 文件（仅构建符号表，不产生诊断）
-            List<String> supportFiles = scanStFiles(workspaceRoot);
-            for (String filePath : supportFiles) {
-                String fileUri = pathToUri(filePath);
-                if (documents.containsKey(fileUri)) continue;
+            // 第一步：解析支持文件（仅建符号表）
+            for (String path : supportFiles.keySet()) {
+                String uri = "file:///" + path.replace('\\', '/');
+                if (documents.containsKey(uri)) continue;
                 try {
-                    String content = Files.readString(Paths.get(filePath));
-                    CharStream cs = CharStreams.fromString(content);
-                    PLCSTPARSERLexer lexer = new PLCSTPARSERLexer(cs);
-                    CommonTokenStream tokens = new CommonTokenStream(lexer);
-                    PLCSTPARSERParser parser = new PLCSTPARSERParser(tokens);
-                    visitor.visit(parser.startpoint());
-                } catch (Exception ignored) {
-                    // 支持文件分析失败不影响诊断
+                    byte[] raw = Files.readAllBytes(Paths.get(path));
+                    parseOnce(visitor, new String(raw));
+                } catch (Exception e) {
+                    // 支持文件解析失败不影响主文件
                 }
             }
 
-            // 2. 正式分析所有已打开的文件
+            // 第二步：解析已打开的文件
             for (var entry : documents.entrySet()) {
-                String uri = entry.getKey();
-                String content = entry.getValue();
-                List<Diagnostic> fileDiags = new ArrayList<>();
+                List<Diagnostic> diags = new ArrayList<>();
                 try {
-                    CharStream charStream = CharStreams.fromString(content);
-                    PLCSTPARSERLexer lexer = new PLCSTPARSERLexer(charStream);
-                    CommonTokenStream tokens = new CommonTokenStream(lexer);
-                    PLCSTPARSERParser parser = new PLCSTPARSERParser(tokens);
-                    visitor.visit(parser.startpoint());
+                    parseOnce(visitor, entry.getValue());
                 } catch (Exception e) {
                     Diagnostic d = createDiagnostic(e);
-                    if (d != null) fileDiags.add(d);
+                    if (d != null) diags.add(d);
                 }
-                diagnosticsMap.put(uri, fileDiags);
+                diagnosticsMap.put(entry.getKey(), diags);
             }
         }
     }
 
-    private List<String> scanStFiles(String dir) {
-        if (dir == null) return List.of();
-        Path dirPath = Paths.get(dir);
-        if (!Files.isDirectory(dirPath)) return List.of();
-        try (Stream<Path> stream = Files.list(dirPath)) {
-            return stream
-                .filter(p -> p.toString().endsWith(".st"))
-                .map(Path::toString)
-                .collect(Collectors.toList());
-        } catch (IOException e) {
-            return List.of();
-        }
+    private void parseOnce(PLCVisitor visitor, String source) {
+        PLCSTPARSERParser parser = new PLCSTPARSERParser(
+            new CommonTokenStream(new PLCSTPARSERLexer(CharStreams.fromString(source))));
+        visitor.visit(parser.startpoint());
     }
 
-    private static String uriToPath(String uri) {
-        if (uri == null) return null;
-        if (uri.startsWith("file:///")) {
-            return uri.substring(8).replace('/', '\\');
+    private String getDirFromUri(String uri) {
+        try {
+            String path;
+            if (uri.startsWith("file:///"))
+                path = uri.substring(8).replace('/', '\\');
+            else if (uri.startsWith("file:/"))
+                path = uri.substring(6).replace('/', '\\');
+            else
+                path = uri;
+            Path parent = Paths.get(path).getParent();
+            return parent != null ? parent.toString() : "";
+        } catch (Exception e) {
+            return "";
         }
-        if (uri.startsWith("file:/")) {
-            return uri.substring(6).replace('/', '\\');
-        }
-        return uri;
-    }
-
-    private static String pathToUri(String path) {
-        return "file:///" + path.replace('\\', '/');
     }
 
     private Diagnostic createDiagnostic(Exception e) {
         String message = e.getMessage();
         if (message == null || message.isEmpty()) return null;
-
         Position start = new Position(0, 0);
         Position end = new Position(0, 0);
-
         if (e instanceof org.antlr.v4.runtime.RecognitionException) {
             org.antlr.v4.runtime.RecognitionException re = (org.antlr.v4.runtime.RecognitionException) e;
             start = new Position(re.getOffendingToken().getLine() - 1,
-                               re.getOffendingToken().getCharPositionInLine());
+                re.getOffendingToken().getCharPositionInLine());
             end = new Position(start.getLine(),
-                             start.getCharacter() + re.getOffendingToken().getText().length());
+                start.getCharacter() + re.getOffendingToken().getText().length());
         } else if (e instanceof PLCSemanticException) {
             PLCSemanticException se = (PLCSemanticException) e;
             if (se.getCtx() != null) {
                 start = new Position(se.getCtx().getStart().getLine() - 1,
-                                   se.getCtx().getStart().getCharPositionInLine());
+                    se.getCtx().getStart().getCharPositionInLine());
                 end = new Position(se.getCtx().getStop().getLine() - 1,
                     se.getCtx().getStop().getCharPositionInLine() + se.getCtx().getStop().getText().length());
             }
         }
-
-        Range range = new Range(start, end);
-        Diagnostic diagnostic = new Diagnostic(range, message);
+        Diagnostic diagnostic = new Diagnostic(new Range(start, end), message);
         diagnostic.setSeverity(DiagnosticSeverity.Error);
         return diagnostic;
     }

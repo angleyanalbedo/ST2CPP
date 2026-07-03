@@ -1,0 +1,4 @@
+PROGRAM MAIN
+    VAR x : SERVO_STATE; y : INT; END_VAR
+    y := 42;
+END_PROGRAM

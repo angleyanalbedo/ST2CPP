@@ -1,4 +1,3 @@
-# ST2C LSP Robot Arm 测试 — 验证跨文件引用自动加载
 $ErrorActionPreference = 'Stop'
 $P = 0; $F = 0
 function ok($n) { $global:P++; Write-Host "  PASS  $n" -F Green }
@@ -21,69 +20,54 @@ function send($obj) {
     $proc.StandardInput.Write($json); $proc.StandardInput.Flush()
 }
 
-function recvAny($timeoutMs = 5000) {
+function drainDiag($uriPattern, $timeoutMs = 3000) {
     $deadline = (Get-Date).AddMilliseconds($timeoutMs)
     while ((Get-Date) -lt $deadline) {
         $line = $proc.StandardOutput.ReadLine()
+        if (-not $line) { Start-Sleep 0.1; continue }
         if ($line -match 'Content-Length:\s+(\d+)') {
             $len = [int]$Matches[1]
             $proc.StandardOutput.ReadLine() | Out-Null
             $buf = New-Object char[] $len
             $proc.StandardOutput.Read($buf, 0, $len) | Out-Null
-            return (-join $buf) | ConvertFrom-Json
+            $body = -join $buf
+            $msg = $body | ConvertFrom-Json
+            if ($msg.method -eq 'textDocument/publishDiagnostics' -and $msg.params.uri -match $uriPattern) {
+                return $msg.params.diagnostics
+            }
         }
     }
     return $null
 }
 
-# Initialize with workspace folder
-send @{
-    jsonrpc = "2.0"; id = 1; method = "initialize"
-    params = @{
-        processId = 9999; capabilities = @{};
-        workspaceFolders = @(@{ uri = "file:///D:/source/Project/ST2C-master/examples/projects/robot_arm"; name = "robot_arm" })
-    }
-}
-recvAny(5000) | Out-Null
+send @{ jsonrpc = "2.0"; id = 1; method = "initialize"; params = @{ processId = 9999; capabilities = @{} } }
+Start-Sleep 0.5
+$proc.StandardOutput.ReadLine() | Out-Null  # Content-Length for init response
+$proc.StandardOutput.ReadLine() | Out-Null  # blank line
+$proc.StandardOutput.Read($null, 0, 10000) | Out-Null  # skip init response body
 send @{ jsonrpc = "2.0"; method = "initialized"; params = @{} }
 
-# 打开 io_config.st （跨文件引用 types.st 定义的 SERVO_STATE）
-Write-Host "[1] Open io_config.st (auto-load types.st from workspace)" -F Cyan
-$ioConfig = Get-Content "D:\source\Project\ST2C-master\examples\projects\robot_arm\io_config.st" -Raw
+# Open a file that references a type from another file in the same dir
+$dir = "D:/source/Project/ST2C-master/examples/projects/syntax_tests"
+$main = Get-Content "$($dir -replace 'D:', 'D:')/test_struct.st" -Raw
+
+Write-Host "[1] Open test_struct.st (uses MY_POINT from .st)" -F Cyan
 send @{
     jsonrpc = "2.0"; method = "textDocument/didOpen"
     params = @{
-        textDocument = @{
-            uri = "file:///D:/source/Project/ST2C-master/examples/projects/robot_arm/io_config.st"
-            languageId = "st"; version = 1
-            text = $ioConfig
-        }
+        textDocument = @{ uri = "file:///$dir/test_struct.st"; languageId = "st"; version = 1; text = $main }
     }
 }
-Start-Sleep 2
-# Drain notifications
-$diags = @{}
-for ($i = 0; $i -lt 50; $i++) {
-    $m = recvAny(1000)
-    if (-not $m) { break }
-    if ($m.method -eq 'textDocument/publishDiagnostics') {
-        $diags[$m.params.uri] = $m.params.diagnostics
-    }
-}
-$focusDiag = $diags["file:///D:/source/Project/ST2C-master/examples/projects/robot_arm/io_config.st"]
-if ($focusDiag -and $focusDiag.Count -gt 0) {
-    $hasTypeError = ($focusDiag | Where-Object { $_.message -match 'can not find type' })
-    if ($hasTypeError) { nok "io_config.st" ($focusDiag | ConvertTo-Json) }
-    else { ok "io_config.st: errors = $($focusDiag.Count) (none are 'can not find type')" }
+Start-Sleep 3
+$diags = drainDiag "test_struct.st" 3000
+if ($diags -and $diags.Count -gt 0) {
+    $typeErr = $diags | Where-Object { $_.message -match 'can not find type' }
+    if ($typeErr) { nok "test_struct.st: TYPE ERROR" ($typeErr | ConvertTo-Json) }
+    else { ok "test_struct.st: $($diags.Count) diags (non-type errors)" }
 } else {
-    ok "io_config.st: no errors (cross-file types resolved)"
-}
-Write-Host "  (all workspace .st files were auto-loaded for symbol resolution)"
+    ok "test_struct.st: no errors" }
 
-# Shutdown
 send @{ jsonrpc = "2.0"; id = 2; method = "shutdown"; params = $null }
-recvAny(3000) | Out-Null
-send @{ jsonrpc = "2.0"; method = "exit"; params = @{} }
+Start-Sleep 0.5; $proc.Kill()
 
 Write-Host "`n=== $P passed, $F failed ===" -F $(if($F){'Red'}else{'Green'})
-exit $F

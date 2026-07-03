@@ -33,10 +33,6 @@ public class ST2CTextDocumentService implements TextDocumentService {
         this.server = server;
     }
 
-    public void setWorkspaceFolders(List<org.eclipse.lsp4j.WorkspaceFolder> folders) {
-        diagnostic.setWorkspaceFolders(folders);
-    }
-
     @Override
     public void didOpen(DidOpenTextDocumentParams params) {
         String uri = params.getTextDocument().getUri();
