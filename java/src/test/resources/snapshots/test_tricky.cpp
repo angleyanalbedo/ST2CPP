@@ -323,14 +323,6 @@ SINT ROL(DWORD IN, INT N);
 
 SINT ROR(DWORD IN, INT N);
 
-SINT AND(DWORD A, DWORD B);
-
-SINT OR(DWORD A, DWORD B);
-
-SINT XOR(DWORD A, DWORD B);
-
-SINT NOT(DWORD IN);
-
 REAL MOVE(REAL IN);
 
 REAL TRUNC(REAL IN);
@@ -381,6 +373,7 @@ REAL AVERAGE(REAL A, REAL B) {
 		return (A + B) / 2.0;
 }
 struct STATE_MACHINE {
+    BOOL FAULT = false;
     INT MODE = 0;
     DINT ACCUM = 0;
     BOOL RUNNING = FALSE;
@@ -389,7 +382,6 @@ struct STATE_MACHINE {
     DINT POSITION = 0;
     DIRECTION DIR;
     INT SPEED = 0;
-    BOOL FAULT = false;
 
     void update(GVL& gvl, ProcessImage& io, TIME dt) {
 

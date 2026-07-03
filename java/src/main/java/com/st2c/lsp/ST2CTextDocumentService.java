@@ -33,12 +33,17 @@ public class ST2CTextDocumentService implements TextDocumentService {
         this.server = server;
     }
 
+    public void setWorkspaceFolders(List<org.eclipse.lsp4j.WorkspaceFolder> folders) {
+        diagnostic.setWorkspaceFolders(folders);
+    }
+
     @Override
     public void didOpen(DidOpenTextDocumentParams params) {
         String uri = params.getTextDocument().getUri();
         String content = params.getTextDocument().getText();
         documents.put(uri, content);
-        runDiagnostics(uri, content);
+        diagnostic.updateDocument(uri, content);
+        publishAllDiagnostics();
     }
 
     @Override
@@ -48,13 +53,17 @@ public class ST2CTextDocumentService implements TextDocumentService {
         if (!changes.isEmpty()) {
             String content = changes.get(changes.size() - 1).getText();
             documents.put(uri, content);
-            runDiagnostics(uri, content);
+            diagnostic.updateDocument(uri, content);
+            publishAllDiagnostics();
         }
     }
 
     @Override
     public void didClose(DidCloseTextDocumentParams params) {
-        documents.remove(params.getTextDocument().getUri());
+        String uri = params.getTextDocument().getUri();
+        documents.remove(uri);
+        diagnostic.removeDocument(uri);
+        publishAllDiagnostics();
     }
 
     @Override
@@ -82,10 +91,10 @@ public class ST2CTextDocumentService implements TextDocumentService {
         return CompletableFuture.completedFuture(result);
     }
 
-    private void runDiagnostics(String uri, String content) {
-        diagnostic.analyze(uri, content);
+    private void publishAllDiagnostics() {
         var client = server.getLanguageClient();
-        if (client != null) {
+        if (client == null) return;
+        for (String uri : documents.keySet()) {
             var params = new PublishDiagnosticsParams();
             params.setUri(uri);
             params.setDiagnostics(diagnostic.getDiagnostics(uri));
