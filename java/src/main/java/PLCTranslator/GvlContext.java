@@ -631,7 +631,7 @@ public class GvlContext {
         sb.append("// DO NOT EDIT\n");
         sb.append("#include \"debug/debug_if.h\"\n\n");
         sb.append("namespace rt_plc {\n\n");
-        sb.append("const DebugVar st2c_debug_vars[] = {\n");
+        sb.append("extern const DebugVar st2c_debug_vars[] = {\n");
 
         int id = 1;
 
@@ -649,10 +649,12 @@ public class GvlContext {
             }
 
             sb.append("    {").append(id).append(", DebugStorage::GVL, ")
-              .append(offset).append(", 0xFF, ")
+              .append("0xFF, ")
               .append(toDebugType(type)).append(", ")
+              .append("DebugAccess::READ_WRITE, ")
+              .append(offset).append(", ")
               .append(size).append(", ").append(count)
-              .append(", DebugAccess::READ_WRITE},\n");
+              .append("},\n");
             id++;
         }
 
@@ -671,15 +673,17 @@ public class GvlContext {
             int size = getDebugSize(io.typeName);
 
             sb.append("    {").append(id).append(", ").append(storage).append(", ")
-              .append(io.byteOffset).append(", ").append(bitOff).append(", ")
+              .append(bitOff).append(", ")
               .append(toDebugType(io.typeName)).append(", ")
-              .append(size).append(", 1, DebugAccess::FORCEABLE},\n");
+              .append("DebugAccess::FORCEABLE, ")
+              .append(io.byteOffset).append(", ")
+              .append(size).append(", 1},\n");
             id++;
         }
 
         sb.append("};\n\n");
-        sb.append("const uint32_t st2c_debug_var_count = ").append(id - 1).append(";\n");
-        sb.append("const uint8_t st2c_build_id[16] = { /* TODO: hash of source */ };\n\n");
+        sb.append("extern const uint32_t st2c_debug_var_count = ").append(id - 1).append(";\n");
+        sb.append("extern const uint8_t st2c_build_id[16] = { /* TODO: hash of source */ };\n\n");
         sb.append("} // namespace rt_plc\n");
         return sb.toString();
     }

@@ -225,6 +225,13 @@ void Scheduler::tick() {
     currentPhase = ScanPhase::READ_INPUTS;
     syncInputs();
 
+#ifdef ENABLE_DEBUG
+    if (debug_) {
+        debug_->applyPendingCommands();
+        debug_->applyForces(gvl, image, ForcePhase::PRE_LOGIC, systemState);
+    }
+#endif
+
     // 更新系统时间（仅诊断模式下精确计时）
 #ifdef ENABLE_DIAG
     int64_t nowWall = platform::steadyUs();
@@ -267,6 +274,10 @@ void Scheduler::tick() {
     phaseStart = platform::steadyUs();
 #endif
 
+#ifdef ENABLE_DEBUG
+    if (debug_) debug_->applyForces(gvl, image, ForcePhase::POST_LOGIC, systemState);
+#endif
+
     // Phase 3: Write Outputs
     currentPhase = ScanPhase::WRITE_OUTPUTS;
     syncOutputs();
@@ -284,6 +295,12 @@ void Scheduler::tick() {
     TIME scanTime = scanEnd - scanStart;
     diagManager.recordScan(scanTime);
     diagManager.recordPhase(ScanPhase::HOUSEKEEPING, platform::steadyUs() - phaseStart);
+#endif
+
+#ifdef ENABLE_DEBUG
+    if (debug_) {
+        debug_->publishSnapshot(gvl, image, totalTicks, systemTime, diag, systemState);
+    }
 #endif
 
     totalTicks++;

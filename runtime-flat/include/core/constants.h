@@ -33,4 +33,17 @@ constexpr int    MAX_POUS_PER_TASK = 8;
 constexpr int    MAX_PRIORITY      = 31;
 constexpr int    MIN_PRIORITY      = 0;
 
+// Debug engine
+#ifndef DEBUG_MAX_WATCH_VARS
+constexpr int    DEBUG_MAX_WATCH_VARS = 64;
+#endif
+
+#ifndef DEBUG_MAX_FORCES
+constexpr int    DEBUG_MAX_FORCES     = 32;
+#endif
+
+#ifndef DEBUG_MAX_PENDING_COMMANDS
+constexpr int    DEBUG_MAX_PENDING_COMMANDS = 16;
+#endif
+
 } // namespace rt_plc

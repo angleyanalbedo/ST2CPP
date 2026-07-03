@@ -21,7 +21,7 @@ ROOT     = ../..
 RT_DIR   = $(ROOT)/runtime-flat
 BUILD    = $(ROOT)/output/flat/build
 
-RT_SRCS  = $(wildcard $(RT_DIR)/src/*.cpp)
+RT_SRCS  = $(filter-out $(RT_DIR)/src/debug_engine.cpp, $(wildcard $(RT_DIR)/src/*.cpp))
 PLAT_SRC = runtime_main.cpp
 POU_SRCS = $(wildcard $(BUILD)/*.cpp)
 CONFIG_JSON = config/config.json
@@ -45,7 +45,7 @@ $(CONFIG_GEN_STUB): $(CONFIG_JSON) | build
 OPT      ?= -O2
 CXXFLAGS  = $(OPT) -std=c++17 \
             -I$(RT_DIR)/include \
-            -I$(TCI_DIR) -I. \
+            -I$(TCI_DIR) -I. -I$(BUILD) \
             -Wall -Wextra -Wno-unused-parameter
 LDFLAGS   = $(OPT) -lwinmm -lws2_32  # Windows 默认，Linux 在下文覆盖
 
@@ -69,6 +69,20 @@ debug: all
 
 debug-run: debug
 	./$(TARGET)
+
+# ─── Debug Server (with DebugEngine) ───
+DEBUG_SRCS = $(RT_SRCS) $(PLAT_SRC) $(POU_SRCS) $(CONFIG_GEN) $(TCI_SRCS) \
+             $(RT_DIR)/src/debug_engine.cpp debug_tcp_server.cpp
+DBG_TARGET = plc_runtime_desktop_dbg$(EXE)
+
+$(DBG_TARGET): CXXFLAGS = -O0 -g -ggdb -std=c++17 -DENABLE_DEBUG \
+                          -I$(RT_DIR)/include -I$(TCI_DIR) -I. -I$(BUILD) \
+                          -Wall -Wextra -Wno-unused-parameter
+$(DBG_TARGET): $(DEBUG_SRCS)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+	@echo "=== Build (debug-server): $@ ==="
+
+debug-server: $(CONFIG_GEN) $(DBG_TARGET)
 
 STUB_SRCS = $(RT_SRCS) $(PLAT_SRC) $(CONFIG_GEN_STUB) $(TCI_SRCS)
 STUB_TARGET = plc_runtime_desktop_stub$(EXE)

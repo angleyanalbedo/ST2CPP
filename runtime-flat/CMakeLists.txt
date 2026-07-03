@@ -28,6 +28,12 @@ if(ENABLE_DIAG)
     add_compile_definitions(ENABLE_DIAG)
 endif()
 
+option(ENABLE_DEBUG "Enable runtime debug engine" OFF)
+if(ENABLE_DEBUG)
+    add_compile_definitions(ENABLE_DEBUG)
+    list(APPEND RT_CORE_SOURCES ${RT_SRC_DIR}/debug_engine.cpp)
+endif()
+
 # ═══ 目录 ═══
 set(RT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(RT_SRC_DIR     ${CMAKE_CURRENT_SOURCE_DIR}/src)

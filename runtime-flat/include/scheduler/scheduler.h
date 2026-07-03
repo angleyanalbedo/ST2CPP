@@ -15,6 +15,9 @@
 #include "core/diag_manager.h"
 #include "core/platform.h"
 #include "rt_plc.h"
+#ifdef ENABLE_DEBUG
+#include "debug/debug_if.h"
+#endif
 
 #include <cstdint>
 #include <cstring>
@@ -37,6 +40,12 @@ public:
     DiagStats     diag;
     DiagManager   diagManager{diag};
     plc_lock      gvlLock;     // GVL 访问互斥锁
+
+#ifdef ENABLE_DEBUG
+    DebugEngine*  debug_ = nullptr;
+    void setDebugEngine(DebugEngine* d) { debug_ = d; }
+    DebugEngine* debug() { return debug_; }
+#endif
 
     // 时间
     uint64_t totalTicks    = 0;

@@ -19,6 +19,18 @@
 
 #include "core/platform.h"
 
+#ifdef ENABLE_DEBUG
+#include "debug/debug_if.h"
+#include "debug_tcp_server.h"
+static rt_plc::DebugEngine debugEngine;
+
+namespace rt_plc {
+extern const DebugVar  st2c_debug_vars[];
+extern const uint32_t  st2c_debug_var_count;
+extern const uint8_t   st2c_build_id[16];
+}
+#endif
+
 using namespace rt_plc;
 
 static volatile bool running = true;
@@ -121,6 +133,16 @@ int main(int argc, char* argv[]) {
     if (!jitterOnly) plcInit();
     else RT_LOG_INFO("Jitter-only mode\n");
 
+#ifdef ENABLE_DEBUG
+    debugEngine.init(st2c_debug_vars, st2c_debug_var_count, st2c_build_id);
+    debugEngine.bindMemory(&sched.gvl, &sched.image);
+    sched.setDebugEngine(&debugEngine);
+    int debugPort = 9090;
+    if (debugTcpServerStart(debugEngine, debugPort)) {
+        platform::logInfo("[Debug] TCP server on 127.0.0.1:%d\n", debugPort);
+    }
+#endif
+
     jitterReset(cycleUs);
     int64_t lastDiag = 0;
     uint64_t tickCount = 0;
@@ -158,6 +180,10 @@ int main(int argc, char* argv[]) {
     }
 
     if (!jitterOnly) sched.stop();
+#ifdef ENABLE_DEBUG
+    debugTcpServerStop();
+    platform::logInfo("[Debug] TCP server stopped\n");
+#endif
     printJitterStats();
     platform::logInfo("Stopped. Total ticks: %llu\n", (unsigned long long)tickCount);
     return 0;
