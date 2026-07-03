@@ -54,8 +54,8 @@ public class HoverAnalyzer {
         Map.entry("CTD", "减计数器\n\n```st\ncounter : CTD;\ncounter(CD := input, LD := load, PV := 10);\n```")
     );
 
-    public Hover getHover(String uri, int line, int character) {
-        String word = getWordAtPosition(uri, line, character);
+    public Hover getHover(String document, int line, int character) {
+        String word = getWordAtPosition(document, line, character);
         if (word == null || word.isEmpty()) {
             return null;
         }
@@ -74,8 +74,25 @@ public class HoverAnalyzer {
         return hover;
     }
 
-    private String getWordAtPosition(String uri, int line, int character) {
-        return null;
+    private String getWordAtPosition(String document, int line, int character) {
+        if (document == null) return null;
+        String[] lines = document.split("\n", -1);
+        if (line < 0 || line >= lines.length) return null;
+        String l = lines[line];
+        if (character < 0 || character > l.length()) return null;
+
+        int start = character;
+        while (start > 0 && isWordChar(l.charAt(start - 1))) start--;
+        int end = character;
+        while (end < l.length() && isWordChar(l.charAt(end))) end++;
+
+        if (start == end) return null;
+        return l.substring(start, end);
+    }
+
+    private boolean isWordChar(char c) {
+        return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+               (c >= '0' && c <= '9') || c == '_';
     }
 
     private String getKeyDocument(String word) {

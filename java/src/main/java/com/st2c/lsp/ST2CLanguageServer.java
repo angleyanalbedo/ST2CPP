@@ -6,18 +6,28 @@ import org.eclipse.lsp4j.InitializeParams;
 import org.eclipse.lsp4j.InitializeResult;
 import org.eclipse.lsp4j.ServerCapabilities;
 import org.eclipse.lsp4j.TextDocumentSyncKind;
+import org.eclipse.lsp4j.services.LanguageClient;
 import org.eclipse.lsp4j.services.LanguageServer;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import org.eclipse.lsp4j.services.WorkspaceService;
 
 public class ST2CLanguageServer implements LanguageServer {
-    private final TextDocumentService textDocumentService;
+    private final ST2CTextDocumentService textDocumentService;
     private final WorkspaceService workspaceService;
+    private LanguageClient client;
     private int processId;
 
     public ST2CLanguageServer() {
         this.textDocumentService = new ST2CTextDocumentService(this);
         this.workspaceService = new ST2CWorkspaceService();
+    }
+
+    public void setLanguageClient(LanguageClient client) {
+        this.client = client;
+    }
+
+    public LanguageClient getLanguageClient() {
+        return client;
     }
 
     @Override
@@ -29,9 +39,7 @@ public class ST2CLanguageServer implements LanguageServer {
         ServerCapabilities capabilities = new ServerCapabilities();
         capabilities.setTextDocumentSync(TextDocumentSyncKind.Full);
 
-        CompletionOptions completionOptions = new CompletionOptions();
-        capabilities.setCompletionProvider(completionOptions);
-
+        capabilities.setCompletionProvider(new CompletionOptions());
         capabilities.setHoverProvider(true);
         capabilities.setDefinitionProvider(true);
 
