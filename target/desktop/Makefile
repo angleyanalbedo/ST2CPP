@@ -65,7 +65,7 @@ DBG_TARGET  = build/plc_runtime_desktop_dbg$(EXE)
 
 .PHONY: all stub run clean config debug debug-run
 
-all: clean-pou $(CONFIG_GEN) $(TARGET)
+all: $(CONFIG_GEN) $(TARGET)
 
 debug: OPT = -O0 -g -ggdb
 debug: all
@@ -83,7 +83,7 @@ $(DBG_TARGET): $(DEBUG_SRCS) | build
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	@echo "=== Build (debug-server): $@ ==="
 
-debug-server: clean-pou $(CONFIG_GEN) $(DBG_TARGET)
+debug-server: $(CONFIG_GEN) $(DBG_TARGET)
 
 clean-pou:
 	cmd /c "if exist $(BUILD_WIN) del /Q $(BUILD_WIN)\*.* 2>NUL & if exist $(BUILD_WIN) for /d %%p in ($(BUILD_WIN)\*) do rd /Q %%p 2>NUL"

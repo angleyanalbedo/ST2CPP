@@ -54,7 +54,7 @@ TARGET   = plc_runtime_windows.exe
 
 .PHONY: all stub run clean config
 
-all: clean-pou $(CONFIG_GEN) $(TARGET)
+all: $(CONFIG_GEN) $(TARGET)
 
 clean-pou:
 	cmd /c "if exist $(BUILD_WIN) del /Q $(BUILD_WIN)\*.* 2>NUL & if exist $(BUILD_WIN) for /d %%p in ($(BUILD_WIN)\*) do rd /Q %%p 2>NUL"

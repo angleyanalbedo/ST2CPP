@@ -207,7 +207,7 @@ public class VisitNamespaceSymbolic implements Strategy {
             }
             if (fieldVar == null) {
                 throw new PLCSemanticException("struct " + typeSymbol.getName()
-                        + " has no member named " + fieldName + " FROM : " + errorCtx.getText());
+                        + " has no member named " + fieldName + " FROM : " + errorCtx.getText(), errorCtx);
             }
         } else if (typeSymbol instanceof PLCBaseClassDeclSymbol classType) {
             PLCSymbolTable importTable = classType.getImportSymbolTable();
@@ -215,14 +215,14 @@ public class VisitNamespaceSymbolic implements Strategy {
             fieldVar = (fieldSym instanceof PLCVariable) ? (PLCVariable) fieldSym : null;
             if (fieldVar == null) {
                 throw new PLCSemanticException("type " + typeSymbol.getName()
-                        + " has no member named " + fieldName + " FROM : " + errorCtx.getText());
+                        + " has no member named " + fieldName + " FROM : " + errorCtx.getText(), errorCtx);
             }
         } else if (typeSymbol == null) {
             throw new PLCSemanticException("variable " + current.getName()
-                    + " has unknown type (typeId=" + currentTypeId + ") FROM : " + errorCtx.getText());
+                    + " has unknown type (typeId=" + currentTypeId + ") FROM : " + errorCtx.getText(), errorCtx);
         } else {
             throw new PLCSemanticException("variable " + current.getName()
-                    + " is not a struct or FB type FROM : " + errorCtx.getText());
+                    + " is not a struct or FB type FROM : " + errorCtx.getText(), errorCtx);
         }
 
         PLCVariable updated = new PLCVariable(current);
