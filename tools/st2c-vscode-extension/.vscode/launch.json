@@ -5,7 +5,19 @@
             "name": "Run Extension",
             "type": "extensionHost",
             "request": "launch",
-            "args": ["--extensionDevelopmentPath=${workspaceFolder}"],
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}"
+            ],
+            "outFiles": ["${workspaceFolder}/out/**/*.js"]
+        },
+        {
+            "name": "Run Extension (with .st file)",
+            "type": "extensionHost",
+            "request": "launch",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}",
+                "${workspaceFolder}/../../examples/projects/hvac_controller/main.st"
+            ],
             "outFiles": ["${workspaceFolder}/out/**/*.js"]
         }
     ]

@@ -66,7 +66,11 @@ public class DiagnosticAnalyzer {
         if (!Files.isDirectory(dirPath)) return;
         try (var stream = Files.list(dirPath)) {
             stream.filter(p -> p.toString().endsWith(".st"))
-                  .forEach(p -> supportFiles.put(p.toString(), ""));
+                  .forEach(p -> {
+                      supportFiles.put(p.toString(), "");
+                      System.err.println("[LSP] Support file registered: " + p.getFileName());
+                  });
+            System.err.println("[LSP] Loaded " + supportFiles.size() + " support files from " + dir);
         } catch (IOException e) {
         }
     }
@@ -82,6 +86,7 @@ public class DiagnosticAnalyzer {
             PLCVisitor visitor = new PLCVisitor(property);
 
             // 自动加载同目录 .st 支持文件（仅构建符号表，不产生诊断）
+            System.err.println("[LSP] Support files to parse: " + supportFiles.size());
             for (String path : supportFiles.keySet()) {
                 String uri = "file:///" + path.replace('\\', '/');
                 if (documents.containsKey(uri)) continue;
@@ -89,8 +94,11 @@ public class DiagnosticAnalyzer {
                     String content = new String(Files.readAllBytes(Paths.get(path)));
                     PLCSTPARSERParser parser = new PLCSTPARSERParser(
                         new CommonTokenStream(new PLCSTPARSERLexer(CharStreams.fromString(content))));
+                    System.err.println("[LSP] Parsing support file: " + Paths.get(path).getFileName());
                     visitor.visit(parser.startpoint());
-                } catch (Exception ignored) {
+                    System.err.println("[LSP] OK: " + Paths.get(path).getFileName());
+                } catch (Exception e) {
+                    System.err.println("[LSP] SKIP (error): " + Paths.get(path).getFileName() + " - " + e.getMessage());
                 }
             }
 

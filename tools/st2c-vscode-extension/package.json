@@ -1,14 +1,21 @@
 {
   "name": "st2c",
   "displayName": "ST2C — IEC 61131-3 ST Language",
-  "description": "结构化文本语言支持：语法高亮、悬停提示、自动补全、实时诊断",
+  "description": "ST language support: syntax highlight, hover, completion, diagnostics, compile, and GDB debug",
   "version": "1.0.0",
   "publisher": "st2c",
   "private": true,
   "license": "GPL-2.0",
   "engines": { "vscode": "^1.85.0" },
   "categories": ["Programming Languages", "Linters"],
-  "activationEvents": ["onLanguage:st"],
+  "activationEvents": [
+    "onLanguage:st",
+    "onCommand:st2c.compileFile",
+    "onCommand:st2c.compileDebug",
+    "onCommand:st2c.buildRuntime",
+    "onCommand:st2c.debugRuntime",
+    "onDebugInitialConfigurations"
+  ],
   "main": "./extension.js",
   "contributes": {
     "languages": [
@@ -26,13 +33,107 @@
         "path": "./syntaxes/st.tmLanguage.json"
       }
     ],
+    "commands": [
+      {
+        "command": "st2c.compileFile",
+        "title": "ST2C: Compile Current File",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "st2c.compileDebug",
+        "title": "ST2C: Compile for Debug (with #line directives)",
+        "icon": "$(bug)"
+      },
+      {
+        "command": "st2c.buildRuntime",
+        "title": "ST2C: Build Runtime Debug-Server",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "st2c.debugRuntime",
+        "title": "ST2C: Compile + Build + Debug",
+        "icon": "$(debug-alt)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "st2c.compileFile",
+        "key": "ctrl+shift+b",
+        "when": "editorLangId == st"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "st2c",
+        "label": "ST2C GDB Debug",
+        "configurationAttributes": {
+          "launch": {
+            "required": [],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "Path to the debug runtime executable",
+                "default": "${workspaceFolder}/target/desktop/build/plc_runtime_desktop_dbg.exe"
+              },
+              "args": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Command-line arguments",
+                "default": ["--cycle-us", "1000"]
+              },
+              "cycleUs": {
+                "type": "number",
+                "description": "PLC cycle in microseconds",
+                "default": 1000
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "st2c",
+            "request": "launch",
+            "name": "ST2C: Debug PLC Runtime",
+            "program": "${workspaceFolder}/target/desktop/build/plc_runtime_desktop_dbg.exe",
+            "args": ["--cycle-us", "1000"],
+            "cwd": "${workspaceFolder}"
+          }
+        ]
+      }
+    ],
     "configuration": {
       "title": "ST2C",
       "properties": {
         "st2c.jarPath": {
           "type": "string",
           "default": "",
-          "markdownDescription": "st2c.jar 路径。留空自动使用扩展目录 `../../java/target/st2c-jar-with-dependencies.jar`"
+          "markdownDescription": "Path to st2c-jar-with-dependencies.jar. If empty, uses `../../java/target/st2c-jar-with-dependencies.jar` relative to the extension directory."
+        },
+        "st2c.outputDir": {
+          "type": "string",
+          "default": "${workspaceFolder}/output/flat/build",
+          "markdownDescription": "Output directory for generated C++ files."
+        },
+        "st2c.makeTarget": {
+          "type": "string",
+          "default": "desktop",
+          "enum": ["desktop", "windows"],
+          "markdownDescription": "Runtime target to build: `desktop` or `windows`."
+        },
+        "st2c.makePath": {
+          "type": "string",
+          "default": "mingw32-make",
+          "markdownDescription": "Path to `make` executable. Default: `mingw32-make`."
+        },
+        "st2c.gdbPath": {
+          "type": "string",
+          "default": "gdb.exe",
+          "markdownDescription": "Path to GDB executable used for debugging."
+        },
+        "st2c.stdlibPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Path to custom IEC stdlib .st file. If empty, uses built-in stdlib from classpath."
         }
       }
     }
