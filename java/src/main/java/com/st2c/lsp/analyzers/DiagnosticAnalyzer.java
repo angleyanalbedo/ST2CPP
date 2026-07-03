@@ -52,7 +52,10 @@ public class DiagnosticAnalyzer {
 
     public synchronized void setWorkspaceFolders(List<org.eclipse.lsp4j.WorkspaceFolder> folders) {
         if (folders != null && !folders.isEmpty()) {
-            workspaceRoot = uriToPath(folders.get(0).getUri());
+            String path = uriToPath(folders.get(0).getUri());
+            if (path != null) {
+                workspaceRoot = path;
+            }
         }
     }
 
@@ -61,9 +64,16 @@ public class DiagnosticAnalyzer {
             documents.put(uri, content);
             // 初次打开文件时用文件目录作为 workspaceRoot
             if (workspaceRoot == null) {
-                workspaceRoot = uriToPath(uri);
-                if (workspaceRoot != null) {
-                    workspaceRoot = Paths.get(workspaceRoot).getParent().toString();
+                try {
+                    String path = uriToPath(uri);
+                    if (path != null) {
+                        Path parent = Paths.get(path).getParent();
+                        if (parent != null && Files.isDirectory(parent)) {
+                            workspaceRoot = parent.toString();
+                        }
+                    }
+                } catch (Exception e) {
+                    // URI 无法解析为本地路径时跳过
                 }
             }
         }
@@ -134,7 +144,9 @@ public class DiagnosticAnalyzer {
 
     private List<String> scanStFiles(String dir) {
         if (dir == null) return List.of();
-        try (Stream<Path> stream = Files.list(Paths.get(dir))) {
+        Path dirPath = Paths.get(dir);
+        if (!Files.isDirectory(dirPath)) return List.of();
+        try (Stream<Path> stream = Files.list(dirPath)) {
             return stream
                 .filter(p -> p.toString().endsWith(".st"))
                 .map(Path::toString)
