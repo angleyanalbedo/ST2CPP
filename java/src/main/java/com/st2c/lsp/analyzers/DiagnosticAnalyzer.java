@@ -5,9 +5,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
@@ -27,24 +29,21 @@ import staticCheckVisitor.PLCVisitor;
 import staticCheckVisitor.register.Registrant;
 
 public class DiagnosticAnalyzer {
-    private final Map<String, String> documents = new HashMap<>();
-    private final Map<String, String> supportFiles = new HashMap<>();
-    private final Map<String, List<Diagnostic>> diagnosticsMap = new HashMap<>();
+    private final Map<String, String> documents = new LinkedHashMap<>();
+    private final List<String> supportFiles = new ArrayList<>();
+    private final Map<String, List<Diagnostic>> diagnosticsMap = new LinkedHashMap<>();
     private boolean strategiesRegistered = false;
 
     private synchronized void ensureStrategies() {
         if (strategiesRegistered) return;
-        try {
-            new Registrant().autoRegister();
-            strategiesRegistered = true;
-        } catch (Exception e) {
-        }
+        try { new Registrant().autoRegister(); strategiesRegistered = true; } catch (Exception e) {}
     }
 
     public void updateDocument(String uri, String content) {
         synchronized (this) {
+            boolean isNew = !documents.containsKey(uri);
             documents.put(uri, content);
-            if (supportFiles.isEmpty()) {
+            if (isNew && supportFiles.isEmpty()) {
                 loadSupportFiles(getDirFromUri(uri));
             }
         }
@@ -64,15 +63,12 @@ public class DiagnosticAnalyzer {
         if (dir.isEmpty()) return;
         Path dirPath = Paths.get(dir);
         if (!Files.isDirectory(dirPath)) return;
-        try (var stream = Files.list(dirPath)) {
+        try (Stream<Path> stream = Files.list(dirPath)) {
             stream.filter(p -> p.toString().endsWith(".st"))
-                  .forEach(p -> {
-                      supportFiles.put(p.toString(), "");
-                      System.err.println("[LSP] Support file registered: " + p.getFileName());
-                  });
-            System.err.println("[LSP] Loaded " + supportFiles.size() + " support files from " + dir);
-        } catch (IOException e) {
-        }
+                  .map(Path::toString)
+                  .sorted()
+                  .forEach(supportFiles::add);
+        } catch (IOException e) {}
     }
 
     private void reanalyzeAll() {
@@ -85,24 +81,30 @@ public class DiagnosticAnalyzer {
             ParseTreeProperty<ArrayList<PLCSymbol>> property = new ParseTreeProperty<>();
             PLCVisitor visitor = new PLCVisitor(property);
 
-            // 自动加载同目录 .st 支持文件（仅构建符号表，不产生诊断）
-            System.err.println("[LSP] Support files to parse: " + supportFiles.size());
-            for (String path : supportFiles.keySet()) {
-                String uri = "file:///" + path.replace('\\', '/');
-                if (documents.containsKey(uri)) continue;
+            // 解析支持文件（仅建符号表，不产生诊断）
+            List<String> ordered = supportFiles.stream()
+                .sorted((a, b) -> {
+                    String fa = Paths.get(a).getFileName().toString().toLowerCase();
+                    String fb = Paths.get(b).getFileName().toString().toLowerCase();
+                    boolean aIsType = fa.startsWith("type") || fa.startsWith("io_config");
+                    boolean bIsType = fb.startsWith("type") || fb.startsWith("io_config");
+                    if (aIsType && !bIsType) return -1;
+                    if (!aIsType && bIsType) return 1;
+                    return fa.compareTo(fb);
+                })
+                .collect(Collectors.toList());
+
+            // 第一步：解析所有支持文件（不管是否也在已打开列表中），建立完整符号表
+            for (String path : ordered) {
                 try {
                     String content = new String(Files.readAllBytes(Paths.get(path)));
                     PLCSTPARSERParser parser = new PLCSTPARSERParser(
                         new CommonTokenStream(new PLCSTPARSERLexer(CharStreams.fromString(content))));
-                    System.err.println("[LSP] Parsing support file: " + Paths.get(path).getFileName());
                     visitor.visit(parser.startpoint());
-                    System.err.println("[LSP] OK: " + Paths.get(path).getFileName());
-                } catch (Exception e) {
-                    System.err.println("[LSP] SKIP (error): " + Paths.get(path).getFileName() + " - " + e.getMessage());
-                }
+                } catch (Exception ignored) {}
             }
 
-            // 分析已打开的文件（共享符号表，跨文件类型引用可解析）
+            // 第二步：分析已打开的文件（共享符号表，跨文件类型可解析）
             for (var entry : documents.entrySet()) {
                 List<Diagnostic> diags = new ArrayList<>();
                 try {
@@ -120,18 +122,12 @@ public class DiagnosticAnalyzer {
 
     private String getDirFromUri(String uri) {
         try {
-            String path;
-            if (uri.startsWith("file:///"))
-                path = uri.substring(8).replace('/', '\\');
-            else if (uri.startsWith("file:/"))
-                path = uri.substring(6).replace('/', '\\');
-            else
-                path = uri;
+            String path = uri.startsWith("file:///") ? uri.substring(8).replace('/', '\\')
+                     : uri.startsWith("file:/") ? uri.substring(6).replace('/', '\\')
+                     : uri;
             Path parent = Paths.get(path).getParent();
             return parent != null ? parent.toString() : "";
-        } catch (Exception e) {
-            return "";
-        }
+        } catch (Exception e) { return ""; }
     }
 
     private Diagnostic createDiagnostic(Exception e) {
@@ -140,15 +136,12 @@ public class DiagnosticAnalyzer {
         Position start = new Position(0, 0), end = new Position(0, 0);
         if (e instanceof org.antlr.v4.runtime.RecognitionException) {
             var re = (org.antlr.v4.runtime.RecognitionException) e;
-            start = new Position(re.getOffendingToken().getLine() - 1,
-                re.getOffendingToken().getCharPositionInLine());
-            end = new Position(start.getLine(),
-                start.getCharacter() + re.getOffendingToken().getText().length());
+            start = new Position(re.getOffendingToken().getLine() - 1, re.getOffendingToken().getCharPositionInLine());
+            end = new Position(start.getLine(), start.getCharacter() + re.getOffendingToken().getText().length());
         } else if (e instanceof PLCSemanticException) {
             var ctx = ((PLCSemanticException) e).getCtx();
             if (ctx != null) {
-                start = new Position(ctx.getStart().getLine() - 1,
-                    ctx.getStart().getCharPositionInLine());
+                start = new Position(ctx.getStart().getLine() - 1, ctx.getStart().getCharPositionInLine());
                 end = new Position(ctx.getStop().getLine() - 1,
                     ctx.getStop().getCharPositionInLine() + ctx.getStop().getText().length());
             }

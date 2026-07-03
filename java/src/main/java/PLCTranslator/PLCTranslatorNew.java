@@ -142,7 +142,8 @@ public class PLCTranslatorNew extends PLCSTPARSERBaseVisitor<String> {
     public String lineDirective(ParserRuleContext ctx) {
         if (!emitLineDirectives || currentSourceName == null) return "";
         int line = ctx.getStart().getLine();
-        return "\n#line " + line + " \"" + currentSourceName + "\"\n";
+        String path = currentSourceName.replace('\\', '/');
+        return "\n#line " + line + " \"" + path + "\"\n";
     }
 
     public boolean shouldEmitHeader() {
