@@ -22,16 +22,20 @@ import staticCheckVisitor.register.Registrant;
 
 public class DiagnosticAnalyzer {
     private final Map<String, List<Diagnostic>> diagnosticsMap = new ConcurrentHashMap<>();
+    private static boolean strategiesRegistered = false;
 
-    static {
+    private static synchronized void ensureStrategies() {
+        if (strategiesRegistered) return;
         try {
             new Registrant().autoRegister();
+            strategiesRegistered = true;
         } catch (Exception e) {
-            System.err.println("[DiagnosticAnalyzer] Failed to register strategies: " + e.getMessage());
+            System.err.println("[DiagnosticAnalyzer] Strategy registration failed: " + e.getMessage());
         }
     }
 
     public void analyze(String uri, String content) {
+        ensureStrategies();
         List<Diagnostic> diagnostics = new ArrayList<>();
         try {
             CharStream charStream = CharStreams.fromString(content);
