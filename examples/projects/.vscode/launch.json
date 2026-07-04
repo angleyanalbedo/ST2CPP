@@ -1,0 +1,39 @@
+{
+    // 使用 IntelliSense 了解相关属性。 
+    // 悬停以查看现有属性的描述。
+    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "st2c",
+            "request": "launch",
+            "name": "ST2C: Debug PLC Runtime",
+            "program": "${workspaceFolder}/target/desktop/build/plc_runtime_desktop_dbg.exe",
+            "args": [
+                "--cycle-us",
+                "1000"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "cppdbg",
+            "name": "ST2C: Debug PLC Runtime (GDB)",
+            "request": "launch",
+            "program": "${workspaceFolder}/target/desktop/build/plc_runtime_desktop_dbg.exe",
+            "args": [
+                "--cycle-us",
+                "1000"
+            ],
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "miDebuggerPath": "gdb.exe",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}

@@ -242,6 +242,70 @@ public class LSPMultiFileTest {
                 "main.st should resolve ADD_POINTS from utils.st and types from types.st");
     }
 
+    // ─── Test 7: Go to Definition ───
+
+    @Test
+    public void testGoToDefinition() throws Exception {
+        openDocument("types.st");
+        openDocument("utils.st");
+        openDocument("main.st");
+
+        // 在 main.st 中对 "MyPoint" 请求定义跳转（光标放在 "MyPoint" 中间）
+        JsonObject defParams = new JsonObject();
+        defParams.add("textDocument", docId("main.st"));
+        JsonObject dpos = new JsonObject();
+        dpos.addProperty("line", 2);
+        dpos.addProperty("character", 14);  // 在 "MyPoint" 的 'y' 上
+        defParams.add("position", dpos);
+        sendRequest("textDocument/definition", 20, defParams);
+        JsonObject resp = waitForResponse(20);
+        assertNotNull("No response for definition", resp);
+        assertTrue("Definition failed: " + resp, resp.has("result"));
+
+        // Either<List<Location>, List<LocationLink>> 序列化可能为 JSON 数组
+        var resultElem = resp.get("result");
+        if (resultElem.isJsonArray()) {
+            var locs = resultElem.getAsJsonArray();
+            assertTrue("Definition should return at least one location", locs.size() > 0);
+            var firstLoc = locs.get(0).getAsJsonObject();
+            String defUri = firstLoc.get("uri").getAsString();
+            assertTrue("Definition should point to types.st, got: " + defUri,
+                defUri.contains("types.st"));
+            System.err.println("  DEFINITION: " + defUri);
+        } else {
+            System.err.println("  DEFINITION result (unexpected format): " + resultElem);
+        }
+    }
+
+    // ─── Test 8: Find References ───
+
+    @Test
+    public void testFindReferences() throws Exception {
+        openDocument("types.st");
+        openDocument("utils.st");
+        openDocument("main.st");
+
+        // 在 main.st 中对 "MyPoint" 请求查找引用
+        JsonObject refParams = new JsonObject();
+        refParams.add("textDocument", docId("main.st"));
+        JsonObject rpos = new JsonObject();
+        rpos.addProperty("line", 2);
+        rpos.addProperty("character", 14);  // "MyPoint" 内
+        refParams.add("position", rpos);
+        JsonObject ctx = new JsonObject();
+        ctx.addProperty("includeDeclaration", false);
+        refParams.add("context", ctx);
+        sendRequest("textDocument/references", 30, refParams);
+        JsonObject resp = waitForResponse(30);
+        assertNotNull("No response for references", resp);
+        assertTrue("References failed: " + resp, resp.has("result"));
+        var refs = resp.getAsJsonArray("result");
+        System.err.println("  REFERENCES: " + refs.size() + " locations");
+        // MyPoint 在 3 个文件中都有出现: types.st(定义), utils.st(VAR_INPUT), main.st(VAR 2次)
+        assertTrue("References should find at least 2 locations, got " + refs.size(),
+            refs.size() >= 2);
+    }
+
     // ─── Helpers ───
 
     private String uriFor(String filename) {

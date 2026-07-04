@@ -35,12 +35,22 @@ public class StDeclarationScanner {
     }
 
     /**
-     * 扫描多个文件，按拓扑排序返回处理顺序
-     * @param filePaths 所有 .st 文件路径
-     * @param contentProvider 根据路径返回文件内容的函数
-     * @return 拓扑排序后的文件路径列表
+     * 拓扑排序的结果
      */
-    public static List<String> topologicalSort(
+    public static class SortResult {
+        public final List<String> sortedFiles;
+        /** 符号名(小写) → 定义它的文件路径 */
+        public final Map<String, String> symbolToFile;
+        SortResult(List<String> sortedFiles, Map<String, String> symbolToFile) {
+            this.sortedFiles = sortedFiles;
+            this.symbolToFile = symbolToFile;
+        }
+    }
+
+    /**
+     * 扫描多个文件，按拓扑排序返回处理顺序
+     */
+    public static SortResult topologicalSortWithDetails(
             List<String> filePaths,
             java.util.function.Function<String, String> contentProvider) {
 
@@ -71,7 +81,17 @@ public class StDeclarationScanner {
             deps.put(info.path, fileDeps);
         }
 
-        return kahnSort(filePaths, deps);
+        List<String> sorted = kahnSort(filePaths, deps);
+        return new SortResult(sorted, symbolToFile);
+    }
+
+    /**
+     * 兼容旧接口：只返回排序结果
+     */
+    public static List<String> topologicalSort(
+            List<String> filePaths,
+            java.util.function.Function<String, String> contentProvider) {
+        return topologicalSortWithDetails(filePaths, contentProvider).sortedFiles;
     }
 
     private static List<String> kahnSort(

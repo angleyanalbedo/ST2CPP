@@ -42,6 +42,8 @@ public class ST2CLanguageServer implements LanguageServer {
 
         capabilities.setCompletionProvider(new CompletionOptions());
         capabilities.setHoverProvider(true);
+        capabilities.setDefinitionProvider(true);
+        capabilities.setReferencesProvider(true);
 
         InitializeResult result = new InitializeResult(capabilities);
         return CompletableFuture.completedFuture(result);

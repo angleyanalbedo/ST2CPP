@@ -1,20 +1,15 @@
 package com.st2c.lsp;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.eclipse.lsp4j.CompletionItem;
-import org.eclipse.lsp4j.CompletionList;
-import org.eclipse.lsp4j.CompletionParams;
-import org.eclipse.lsp4j.DidChangeTextDocumentParams;
-import org.eclipse.lsp4j.DidCloseTextDocumentParams;
-import org.eclipse.lsp4j.DidOpenTextDocumentParams;
-import org.eclipse.lsp4j.DidSaveTextDocumentParams;
-import org.eclipse.lsp4j.Hover;
-import org.eclipse.lsp4j.HoverParams;
-import org.eclipse.lsp4j.PublishDiagnosticsParams;
+import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
 
@@ -85,6 +80,75 @@ public class ST2CTextDocumentService implements TextDocumentService {
         String content = documents.get(uri);
         Hover result = hover.getHover(content, line, col);
         return CompletableFuture.completedFuture(result);
+    }
+
+    @Override
+    public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> definition(DefinitionParams params) {
+        String uri = params.getTextDocument().getUri();
+        int line = params.getPosition().getLine();
+        int col = params.getPosition().getCharacter();
+        String content = documents.get(uri);
+        if (content == null) return CompletableFuture.completedFuture(null);
+
+        String word = DiagnosticAnalyzer.extractWordAt(content, line, col);
+        if (word == null) return CompletableFuture.completedFuture(Either.forLeft(List.of()));
+
+        var info = diagnostic.findDefinition(word);
+        if (info == null) return CompletableFuture.completedFuture(Either.forLeft(List.of()));
+
+        Location loc = new Location(info.uri, new Range(
+            new Position(info.symbolLine, info.symbolColumn),
+            new Position(info.symbolLine, info.symbolColumn + word.length())
+        ));
+        return CompletableFuture.completedFuture(Either.forLeft(List.of(loc)));
+    }
+
+    @Override
+    public CompletableFuture<List<? extends Location>> references(ReferenceParams params) {
+        String uri = params.getTextDocument().getUri();
+        int line = params.getPosition().getLine();
+        int col = params.getPosition().getCharacter();
+        String content = documents.get(uri);
+        if (content == null) return CompletableFuture.completedFuture(List.of());
+
+        String word = DiagnosticAnalyzer.extractWordAt(content, line, col);
+        if (word == null) return CompletableFuture.completedFuture(List.of());
+
+        // 在所有打开的文件中搜索该符号的出现位置
+        List<Location> results = new ArrayList<>();
+        String lower = word.toLowerCase();
+
+        // 只搜索已打开的文件
+        for (var entry : diagnostic.getDocuments().entrySet()) {
+            findOccurrences(entry.getValue(), entry.getKey(), lower, results);
+        }
+
+        return CompletableFuture.completedFuture(results);
+    }
+
+    private void findOccurrences(String content, String uri, String lowerWord, List<Location> results) {
+        String[] lines = content.split("\n", -1);
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            int idx = 0;
+            while (true) {
+                idx = line.toLowerCase().indexOf(lowerWord, idx);
+                if (idx < 0) break;
+                if (isWordBoundary(line, idx, lowerWord.length())) {
+                    results.add(new Location(uri, new Range(
+                        new Position(i, idx), new Position(i, idx + lowerWord.length())
+                    )));
+                }
+                idx += lowerWord.length();
+            }
+        }
+    }
+
+    private boolean isWordBoundary(String line, int start, int len) {
+        boolean leftOk = start == 0 || !Character.isJavaIdentifierPart(line.charAt(start - 1));
+        int end = start + len;
+        boolean rightOk = end >= line.length() || !Character.isJavaIdentifierPart(line.charAt(end));
+        return leftOk && rightOk;
     }
 
     private void publishAllDiagnostics() {

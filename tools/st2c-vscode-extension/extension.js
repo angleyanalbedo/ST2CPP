@@ -14,8 +14,12 @@ function resolveJar(context) {
 
 function resolveOutputDir() {
     const raw = vscode.workspace.getConfiguration('st2c').get('outputDir');
-    if (!raw) return '${workspaceFolder}/output/flat/build';
-    return raw.replace(/\$\{workspaceFolder\}/g, vscode.workspace.rootPath || '');
+    // If user explicitly set a custom path, respect it (with workspaceFolder variable)
+    if (raw && raw !== '${workspaceFolder}/output/flat/build') {
+        return raw.replace(/\$\{workspaceFolder\}/g, vscode.workspace.rootPath || '');
+    }
+    // Default: repo-root/output/flat/build (relative to extension install dir)
+    return path.resolve(__dirname, '..', '..', 'output', 'flat', 'build');
 }
 
 function resolveMakeTarget() {
@@ -167,10 +171,6 @@ async function buildRuntime(context) {
 function activate(context) {
     outputChannel = vscode.window.createOutputChannel('ST2C');
 
-    // Enable breakpoints in .st files for cppdbg debugging
-    vscode.workspace.getConfiguration('debug')
-        .update('allowBreakpointsEverywhere', true, vscode.ConfigurationTarget.Workspace);
-
     // ─── LSP client ───
     const jar = resolveJar(context);
     const serverOptions = {
@@ -239,6 +239,14 @@ function activate(context) {
         }
     }));
 
+    // ─── Command: runtime debug adapter executable path ───
+    context.subscriptions.push(vscode.commands.registerCommand('st2c.getDebugAdapterExecutable', () => {
+        return {
+            command: 'node',
+            args: [context.asAbsolutePath('debugAdapter.js')],
+        };
+    }));
+
     // ─── Command: compile current .st → build runtime → launch GDB ───
     context.subscriptions.push(vscode.commands.registerCommand('st2c.debugRuntime', async () => {
         try {
@@ -257,7 +265,7 @@ function activate(context) {
             log('=== Step 2: Generate runtime config + Build runtime ===');
             await buildRuntime(context);
 
-            log('=== Step 3: Launch GDB ===');
+            log('=== Step 3: Launch GDB (via ST2C debug adapter) ===');
             const target = resolveMakeTarget();
             const targetDir = context.asAbsolutePath(`../../target/${target}`);
             const exeName = target === 'desktop'
@@ -269,39 +277,13 @@ function activate(context) {
             }
 
             await vscode.debug.startDebugging(undefined, {
-                type: 'cppdbg',
+                type: 'st2c',
                 name: 'ST2C Debug',
                 request: 'launch',
                 program: exePath,
                 args: ['--cycle-us', '1000'],
                 cwd: getWorkspaceRoot(),
-                targetArchitecture: 'x86_64',
-                MIMode: 'gdb',
                 miDebuggerPath: resolveGdbPath(),
-                setupCommands: [
-                    {
-                        description: 'Enable pretty-printing',
-                        text: '-enable-pretty-printing',
-                        ignoreFailures: true,
-                    },
-                    {
-                        description: 'Ignore SIGTRAP (debug server thread)',
-                        text: 'handle SIGTRAP nostop noprint',
-                        ignoreFailures: true,
-                    },
-                ],
-                customLaunchSetupCommands: [
-                    {
-                        description: 'Enable pending breakpoints',
-                        text: 'set breakpoint pending on',
-                        ignoreFailures: true,
-                    },
-                    {
-                        description: 'Run (no stop at main)',
-                        text: 'run',
-                        ignoreFailures: false,
-                    },
-                ],
             });
         } catch (e) {
             log(`[ERROR] ${e.message}`);
@@ -314,23 +296,12 @@ function activate(context) {
         provideDebugConfigurations(folder) {
             return [
                 {
-                    type: 'cppdbg',
-                    name: 'ST2C: Debug PLC Runtime (GDB)',
+                    type: 'st2c',
+                    name: 'ST2C: Debug PLC Runtime',
                     request: 'launch',
                     program: '${workspaceFolder}/target/desktop/build/plc_runtime_desktop_dbg.exe',
                     args: ['--cycle-us', '1000'],
                     cwd: '${workspaceFolder}',
-                    targetArchitecture: 'x86_64',
-                    MIMode: 'gdb',
-                    miDebuggerPath: resolveGdbPath(),
-                    setupCommands: [
-                        { description: 'Enable pretty-printing', text: '-enable-pretty-printing', ignoreFailures: true },
-                        { description: 'Ignore SIGTRAP', text: 'handle SIGTRAP nostop noprint', ignoreFailures: true },
-                    ],
-                    customLaunchSetupCommands: [
-                        { description: 'Enable pending breakpoints', text: 'set breakpoint pending on', ignoreFailures: true },
-                        { description: 'Run (no stop at main)', text: 'run', ignoreFailures: false },
-                    ],
                 },
             ];
         },
@@ -339,23 +310,13 @@ function activate(context) {
                 const editor = vscode.window.activeTextEditor;
                 if (editor && editor.document.languageId === 'st') {
                     return {
-                        type: 'cppdbg',
-                        name: 'ST2C: Debug PLC Runtime (GDB)',
+                        type: 'st2c',
+                        name: 'ST2C: Debug PLC Runtime',
                         request: 'launch',
                         program: '${workspaceFolder}/target/desktop/build/plc_runtime_desktop_dbg.exe',
                         args: ['--cycle-us', '1000'],
                         cwd: '${workspaceFolder}',
-                        targetArchitecture: 'x86_64',
-                        MIMode: 'gdb',
                         miDebuggerPath: resolveGdbPath(),
-                        setupCommands: [
-                            { description: 'Enable pretty-printing', text: '-enable-pretty-printing', ignoreFailures: true },
-                            { description: 'Ignore SIGTRAP', text: 'handle SIGTRAP nostop noprint', ignoreFailures: true },
-                        ],
-                        customLaunchSetupCommands: [
-                            { description: 'Enable pending breakpoints', text: 'set breakpoint pending on', ignoreFailures: true },
-                            { description: 'Run (no stop at main)', text: 'run', ignoreFailures: false },
-                        ],
                     };
                 }
             }

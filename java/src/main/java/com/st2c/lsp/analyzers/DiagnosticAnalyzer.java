@@ -17,6 +17,7 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTreeProperty;
 import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.DiagnosticSeverity;
+import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 
@@ -25,6 +26,7 @@ import antlr4.PLCSTPARSERParser;
 import PLCException.PLCSemanticException;
 import PLCSymbolAndScope.CompilerState;
 import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
+import PLCSymbolAndScope.PLCSymbols.PLCTypeDeclSymbol;
 import staticCheckVisitor.PLCVisitor;
 import staticCheckVisitor.register.Registrant;
 
@@ -35,6 +37,33 @@ public class DiagnosticAnalyzer {
     private final List<String> supportFiles = new ArrayList<>();
     private final Map<String, List<Diagnostic>> diagnosticsMap = new LinkedHashMap<>();
     private boolean strategiesRegistered = false;
+
+    // 符号定义索引: symbolName_lowercase → (URI, line, col)
+    private final Map<String, DefinitionInfo> symbolDefinitions = new LinkedHashMap<>();
+
+    public static class DefinitionInfo {
+        public final String uri;
+        public final int line;    // 1-based
+        public final int column;  // 1-based
+        public final int symbolLine; // 0-based for ANTLR
+        public final int symbolColumn;
+        public DefinitionInfo(String uri, int line, int col) {
+            this.uri = uri; this.line = line; this.column = col;
+            this.symbolLine = line - 1; this.symbolColumn = col;
+        }
+    }
+
+    public DefinitionInfo findDefinition(String name) {
+        return symbolDefinitions.get(name.toLowerCase());
+    }
+
+    public Map<String, String> getDocuments() {
+        return documents;
+    }
+
+    public List<String> getSupportFiles() {
+        return supportFiles;
+    }
 
     private synchronized void ensureStrategies() {
         if (strategiesRegistered) return;
@@ -87,9 +116,9 @@ public class DiagnosticAnalyzer {
         ensureStrategies();
         synchronized (this) {
             diagnosticsMap.clear();
+            symbolDefinitions.clear();
             if (documents.isEmpty() || supportFiles.isEmpty()) return;
 
-            // 构建内容提供者：打开文档用内存内容，其余读磁盘
             java.util.function.Function<String, String> contentProvider = path -> {
                 for (var entry : documents.entrySet()) {
                     String docPath = getPathFromUri(entry.getKey());
@@ -104,23 +133,26 @@ public class DiagnosticAnalyzer {
                 }
             };
 
-            // 拓扑排序所有支持文件
-            List<String> ordered = StDeclarationScanner.topologicalSort(
+            var sortResult = StDeclarationScanner.topologicalSortWithDetails(
                 new ArrayList<>(supportFiles), contentProvider);
+            List<String> ordered = sortResult.sortedFiles;
+            Map<String, String> symbolToFile = sortResult.symbolToFile;
 
-            // 单趟全量分析，共享 PLCVisitor
             CompilerState.reset();
             ParseTreeProperty<ArrayList<PLCSymbol>> property = new ParseTreeProperty<>();
             PLCVisitor visitor = new PLCVisitor(property);
 
-            // 预计算 URI ↔ 路径映射
             Map<String, String> pathToUri = new LinkedHashMap<>();
+            // 已打开的文档
             for (String uri : documents.keySet()) {
                 String p = getPathFromUri(uri);
                 if (!p.isEmpty()) pathToUri.put(p, uri);
             }
+            // 未打开的支持文件（用于符号定义指向）
+            for (String sp : supportFiles) {
+                pathToUri.putIfAbsent(sp, pathToUri(sp));
+            }
 
-            // 单趟：按拓扑序解析每个文件一次
             for (String path : ordered) {
                 String content = contentProvider.apply(path);
                 if (content == null) continue;
@@ -135,13 +167,48 @@ public class DiagnosticAnalyzer {
                     if (d != null) diags.add(d);
                 }
 
-                // 如果是打开文档，保存诊断
                 String uri = pathToUri.get(path);
                 if (uri != null) {
                     diagnosticsMap.put(uri, diags);
                 }
             }
+
+            // 建立符号定义索引：遍历总符号表，用 scanner 的 symbolToFile 映射 URI
+            Map<String, String> fileToUri = new LinkedHashMap<>();
+            for (String uri : documents.keySet()) {
+                String p = getPathFromUri(uri);
+                if (!p.isEmpty()) fileToUri.put(p, uri);
+            }
+            for (PLCTypeDeclSymbol type : PLCSymbolAndScope.PLCSymbolTables.PLCTotalSymbolTable.totalTypeMap.values()) {
+                if (type.getName() == null || type.rowNum < 0) continue;
+                String key = type.getName().toLowerCase();
+                String filePath = symbolToFile.get(key);
+                if (filePath != null) {
+                    String uri = fileToUri.get(filePath);
+                    if (uri != null) {
+                        symbolDefinitions.put(key, new DefinitionInfo(uri, type.rowNum, type.columnNum));
+                    }
+                }
+            }
+
         }
+    }
+
+    public static String extractWordAt(String content, int line, int col) {
+        String[] lines = content.split("\n", -1);
+        if (line < 0 || line >= lines.length) return null;
+        String l = lines[line];
+        if (col < 0 || col >= l.length()) return null;
+
+        int start = col;
+        while (start > 0 && (Character.isJavaIdentifierPart(l.charAt(start - 1)) || l.charAt(start - 1) == '_'))
+            start--;
+        int end = col;
+        while (end < l.length() && (Character.isJavaIdentifierPart(l.charAt(end)) || l.charAt(end) == '_'))
+            end++;
+
+        if (start == end) return null;
+        return l.substring(start, end);
     }
 
     private String getDirFromUri(String uri) {
@@ -155,13 +222,20 @@ public class DiagnosticAnalyzer {
         } catch (Exception e) { return ""; }
     }
 
-    private String getPathFromUri(String uri) {
+    public String getPathFromUri(String uri) {
         try {
             String decoded = java.net.URLDecoder.decode(uri, "UTF-8");
             String path = decoded.startsWith("file:///") ? decoded.substring(8).replace('/', '\\')
                      : decoded.startsWith("file:/") ? decoded.substring(6).replace('/', '\\')
                      : decoded;
             return Paths.get(path).normalize().toString();
+        } catch (Exception e) { return ""; }
+    }
+
+    /** 文件系统路径 → file:// URI */
+    private static String pathToUri(String filePath) {
+        try {
+            return Paths.get(filePath).toUri().toString();
         } catch (Exception e) { return ""; }
     }
 

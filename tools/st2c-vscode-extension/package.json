@@ -47,6 +47,11 @@
         "command": "st2c.debugRuntime",
         "title": "ST2C: Debug Current File (Compile + Build + Launch GDB)",
         "icon": "$(debug-alt)"
+      },
+      {
+        "command": "st2c.getDebugAdapterExecutable",
+        "title": "Internal: Return debug adapter path",
+        "icon": "$(debug)"
       }
     ],
     "menus": {
@@ -68,26 +73,26 @@
     "debuggers": [
       {
         "type": "st2c",
-        "label": "ST2C GDB Debug",
+        "label": "ST2C Debug",
+        "languages": ["st"],
+        "adapterExecutableCommand": "st2c.getDebugAdapterExecutable",
         "configurationAttributes": {
           "launch": {
-            "required": [],
+            "required": ["program"],
             "properties": {
               "program": {
                 "type": "string",
-                "description": "Path to the debug runtime executable",
-                "default": "${workspaceFolder}/target/desktop/build/plc_runtime_desktop_dbg.exe"
+                "description": "Path to the debug runtime executable"
               },
               "args": {
                 "type": "array",
                 "items": { "type": "string" },
-                "description": "Command-line arguments",
-                "default": ["--cycle-us", "1000"]
+                "description": "Command-line arguments"
               },
-              "cycleUs": {
-                "type": "number",
-                "description": "PLC cycle in microseconds",
-                "default": 1000
+              "miDebuggerPath": {
+                "type": "string",
+                "description": "Path to GDB executable",
+                "default": "gdb.exe"
               }
             }
           }
