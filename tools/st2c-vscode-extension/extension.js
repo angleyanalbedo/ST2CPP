@@ -169,6 +169,10 @@ async function buildRuntime(context) {
 function activate(context) {
     outputChannel = vscode.window.createOutputChannel('ST2C');
 
+    // Enable breakpoints in .st files for cppdbg debugging
+    vscode.workspace.getConfiguration('debug')
+        .update('allowBreakpointsEverywhere', true, vscode.ConfigurationTarget.Workspace);
+
     // ─── LSP client ───
     const jar = resolveJar(context);
     const serverOptions = {
@@ -234,6 +238,64 @@ function activate(context) {
         } catch (e) {
             log(`[ERROR] ${e.message}`);
             vscode.window.showErrorMessage(`ST2C: Compile Project failed — ${e.message}`);
+        }
+    }));
+
+    // ─── Command: compile current .st → build runtime → launch GDB ───
+    context.subscriptions.push(vscode.commands.registerCommand('st2c.debugRuntime', async () => {
+        try {
+            outputChannel.show();
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) { vscode.window.showWarningMessage('No active editor'); return; }
+            const input = editor.document.fileName;
+            if (!input.endsWith('.st')) { vscode.window.showWarningMessage('Not an .st file'); return; }
+
+            const j = resolveJar(context);
+            if (!(await ensureJar(j))) return;
+
+            log('=== Step 1: Compile ST → C++ (debug) ===');
+            await doCompile(j, [input], ['--emit-line-directives', '--generate-debug']);
+
+            log('=== Step 2: Generate runtime config + Build runtime ===');
+            await buildRuntime(context);
+
+            log('=== Step 3: Launch GDB ===');
+            const target = resolveMakeTarget();
+            const targetDir = context.asAbsolutePath(`../../target/${target}`);
+            const exeName = target === 'desktop'
+                ? 'plc_runtime_desktop_dbg.exe'
+                : 'plc_runtime_windows_dbg.exe';
+            const exePath = path.join(targetDir, 'build', exeName);
+            if (!fs.existsSync(exePath)) {
+                throw new Error(`Executable not found: ${exePath}`);
+            }
+
+            await vscode.debug.startDebugging(undefined, {
+                type: 'cppdbg',
+                name: 'ST2C Debug',
+                request: 'launch',
+                program: exePath,
+                args: ['--cycle-us', '1000'],
+                cwd: getWorkspaceRoot(),
+                stopAtEntry: false,
+                MIMode: 'gdb',
+                miDebuggerPath: resolveGdbPath(),
+                setupCommands: [
+                    {
+                        description: 'Enable pretty-printing',
+                        text: '-enable-pretty-printing',
+                        ignoreFailures: true,
+                    },
+                    {
+                        description: 'Ignore SIGTRAP (debug server thread)',
+                        text: 'handle SIGTRAP nostop noprint',
+                        ignoreFailures: true,
+                    },
+                ],
+            });
+        } catch (e) {
+            log(`[ERROR] ${e.message}`);
+            vscode.window.showErrorMessage(`ST2C: Debug failed — ${e.message}`);
         }
     }));
 

@@ -12,6 +12,7 @@
     "onLanguage:st",
     "onCommand:st2c.compileCurrent",
     "onCommand:st2c.compileProject",
+    "onCommand:st2c.debugRuntime",
     "onDebugInitialConfigurations"
   ],
   "main": "./extension.js",
@@ -41,8 +42,22 @@
         "command": "st2c.compileProject",
         "title": "ST2C: Compile All ST Files → Build Runtime",
         "icon": "$(tools)"
+      },
+      {
+        "command": "st2c.debugRuntime",
+        "title": "ST2C: Debug Current File (Compile + Build + Launch GDB)",
+        "icon": "$(debug-alt)"
       }
     ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "st2c.debugRuntime",
+          "when": "editorLangId == st",
+          "group": "navigation"
+        }
+      ]
+    },
     "keybindings": [
       {
         "command": "st2c.compileCurrent",
