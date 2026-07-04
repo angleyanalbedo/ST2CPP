@@ -152,22 +152,33 @@ public class DiagnosticAnalyzer {
             for (String sp : supportFiles) {
                 pathToUri.putIfAbsent(sp, pathToUri(sp));
             }
+            System.err.println("[LSP] Sorted files order:");
+            for (String f : ordered) {
+                System.err.println("[LSP]   - " + f);
+            }
 
-            for (String path : ordered) {
-                String content = contentProvider.apply(path);
+            for (String filePath : ordered) {
+                String content = contentProvider.apply(filePath);
                 if (content == null) continue;
 
+                System.err.println("[LSP] Analyzing: " + filePath);
                 List<Diagnostic> diags = new ArrayList<>();
                 try {
-                    PLCSTPARSERParser parser = new PLCSTPARSERParser(
-                        new CommonTokenStream(new PLCSTPARSERLexer(CharStreams.fromString(content))));
-                    visitor.visit(parser.startpoint());
+                    PLCSTPARSERLexer lexer = new PLCSTPARSERLexer(CharStreams.fromString(content));
+                    try {
+                        PLCSTPARSERParser parser = new PLCSTPARSERParser(
+                            new CommonTokenStream(new PLCSTPARSERLexer(CharStreams.fromString(content))));
+                        visitor.visit(parser.startpoint());
+                    } catch (Exception e) {
+                        Diagnostic d = createDiagnostic(e);
+                        if (d != null) diags.add(d);
+                    }
                 } catch (Exception e) {
                     Diagnostic d = createDiagnostic(e);
                     if (d != null) diags.add(d);
                 }
 
-                String uri = pathToUri.get(path);
+                String uri = pathToUri.get(filePath);
                 if (uri != null) {
                     diagnosticsMap.put(uri, diags);
                 }
