@@ -13,7 +13,8 @@
     "onCommand:st2c.compileCurrent",
     "onCommand:st2c.compileProject",
     "onCommand:st2c.debugRuntime",
-    "onDebugInitialConfigurations"
+    "onDebugInitialConfigurations",
+    "onDebug"
   ],
   "main": "./extension.js",
   "contributes": {
@@ -75,7 +76,6 @@
         "type": "st2c",
         "label": "ST2C Debug",
         "languages": ["st"],
-        "adapterExecutableCommand": "st2c.getDebugAdapterExecutable",
         "configurationAttributes": {
           "launch": {
             "required": ["program"],

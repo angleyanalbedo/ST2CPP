@@ -239,12 +239,14 @@ function activate(context) {
         }
     }));
 
-    // ─── Command: runtime debug adapter executable path ───
-    context.subscriptions.push(vscode.commands.registerCommand('st2c.getDebugAdapterExecutable', () => {
-        return {
-            command: 'node',
-            args: [context.asAbsolutePath('debugAdapter.js')],
-        };
+    // ─── Debug adapter descriptor factory ───
+    context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('st2c', {
+        createDebugAdapterDescriptor(session) {
+            return new vscode.DebugAdapterExecutable(
+                'node',
+                [context.asAbsolutePath('debugAdapter.js')]
+            );
+        },
     }));
 
     // ─── Command: compile current .st → build runtime → launch GDB ───

@@ -57,11 +57,31 @@ function parseMIValue(v) {
                     depth++;
                     while (i < inner.length) { if (inner[i] === '"' && inner[i - 1] !== '\\') depth--; if (depth === 0) break; i++; }
                 } else if (ch === ',' && depth === 0) {
-                    arr.push(parseMIValue(inner.slice(start, i)));
+                    let item = inner.slice(start, i).trim();
+                    let eqIdx = item.indexOf('=');
+                    if (eqIdx > 0 && item[0] !== '{' && item[0] !== '"') {
+                        let k = item.slice(0, eqIdx).trim();
+                        let v = parseMIValue(item.slice(eqIdx + 1));
+                        let obj = {}; obj[k] = v;
+                        arr.push(obj);
+                    } else {
+                        arr.push(parseMIValue(item));
+                    }
                     start = i + 1;
                 }
             }
-            if (start < inner.length) arr.push(parseMIValue(inner.slice(start)));
+            if (start < inner.length) {
+                let item = inner.slice(start).trim();
+                let eqIdx = item.indexOf('=');
+                if (eqIdx > 0 && item[0] !== '{' && item[0] !== '"') {
+                    let k = item.slice(0, eqIdx).trim();
+                    let v = parseMIValue(item.slice(eqIdx + 1));
+                    let obj = {}; obj[k] = v;
+                    arr.push(obj);
+                } else {
+                    arr.push(parseMIValue(item));
+                }
+            }
         }
         return arr;
     }
@@ -248,13 +268,13 @@ class ST2CDebugAdapter {
 
     async _setBreakpoints(args) {
         const { source: { path: srcPath }, breakpoints: bps } = args;
-        const normalized = srcPath.replace(/\\/g, '/');
+        const normalized = srcPath.replace(/\\/g, '/').replace(/^[A-Z]:/, m => m.toLowerCase());
         const result = [];
 
         // Remove old breakpoints for this file
         const oldBps = this._breakpoints.get(normalized) || [];
         for (const old of oldBps) {
-            await this._gdb.sendCommand(`-break-delete ${old.gdbId}`).catch(() => {});
+            await this._gdb.sendCommand(`-break-delete ${old.id}`).catch(() => {});
         }
 
         // Set new breakpoints
@@ -316,7 +336,8 @@ class ST2CDebugAdapter {
 
     async _stackTrace(args) {
         const resp = await this._gdb.sendCommand('-stack-list-frames');
-        const stack = (resp.stack || {}).frame || [];
+        const stackList = Array.isArray(resp.stack) ? resp.stack : [(resp.stack || {})];
+        const stack = stackList.map(s => s.frame || s).filter(f => Object.keys(f).length > 0);
         const frames = stack.map((f, i) => ({
             id: i,
             name: f.func || '??',
