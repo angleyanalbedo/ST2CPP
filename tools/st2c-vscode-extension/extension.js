@@ -121,15 +121,13 @@ async function doCompile(jar, inputFiles, flags) {
     }
 
     const outputDir = resolveOutputDir();
-    fs.mkdirSync(outputDir, { recursive: true });
 
-    // Clean stale .cpp/.h files from previous runs to prevent Makefile
-    // $(wildcard *.cpp) from pulling in unrelated test snapshots.
-    const oldFiles = fs.readdirSync(outputDir)
-        .filter(f => f.endsWith('.cpp') || f.endsWith('.h'));
-    for (const f of oldFiles) {
-        fs.unlinkSync(path.join(outputDir, f));
+    // Wipe entire output directory to prevent stale .cpp/.h from polluting
+    // Makefile's $(wildcard *.cpp) in desktop/target.
+    if (fs.existsSync(outputDir)) {
+        fs.rmSync(outputDir, { recursive: true, force: true });
     }
+    fs.mkdirSync(outputDir, { recursive: true });
 
     const args = [
         ...inputFiles.flatMap(f => ['--input', f]),
@@ -277,7 +275,7 @@ function activate(context) {
                 program: exePath,
                 args: ['--cycle-us', '1000'],
                 cwd: getWorkspaceRoot(),
-                stopAtEntry: false,
+                targetArchitecture: 'x86_64',
                 MIMode: 'gdb',
                 miDebuggerPath: resolveGdbPath(),
                 setupCommands: [
@@ -290,6 +288,18 @@ function activate(context) {
                         description: 'Ignore SIGTRAP (debug server thread)',
                         text: 'handle SIGTRAP nostop noprint',
                         ignoreFailures: true,
+                    },
+                ],
+                customLaunchSetupCommands: [
+                    {
+                        description: 'Enable pending breakpoints',
+                        text: 'set breakpoint pending on',
+                        ignoreFailures: true,
+                    },
+                    {
+                        description: 'Run (no stop at main)',
+                        text: 'run',
+                        ignoreFailures: false,
                     },
                 ],
             });
@@ -310,14 +320,16 @@ function activate(context) {
                     program: '${workspaceFolder}/target/desktop/build/plc_runtime_desktop_dbg.exe',
                     args: ['--cycle-us', '1000'],
                     cwd: '${workspaceFolder}',
+                    targetArchitecture: 'x86_64',
                     MIMode: 'gdb',
                     miDebuggerPath: resolveGdbPath(),
                     setupCommands: [
-                        {
-                            description: 'Enable pretty-printing',
-                            text: '-enable-pretty-printing',
-                            ignoreFailures: true,
-                        },
+                        { description: 'Enable pretty-printing', text: '-enable-pretty-printing', ignoreFailures: true },
+                        { description: 'Ignore SIGTRAP', text: 'handle SIGTRAP nostop noprint', ignoreFailures: true },
+                    ],
+                    customLaunchSetupCommands: [
+                        { description: 'Enable pending breakpoints', text: 'set breakpoint pending on', ignoreFailures: true },
+                        { description: 'Run (no stop at main)', text: 'run', ignoreFailures: false },
                     ],
                 },
             ];
@@ -333,14 +345,16 @@ function activate(context) {
                         program: '${workspaceFolder}/target/desktop/build/plc_runtime_desktop_dbg.exe',
                         args: ['--cycle-us', '1000'],
                         cwd: '${workspaceFolder}',
+                        targetArchitecture: 'x86_64',
                         MIMode: 'gdb',
                         miDebuggerPath: resolveGdbPath(),
                         setupCommands: [
-                            {
-                                description: 'Enable pretty-printing',
-                                text: '-enable-pretty-printing',
-                                ignoreFailures: true,
-                            },
+                            { description: 'Enable pretty-printing', text: '-enable-pretty-printing', ignoreFailures: true },
+                            { description: 'Ignore SIGTRAP', text: 'handle SIGTRAP nostop noprint', ignoreFailures: true },
+                        ],
+                        customLaunchSetupCommands: [
+                            { description: 'Enable pending breakpoints', text: 'set breakpoint pending on', ignoreFailures: true },
+                            { description: 'Run (no stop at main)', text: 'run', ignoreFailures: false },
                         ],
                     };
                 }

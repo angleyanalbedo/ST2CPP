@@ -17,7 +17,12 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.List;
+
+import com.st2c.lsp.StDeclarationScanner;
 
 /**
  * ST2C++ 编译器入口（Flat 后端）
@@ -66,8 +71,19 @@ public class Main {
             }
         }
 
-        // 用户源文件
-        for (String inputPath : cfg.inputFiles) {
+        // 拓扑排序用户源文件（消除 --input 顺序依赖）
+        List<String> sortedInputs = StDeclarationScanner.topologicalSort(
+            cfg.inputFiles,
+            path -> {
+                try { return new String(Files.readAllBytes(Paths.get(path))); }
+                catch (Exception e) { return null; }
+            });
+
+        if (cfg.verbose) {
+            System.out.println("[Order] " + String.join(" -> ", sortedInputs));
+        }
+
+        for (String inputPath : sortedInputs) {
             CharStream charStream = CharStreams.fromFileName(inputPath);
             translatorNew.setCurrentSourceName(inputPath);
             fullCodeBuilder.append(processStream(charStream, plcVisitor, translatorNew, fileIndex++));

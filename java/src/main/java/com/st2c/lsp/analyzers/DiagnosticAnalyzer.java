@@ -28,6 +28,8 @@ import PLCSymbolAndScope.PLCSymbols.PLCSymbol;
 import staticCheckVisitor.PLCVisitor;
 import staticCheckVisitor.register.Registrant;
 
+import com.st2c.lsp.StDeclarationScanner;
+
 public class DiagnosticAnalyzer {
     private final Map<String, String> documents = new LinkedHashMap<>();
     private final List<String> supportFiles = new ArrayList<>();
@@ -85,67 +87,65 @@ public class DiagnosticAnalyzer {
         ensureStrategies();
         synchronized (this) {
             diagnosticsMap.clear();
-            if (documents.isEmpty()) return;
+            if (documents.isEmpty() || supportFiles.isEmpty()) return;
 
+            // 构建内容提供者：打开文档用内存内容，其余读磁盘
+            java.util.function.Function<String, String> contentProvider = path -> {
+                for (var entry : documents.entrySet()) {
+                    String docPath = getPathFromUri(entry.getKey());
+                    if (docPath.equals(path)) {
+                        return entry.getValue();
+                    }
+                }
+                try {
+                    return new String(Files.readAllBytes(Paths.get(path)));
+                } catch (IOException e) {
+                    return null;
+                }
+            };
+
+            // 拓扑排序所有支持文件
+            List<String> ordered = StDeclarationScanner.topologicalSort(
+                new ArrayList<>(supportFiles), contentProvider);
+
+            // 单趟全量分析，共享 PLCVisitor
             CompilerState.reset();
             ParseTreeProperty<ArrayList<PLCSymbol>> property = new ParseTreeProperty<>();
             PLCVisitor visitor = new PLCVisitor(property);
 
-            // 解析支持文件（仅建符号表，不产生诊断）
-            // 包含已打开文档——它们的符号必须贡献给共享符号表，
-            // 否则依赖它们的其他文件（如 utils.st → types.st 的类型）无法解析
-            List<String> ordered = supportFiles.stream()
-                .sorted((a, b) -> {
-                    String fa = Paths.get(a).getFileName().toString().toLowerCase();
-                    String fb = Paths.get(b).getFileName().toString().toLowerCase();
-                    boolean aIsType = fa.startsWith("type") || fa.startsWith("io_config");
-                    boolean bIsType = fb.startsWith("type") || fb.startsWith("io_config");
-                    if (aIsType && !bIsType) return -1;
-                    if (!aIsType && bIsType) return 1;
-                    return fa.compareTo(fb);
-                })
-                .collect(Collectors.toList());
-
-            // 第一步：解析所有支持文件（含打开文档，从磁盘读取），建立完整符号表
-            for (String path : ordered) {
-                try {
-                    String content = new String(Files.readAllBytes(Paths.get(path)));
-                    PLCSTPARSERParser parser = new PLCSTPARSERParser(
-                        new CommonTokenStream(new PLCSTPARSERLexer(CharStreams.fromString(content))));
-                    visitor.visit(parser.startpoint());
-                } catch (Exception ignored) {}
+            // 预计算 URI ↔ 路径映射
+            Map<String, String> pathToUri = new LinkedHashMap<>();
+            for (String uri : documents.keySet()) {
+                String p = getPathFromUri(uri);
+                if (!p.isEmpty()) pathToUri.put(p, uri);
             }
 
-            // 第二步：分析已打开的文件（使用内存中的内容，可能与磁盘不同）
-            // 注意：打开文档的符号在 step 1 已从磁盘注册，step 2 重新解析时
-            // 会触发 "duplication of name" 错误——这些是 LSP 多文件场景的误报，
-            // 因为同一文件被解析了两次（step 1 从磁盘，step 2 从内存）。
-            // 这些误报需要被过滤掉，不作为诊断报告给用户。
-            for (var entry : documents.entrySet()) {
+            // 单趟：按拓扑序解析每个文件一次
+            for (String path : ordered) {
+                String content = contentProvider.apply(path);
+                if (content == null) continue;
+
                 List<Diagnostic> diags = new ArrayList<>();
                 try {
                     PLCSTPARSERParser parser = new PLCSTPARSERParser(
-                        new CommonTokenStream(new PLCSTPARSERLexer(CharStreams.fromString(entry.getValue()))));
+                        new CommonTokenStream(new PLCSTPARSERLexer(CharStreams.fromString(content))));
                     visitor.visit(parser.startpoint());
                 } catch (Exception e) {
                     Diagnostic d = createDiagnostic(e);
-                    if (d != null && !isDuplicateError(d)) {
-                        diags.add(d);
-                    }
+                    if (d != null) diags.add(d);
                 }
-                diagnosticsMap.put(entry.getKey(), diags);
+
+                // 如果是打开文档，保存诊断
+                String uri = pathToUri.get(path);
+                if (uri != null) {
+                    diagnosticsMap.put(uri, diags);
+                }
             }
         }
     }
 
-    private boolean isDuplicateError(Diagnostic d) {
-        String msg = d.getMessage();
-        return msg != null && msg.contains("duplication of name");
-    }
-
     private String getDirFromUri(String uri) {
         try {
-            // VS Code 发送的 URI 是 URL 编码的（d%3A → d:），需要解码
             String decoded = java.net.URLDecoder.decode(uri, "UTF-8");
             String path = decoded.startsWith("file:///") ? decoded.substring(8).replace('/', '\\')
                      : decoded.startsWith("file:/") ? decoded.substring(6).replace('/', '\\')
@@ -161,7 +161,6 @@ public class DiagnosticAnalyzer {
             String path = decoded.startsWith("file:///") ? decoded.substring(8).replace('/', '\\')
                      : decoded.startsWith("file:/") ? decoded.substring(6).replace('/', '\\')
                      : decoded;
-            // Normalize to handle / vs \ differences
             return Paths.get(path).normalize().toString();
         } catch (Exception e) { return ""; }
     }
