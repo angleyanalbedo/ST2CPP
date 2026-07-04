@@ -1,8 +1,7 @@
-FUNCTION ADD_POINTS : MyResult
+FUNCTION SUM_POINTS : DINT
     VAR_INPUT
-        A : MyPoint;
-        B : MyPoint;
+        X : INT;
+        Y : INT;
     END_VAR
-    ADD_POINTS.SUM := A.X + A.Y + B.X + B.Y;
-    ADD_POINTS.AVG := ADD_POINTS.SUM / 2;
+    SUM_POINTS := X + Y;
 END_FUNCTION

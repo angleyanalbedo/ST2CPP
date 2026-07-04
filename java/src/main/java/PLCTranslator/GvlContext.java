@@ -404,7 +404,7 @@ public class GvlContext {
     public String emitGVLLayoutIncludeOnce() {
         if (gvlLayoutIncludeEmitted) return "";
         gvlLayoutIncludeEmitted = true;
-        return "#include \"gvl_layout.gen.h\"\n\n";
+        return "\n#include \"gvl_layout.gen.h\"\n\n";
     }
 
     public boolean isIOVariable(String varName) {
