@@ -81,7 +81,7 @@ public class VisitorTool {
         }
         catch(PLCSemanticException e){
             System.err.println(e.getMessage());
-            throw new RuntimeException(e);
+            // throw new RuntimeException(e); // LSP mode: do not abort file parsing for duplicates
         }
     }
 

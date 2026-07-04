@@ -173,21 +173,23 @@ public class DiagnosticAnalyzer {
                 }
             }
 
-            // 建立符号定义索引：遍历总符号表，用 scanner 的 symbolToFile 映射 URI
-            Map<String, String> fileToUri = new LinkedHashMap<>();
-            for (String uri : documents.keySet()) {
-                String p = getPathFromUri(uri);
-                if (!p.isEmpty()) fileToUri.put(p, uri);
-            }
-            for (PLCTypeDeclSymbol type : PLCSymbolAndScope.PLCSymbolTables.PLCTotalSymbolTable.totalTypeMap.values()) {
-                if (type.getName() == null || type.rowNum < 0) continue;
-                String key = type.getName().toLowerCase();
+            for (String key : symbolToFile.keySet()) {
                 String filePath = symbolToFile.get(key);
                 if (filePath != null) {
-                    String uri = fileToUri.get(filePath);
+                    String uri = pathToUri.get(filePath);
                     if (uri != null) {
-                        symbolDefinitions.put(key, new DefinitionInfo(uri, type.rowNum, type.columnNum));
+                        var pos = sortResult.symbolToPos.get(key);
+                        if (pos != null) {
+                            symbolDefinitions.put(key, new DefinitionInfo(uri, pos.line, pos.col));
+                            System.err.println("[LSP] Indexed symbol definition: " + key + " -> " + uri + " (" + pos.line + ":" + pos.col + ")");
+                        } else {
+                            System.err.println("[LSP] Warning: pos not found for symbol: " + key);
+                        }
+                    } else {
+                        System.err.println("[LSP] Warning: URI not found for filePath: " + filePath + " (symbol: " + key + ")");
                     }
+                } else {
+                    System.err.println("[LSP] Warning: symbolToFile missing filePath for symbol: " + key);
                 }
             }
 

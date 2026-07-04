@@ -93,9 +93,14 @@ public class ST2CTextDocumentService implements TextDocumentService {
         String word = DiagnosticAnalyzer.extractWordAt(content, line, col);
         if (word == null) return CompletableFuture.completedFuture(Either.forLeft(List.of()));
 
+        System.err.println("[LSP] definition request for word: '" + word + "' at line " + line + ", col " + col);
         var info = diagnostic.findDefinition(word);
-        if (info == null) return CompletableFuture.completedFuture(Either.forLeft(List.of()));
+        if (info == null) {
+            System.err.println("[LSP] -> findDefinition returned null for word: " + word);
+            return CompletableFuture.completedFuture(Either.forLeft(List.of()));
+        }
 
+        System.err.println("[LSP] -> Found definition in " + info.uri + " at " + info.symbolLine + ":" + info.symbolColumn);
         Location loc = new Location(info.uri, new Range(
             new Position(info.symbolLine, info.symbolColumn),
             new Position(info.symbolLine, info.symbolColumn + word.length())

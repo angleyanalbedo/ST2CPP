@@ -105,7 +105,7 @@ public final class PLCTotalSymbolTable {
         }
         //Format.printlnJsonObjectString(entirety);
         stringBuilder.append(Format.toPrettyString(entirety));
-        System.out.println(stringBuilder);
+        System.err.println(stringBuilder);
         OutputToFile(stringBuilder);
     }
     public static void OutputToFile(StringBuilder stringBuilder) throws IOException {

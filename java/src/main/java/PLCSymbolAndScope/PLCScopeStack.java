@@ -131,7 +131,7 @@ public final class PLCScopeStack {
             }
         }
         catch(PLCSemanticException e){
-            System.out.println(e.getMessage());
+            System.err.println(e.getMessage());
         }
 
         PLCScope tempScope = scopeStack.pop();
