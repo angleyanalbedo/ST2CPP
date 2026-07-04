@@ -74,14 +74,17 @@ public class StDeclarationScanner {
         Map<String, String> symbolToFile = new HashMap<>();
         Map<String, SymbolPos> symbolToPos = new HashMap<>();
         for (FileInfo info : infoMap.values()) {
-            for (var entry : info.defines.entrySet()) {
-                String sym = entry.getKey().toLowerCase();
-                symbolToFile.putIfAbsent(sym, info.path);
-                symbolToPos.putIfAbsent(sym, entry.getValue());
+            System.err.println("[LSP] SCAN File: " + info.path);
+            System.err.println("[LSP]   Defines: " + info.defines.keySet());
+            System.err.println("[LSP]   Refs: " + info.references);
+            for (Map.Entry<String, SymbolPos> entry : info.defines.entrySet()) {
+                symbolToFile.put(entry.getKey().toLowerCase(), info.path);
+                symbolToPos.put(entry.getKey().toLowerCase(), entry.getValue());
             }
         }
 
         Map<String, Set<String>> deps = new HashMap<>();
+        System.err.println("[LSP] ---- DEPS ----");
         for (FileInfo info : infoMap.values()) {
             Set<String> fileDeps = new HashSet<>();
             for (String ref : info.references) {
@@ -91,6 +94,7 @@ public class StDeclarationScanner {
                 }
             }
             deps.put(info.path, fileDeps);
+            System.err.println("[LSP] " + info.path + " depends on " + fileDeps);
         }
 
         List<String> sorted = kahnSort(filePaths, deps);
@@ -128,18 +132,29 @@ public class StDeclarationScanner {
             }
         }
 
+        System.err.println("[LSP] ---- Kahn Sort Trace ----");
         Queue<String> queue = new ArrayDeque<>();
         for (var entry : inDegree.entrySet()) {
-            if (entry.getValue() == 0) queue.add(entry.getKey());
+            if (entry.getValue() == 0) {
+                queue.add(entry.getKey());
+                System.err.println("[LSP] Node with inDegree=0: " + entry.getKey());
+            } else {
+                System.err.println("[LSP] Node " + entry.getKey() + " has inDegree=" + entry.getValue());
+            }
         }
 
         List<String> result = new ArrayList<>();
         while (!queue.isEmpty()) {
             String node = queue.poll();
             result.add(node);
+            System.err.println("[LSP] Popped: " + node);
             for (String dependent : reverseDeps.getOrDefault(node, List.of())) {
                 int newDegree = inDegree.merge(dependent, -1, Integer::sum);
-                if (newDegree == 0) queue.add(dependent);
+                System.err.println("[LSP]   Decremented " + dependent + " to " + newDegree);
+                if (newDegree == 0) {
+                    queue.add(dependent);
+                    System.err.println("[LSP]   Added " + dependent + " to queue");
+                }
             }
         }
 
@@ -234,25 +249,60 @@ public class StDeclarationScanner {
         }
 
         @Override
-        public Void visitUser_defination_type_access(
-                PLCSTPARSERParser.User_defination_type_accessContext ctx) {
-            if (ctx.user_defination_type_name() != null)
-                info.references.add(ctx.user_defination_type_name().getText());
-            return super.visitUser_defination_type_access(ctx);
+        public Void visitSimple_type_name(PLCSTPARSERParser.Simple_type_nameContext ctx) {
+            if (ctx != null) {
+                String name = ctx.getText();
+                if (!BASIC_TYPES.contains(name.toUpperCase())) {
+                    info.references.add(name);
+                }
+            }
+            return super.visitSimple_type_name(ctx);
+        }
+
+        @Override
+        public Void visitUser_defination_type_name(PLCSTPARSERParser.User_defination_type_nameContext ctx) {
+            if (ctx != null) {
+                info.references.add(ctx.getText());
+            }
+            return super.visitUser_defination_type_name(ctx);
+        }
+
+        @Override
+        public Void visitFb_type_name(PLCSTPARSERParser.Fb_type_nameContext ctx) {
+            if (ctx != null) info.references.add(ctx.getText());
+            return super.visitFb_type_name(ctx);
+        }
+
+        @Override
+        public Void visitDerived_fb_name(PLCSTPARSERParser.Derived_fb_nameContext ctx) {
+            if (ctx != null) info.references.add(ctx.getText());
+            return super.visitDerived_fb_name(ctx);
+        }
+
+        @Override
+        public Void visitStruct_type_name(PLCSTPARSERParser.Struct_type_nameContext ctx) {
+            if (ctx != null) info.references.add(ctx.getText());
+            return super.visitStruct_type_name(ctx);
+        }
+
+        @Override
+        public Void visitDerived_type_name(PLCSTPARSERParser.Derived_type_nameContext ctx) {
+            if (ctx != null) info.references.add(ctx.getText());
+            return super.visitDerived_type_name(ctx);
         }
 
         @Override
         public Void visitSimple_type_access(
                 PLCSTPARSERParser.Simple_type_accessContext ctx) {
-            // 独立扫描时没有符号表，用户类型会被 ANTLR 归为 simple_type_access
-            // 所以要从这里收集非基本类型的引用
-            if (ctx.simple_type_name() != null) {
-                String name = ctx.simple_type_name().getText();
-                if (!BASIC_TYPES.contains(name.toUpperCase())) {
-                    info.references.add(name);
-                }
-            }
+            // 依赖 visitSimple_type_name 去收集引用
             return super.visitSimple_type_access(ctx);
+        }
+
+        @Override
+        public Void visitUser_defination_type_access(
+                PLCSTPARSERParser.User_defination_type_accessContext ctx) {
+            // 依赖 visitUser_defination_type_name 去收集引用
+            return super.visitUser_defination_type_access(ctx);
         }
 
         @Override
