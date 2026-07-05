@@ -1,5 +1,5 @@
 ROOT     = ../..
-TOOLS_DIR = $(ROOT)/.tools
+TOOLS_DIR = $(ROOT)/.env
 ifneq ("$(wildcard $(TOOLS_DIR)/arm-gcc/bin/arm-none-eabi-gcc.exe)","")
     CROSS   := $(TOOLS_DIR)/arm-gcc/bin/arm-none-eabi-
 else

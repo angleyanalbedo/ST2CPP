@@ -14,7 +14,7 @@
 ROOT     = ../..
 
 # 本地工具链路径（如果存在则优先使用）
-TOOLS_DIR = $(ROOT)/.tools
+TOOLS_DIR = $(ROOT)/.env
 ifneq ("$(wildcard $(TOOLS_DIR)/arm-gcc/bin/arm-none-eabi-gcc.exe)","")
     CROSS   := $(TOOLS_DIR)/arm-gcc/bin/arm-none-eabi-
 else

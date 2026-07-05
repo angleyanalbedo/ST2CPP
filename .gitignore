@@ -19,4 +19,4 @@ target/*/build/
 runtime-flat/build-no-diag/
 tools/st2c-vscode-extension/node_modules/
 test/tmp_lsp_input.txt
-.tools/
+.env/

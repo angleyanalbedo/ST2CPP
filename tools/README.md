@@ -1,4 +1,34 @@
-# debug_cli — ST2C 调试客户端
+# tools / .env — 工具集
+
+## .env — 本地编译工具链
+
+`.env/` 存放 ARM 交叉编译器 + OpenOCD，由 `tools_download.ps1` 自动下载。
+
+### 下载
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools_download.ps1
+```
+
+脚本操作：
+1. 下载 ARM GCC 15.2.rel1（固定地址，已验证）
+2. 通过 GitHub API 获取最新版 OpenOCD（xpack 发行版）
+3. 解压到 `.env/arm-gcc/` 和 `.env/opencoded/`
+
+### 验证
+
+```powershell
+.env\arm-gcc\bin\arm-none-eabi-gcc.exe --version
+.env\opencoded\bin\openocd.exe --version
+```
+
+### 使用
+
+Makefile 会自动检测 `.env/` 下的工具链并优先使用，不存在时回退到系统 PATH。
+
+---
+
+## debug_cli — 调试客户端
 
 `tools/debug_cli.cpp` — 通过 TCP 连接 DebugEngine，提供两种调试模式：交互式一问一答和实时监视面板。
 
