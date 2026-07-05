@@ -168,6 +168,10 @@ flash: $(BUILD)/$(TARGET).bin
 	$(OPENOCD) -f interface/stlink.cfg -f target/stm32f1x.cfg \
 		-c "program $(BUILD)/$(TARGET).bin 0x08000000 reset exit"
 
+flash-jtag: $(BUILD)/$(TARGET).bin
+	$(OPENOCD) -c "transport select jtag" -f interface/stlink.cfg -f target/stm32f1x.cfg \
+		-c "program $(BUILD)/$(TARGET).bin 0x08000000 reset exit"
+
 openocd:
 	$(OPENOCD) -f interface/stlink.cfg -f target/stm32f1x.cfg
 

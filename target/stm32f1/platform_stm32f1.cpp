@@ -87,7 +87,7 @@ static int64_t us_timer_read64() {
 
 static void us_timer_init() {
     __HAL_RCC_TIM3_CLK_ENABLE();
-    PLC_US_TIM->PSC  = (PLC_SYSTEM_CORE_CLOCK / 1000000) - 1;
+    PLC_US_TIM->PSC  = (SystemCoreClock / 1000000) - 1;
     PLC_US_TIM->ARR  = 0xFFFF;
     PLC_US_TIM->DIER |= TIM_DIER_UIE;
     PLC_US_TIM->CR1  |= TIM_CR1_ARPE;
@@ -178,19 +178,28 @@ extern "C" void TIM2_IRQHandler(void) {
 // ═══════════════════════════════════════════════════════
 
 static void system_clock_init() {
+    int timeout = 1000000;
     RCC->CR |= RCC_CR_HSEON;
-    while (!(RCC->CR & RCC_CR_HSERDY)) {}
+    while (!(RCC->CR & RCC_CR_HSERDY)) {
+        if (--timeout == 0) { RCC->CR &= ~RCC_CR_HSEON; break; }
+    }
 
-    RCC->CFGR = (RCC->CFGR & ~RCC_CFGR_PLLMULL) | RCC_CFGR_PLLMULL9;
-    RCC->CFGR = (RCC->CFGR & ~RCC_CFGR_PLLSRC) | RCC_CFGR_PLLSRC;
-    RCC->CR |= RCC_CR_PLLON;
-    while (!(RCC->CR & RCC_CR_PLLRDY)) {}
+    if (RCC->CR & RCC_CR_HSERDY) {
+        RCC->CFGR = (RCC->CFGR & ~RCC_CFGR_PLLMULL) | RCC_CFGR_PLLMULL9;
+        RCC->CFGR = (RCC->CFGR & ~RCC_CFGR_PLLSRC) | RCC_CFGR_PLLSRC;
+        RCC->CR |= RCC_CR_PLLON;
+        while (!(RCC->CR & RCC_CR_PLLRDY)) {}
 
-    FLASH->ACR = (FLASH->ACR & ~FLASH_ACR_LATENCY) | FLASH_ACR_LATENCY_2;
-    RCC->CFGR = (RCC->CFGR & ~RCC_CFGR_SW) | RCC_CFGR_SW_PLL;
-    while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_PLL) {}
+        FLASH->ACR = (FLASH->ACR & ~FLASH_ACR_LATENCY) | FLASH_ACR_LATENCY_2;
+        RCC->CFGR = (RCC->CFGR & ~RCC_CFGR_SW) | RCC_CFGR_SW_PLL;
+        while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_PLL) {}
+        SystemCoreClock = 72000000;
+    } else {
+        RCC->CFGR = (RCC->CFGR & ~RCC_CFGR_SW) | RCC_CFGR_SW_HSI;
+        while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_HSI) {}
+        SystemCoreClock = 8000000;
+    }
 
-    SystemCoreClock = 72000000;
     HAL_SYSTICK_Config(SystemCoreClock / 1000);
     HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
 }
@@ -214,9 +223,18 @@ static void uart_init() {
     gpio.Pull  = GPIO_PULLUP;
     HAL_GPIO_Init(PLC_UART_GPIO_PORT, &gpio);
 
-    uint32_t usartDiv = PLC_SYSTEM_CORE_CLOCK / PLC_UART_BAUD;
+    uint32_t usartDiv = SystemCoreClock / PLC_UART_BAUD;
     PLC_UART->BRR = usartDiv;
     PLC_UART->CR1 = USART_CR1_UE | USART_CR1_TE | USART_CR1_RE;
+}
+
+// ═══════════════════════════════════════════════════════
+// 微秒级延时（烧录后用，用于 UART 输出前延时等待稳定）
+// ═══════════════════════════════════════════════════════
+
+static void spin_delay_us(uint32_t us) {
+    uint32_t n = us * (SystemCoreClock / 1000000) / 3;
+    while (n--) { __asm__("nop"); }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -227,7 +245,10 @@ extern "C" void plc_platform_init() {
     HAL_Init();
     system_clock_init();
     HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq() / 1000);
+    spin_delay_us(10000);
     uart_init();
+    spin_delay_us(5000);
+
     us_timer_init();
 
     __HAL_RCC_GPIOC_CLK_ENABLE();
@@ -240,7 +261,7 @@ extern "C" void plc_platform_init() {
     HAL_GPIO_WritePin(PLC_LED_PORT, PLC_LED_PIN, GPIO_PIN_SET);
 
     __HAL_RCC_TIM2_CLK_ENABLE();
-    PLC_TICK_TIM->PSC  = (PLC_SYSTEM_CORE_CLOCK / 1000000) - 1;
+    PLC_TICK_TIM->PSC  = (SystemCoreClock / 1000000) - 1;
     PLC_TICK_TIM->ARR  = 1000 - 1;
     PLC_TICK_TIM->DIER |= TIM_DIER_UIE;
     PLC_TICK_TIM->CR1  |= TIM_CR1_ARPE;
