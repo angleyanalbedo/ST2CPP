@@ -69,7 +69,7 @@ LDFLAGS   = $(OPT) $(MCUFLAGS) \
             -lc -lm -lnosys
 
 RT_SRCS   = $(wildcard $(RT_DIR)/src/*.cpp)
-PLAT_SRC  = platform_puzhong.cpp runtime_puzhong.cpp
+PLAT_SRC  = platform_puzhong.cpp runtime_puzhong.cpp ws2812.cpp
 CONFIG_JSON     = config/config.json
 CONFIG_GEN      = $(BUILD)/runtime_config.gen.cpp
 CONFIG_GEN_STUB = $(BUILD)/runtime_config_stub.gen.cpp

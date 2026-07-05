@@ -7,6 +7,7 @@
 using namespace rt_plc;
 
 extern "C" void plc_platform_init();
+extern "C" void plc_platform_demo_tick();
 
 static Scheduler sched;
 static CompositeTCI compositeTCI;
@@ -40,6 +41,7 @@ int main() {
 
     while (1) {
         __WFI();
+        plc_platform_demo_tick();
     }
 }
 
