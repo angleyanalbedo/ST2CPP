@@ -11,14 +11,20 @@
 #   make clean         # 清理
 #   make config        # 仅生成运行时配置代码
 
-CROSS   ?= arm-none-eabi-
+ROOT     = ../..
+
+# 本地工具链路径（如果存在则优先使用）
+TOOLS_DIR = $(ROOT)/.tools
+ifneq ("$(wildcard $(TOOLS_DIR)/arm-gcc/bin/arm-none-eabi-gcc.exe)","")
+    CROSS   := $(TOOLS_DIR)/arm-gcc/bin/arm-none-eabi-
+else
+    CROSS   ?= arm-none-eabi-
+endif
 CC       = $(CROSS)gcc
 CXX      = $(CROSS)g++
 LD       = $(CROSS)g++
 OBJCOPY  = $(CROSS)objcopy
 SIZE     = $(CROSS)size
-
-ROOT     = ../..
 RT_DIR   = $(ROOT)/runtime-flat
 BUILD    = build
 TCI_DIR  = ../lib/tci
@@ -41,9 +47,12 @@ DEFINES   = -DRT_PLATFORM_BARE_METAL \
             -DUSE_HAL_DRIVER \
             -DHSE_VALUE=8000000 \
             -DSTM32F103xB \
-            -DPROCESS_IMAGE_SIZE_OVERRIDE=1024 \
-            -DGVL_SIZE_OVERRIDE=4096 \
-            -DGVL_RETAIN_SIZE_OVERRIDE=1024
+            -DPROCESS_IMAGE_SIZE_OVERRIDE=512 \
+            -DGVL_SIZE_OVERRIDE=2048 \
+            -DGVL_RETAIN_SIZE_OVERRIDE=512 \
+            -DMAX_TASKS=4 \
+            -DMAX_PROGRAMS=8 \
+            -DMAX_POUS_PER_TASK=4
 
 CFLAGS    = $(OPT) $(MCUFLAGS) $(CSTANDARD) $(DEFINES) \
             -I$(RT_DIR)/include \
@@ -107,7 +116,7 @@ $(CONFIG_GEN_STUB): $(CONFIG_JSON) | $(BUILD)
 	echo "Warning: gen_config.py --stub failed" 1>&2
 
 SRCS      = $(PLAT_SRC) $(HAL_SRCS) $(HAL_STUB) startup_stm32f103xb.s system_stm32f1xx.c $(CONFIG_GEN)
-RT_OBJS   = $(addprefix $(BUILD)/,diag.o event.o gvl.o program.o scheduler.o task.o watchdog.o)
+RT_OBJS   = $(addprefix $(BUILD)/,diag.o diag_manager.o error_policy.o event.o gvl.o io_manager.o program.o retain_manager.o runtime_validator.o scheduler.o task.o task_executor.o watchdog.o)
 OBJS      = $(RT_OBJS) \
             $(patsubst %.cpp,$(BUILD)/%.o,$(filter %.cpp,$(notdir $(SRCS)))) \
             $(patsubst %.c,$(BUILD)/%.o,$(filter %.c,$(notdir $(SRCS)))) \
@@ -137,19 +146,7 @@ $(BUILD)/%.o: %.s | $(BUILD)
 $(BUILD)/runtime_config.gen.o: $(CONFIG_GEN) | $(BUILD)
 	$(CXX) $(CXXFLAGS) -c $(CONFIG_GEN) -o $@
 
-$(BUILD)/diag.o: $(RT_DIR)/src/diag.cpp | $(BUILD)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-$(BUILD)/event.o: $(RT_DIR)/src/event.cpp | $(BUILD)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-$(BUILD)/gvl.o: $(RT_DIR)/src/gvl.cpp | $(BUILD)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-$(BUILD)/program.o: $(RT_DIR)/src/program.cpp | $(BUILD)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-$(BUILD)/scheduler.o: $(RT_DIR)/src/scheduler.cpp | $(BUILD)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-$(BUILD)/task.o: $(RT_DIR)/src/task.cpp | $(BUILD)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-$(BUILD)/watchdog.o: $(RT_DIR)/src/watchdog.cpp | $(BUILD)
+$(BUILD)/%.o: $(RT_DIR)/src/%.cpp | $(BUILD)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(BUILD)/$(TARGET).elf: $(OBJS)
@@ -162,12 +159,17 @@ $(BUILD)/$(TARGET).bin: $(BUILD)/$(TARGET).elf
 $(BUILD)/$(TARGET).hex: $(BUILD)/$(TARGET).elf
 	$(OBJCOPY) -O ihex $< $@
 
+OPENOCD ?= openocd
+ifneq ("$(wildcard $(TOOLS_DIR)/opencoded/bin/openocd.exe)","")
+    OPENOCD := $(TOOLS_DIR)/opencoded/bin/openocd.exe
+endif
+
 flash: $(BUILD)/$(TARGET).bin
-	openocd -f interface/stlink.cfg -f target/stm32f1x.cfg \
+	$(OPENOCD) -f interface/stlink.cfg -f target/stm32f1x.cfg \
 		-c "program $(BUILD)/$(TARGET).bin 0x08000000 reset exit"
 
 openocd:
-	openocd -f interface/stlink.cfg -f target/stm32f1x.cfg
+	$(OPENOCD) -f interface/stlink.cfg -f target/stm32f1x.cfg
 
 clean:
 	rm -rf $(BUILD)

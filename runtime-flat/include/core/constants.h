@@ -4,10 +4,16 @@
 
 namespace rt_plc {
 
-constexpr int    MAX_TASKS         = 16;
+#ifndef MAX_TASKS
+  constexpr int MAX_TASKS = 16;
+#endif
 constexpr int    MAX_EVENTS        = 16;
-constexpr int    MAX_PROGRAMS      = 32;    // 最大 PROGRAM 实例数
-constexpr int    MAX_POUS_PER_TASK = 8;
+#ifndef MAX_PROGRAMS
+  constexpr int MAX_PROGRAMS = 32;    // 最大 PROGRAM 实例数
+#endif
+#ifndef MAX_POUS_PER_TASK
+  constexpr int MAX_POUS_PER_TASK = 8;
+#endif
 
 // GVL 大小可通过编译宏覆盖（STM32 等小 RAM 平台）
 #ifndef GVL_SIZE_OVERRIDE

@@ -40,6 +40,22 @@
 #define PLC_UART               USART1
 #endif
 
+#ifndef PLC_UART_BAUD
+#define PLC_UART_BAUD           115200
+#endif
+
+#ifndef PLC_UART_TX_PIN
+#define PLC_UART_TX_PIN         GPIO_PIN_9
+#endif
+
+#ifndef PLC_UART_RX_PIN
+#define PLC_UART_RX_PIN         GPIO_PIN_10
+#endif
+
+#ifndef PLC_UART_GPIO_PORT
+#define PLC_UART_GPIO_PORT      GPIOA
+#endif
+
 
 // ═══════════════════════════════════════════════════════
 // TIM3 自由运行计数器（替代 DWT CYCCNT）
@@ -158,10 +174,60 @@ extern "C" void TIM2_IRQHandler(void) {
 
 
 // ═══════════════════════════════════════════════════════
+// 系统时钟配置：8MHz HSE → PLL → 72MHz
+// ═══════════════════════════════════════════════════════
+
+static void system_clock_init() {
+    RCC->CR |= RCC_CR_HSEON;
+    while (!(RCC->CR & RCC_CR_HSERDY)) {}
+
+    RCC->CFGR = (RCC->CFGR & ~RCC_CFGR_PLLMULL) | RCC_CFGR_PLLMULL9;
+    RCC->CFGR = (RCC->CFGR & ~RCC_CFGR_PLLSRC) | RCC_CFGR_PLLSRC;
+    RCC->CR |= RCC_CR_PLLON;
+    while (!(RCC->CR & RCC_CR_PLLRDY)) {}
+
+    FLASH->ACR = (FLASH->ACR & ~FLASH_ACR_LATENCY) | FLASH_ACR_LATENCY_2;
+    RCC->CFGR = (RCC->CFGR & ~RCC_CFGR_SW) | RCC_CFGR_SW_PLL;
+    while ((RCC->CFGR & RCC_CFGR_SWS) != RCC_CFGR_SWS_PLL) {}
+
+    SystemCoreClock = 72000000;
+    HAL_SYSTICK_Config(SystemCoreClock / 1000);
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
+}
+
+// ═══════════════════════════════════════════════════════
+// USART1 初始化（115200 8N1）
+// ═══════════════════════════════════════════════════════
+
+static void uart_init() {
+    __HAL_RCC_USART1_CLK_ENABLE();
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+
+    GPIO_InitTypeDef gpio = {};
+    gpio.Pin   = PLC_UART_TX_PIN;
+    gpio.Mode  = GPIO_MODE_AF_PP;
+    gpio.Speed = GPIO_SPEED_FREQ_HIGH;
+    HAL_GPIO_Init(PLC_UART_GPIO_PORT, &gpio);
+
+    gpio.Pin   = PLC_UART_RX_PIN;
+    gpio.Mode  = GPIO_MODE_INPUT;
+    gpio.Pull  = GPIO_PULLUP;
+    HAL_GPIO_Init(PLC_UART_GPIO_PORT, &gpio);
+
+    uint32_t usartDiv = PLC_SYSTEM_CORE_CLOCK / PLC_UART_BAUD;
+    PLC_UART->BRR = usartDiv;
+    PLC_UART->CR1 = USART_CR1_UE | USART_CR1_TE | USART_CR1_RE;
+}
+
+// ═══════════════════════════════════════════════════════
 // 初始化函数
 // ═══════════════════════════════════════════════════════
 
 extern "C" void plc_platform_init() {
+    HAL_Init();
+    system_clock_init();
+    HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq() / 1000);
+    uart_init();
     us_timer_init();
 
     __HAL_RCC_GPIOC_CLK_ENABLE();
