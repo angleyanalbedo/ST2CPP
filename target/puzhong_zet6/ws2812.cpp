@@ -1,92 +1,88 @@
 #include "ws2812.h"
 #include "stm32f1xx_hal.h"
-#include <cmsis_gcc.h>
 
-// 完全参照板商官方代码 APP/ws2812/ws2812.c
-// 引脚: PE5 (与 LED2 共用)
+#define WS_PORT  GPIOE
+#define WS_PIN   GPIO_PIN_5
+#define WS_HIGH  (WS_PORT->BSRR = WS_PIN)
+#define WS_LOW   (WS_PORT->BRR  = WS_PIN)
 
-#define RGB_PORT  GPIOE
-#define RGB_PIN   GPIO_PIN_5
-#define RGB_LED_HIGH  (RGB_PORT->BSRR = RGB_PIN)
-#define RGB_LED_LOW   (RGB_PORT->BRR  = RGB_PIN)
+// WS2812 时序 @72MHz:
+//   官方 Keil+SPL 代码: GPIO_SetBits(~10cyc) + NOPs + GPIO_ResetBits(~10cyc) + NOPs
+//   GCC 直写 BSRR(~2cyc) + NOPs + BRR(~2cyc) + NOPs
+//   需要比官方多 ~16 NOP 来补偿函数调用开销差
+//
+//   T0H = 220-380ns → 目标 ~22 周期 (BSRR 2 + 20 NOP)
+//   T0L = 580-1000ns → 目标 ~50 周期 (BRR 2 + 48 NOP)
+//   T1H = 580-1000ns → 目标 ~50 周期 (BSRR 2 + 48 NOP)
+//   T1L = 220-380ns → 目标 ~22 周期 (BRR 2 + 20 NOP)
 
-static void RGB_LED_Write0(void) {
-    RGB_LED_HIGH;
-    __NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
-    __NOP();__NOP();
-    RGB_LED_LOW;
+static void ws_bit0() {
+    WS_HIGH;
     __NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
     __NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
+    WS_LOW;
     __NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
-    __NOP();__NOP();
+    __NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
+    __NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
+    __NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
+    __NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
+    __NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
 }
 
-static void RGB_LED_Write1(void) {
-    RGB_LED_HIGH;
+static void ws_bit1() {
+    WS_HIGH;
     __NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
     __NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
     __NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
-    __NOP();__NOP();
-    RGB_LED_LOW;
     __NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
-    __NOP();__NOP();
+    __NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
+    __NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
+    __NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
+    WS_LOW;
+    __NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
+    __NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
 }
 
-static void RGB_LED_Reset(void) {
-    RGB_LED_LOW;
-    for (volatile int i = 0; i < 8000; i++) {}
+static void ws_reset() {
+    WS_LOW;
+    for (volatile int i = 0; i < 6000; i++) {}
 }
 
-static void RGB_LED_Write_Byte(uint8_t byte) {
+static void ws_send_byte(uint8_t v) {
     for (int i = 0; i < 8; i++) {
-        if (byte & 0x80) RGB_LED_Write1();
-        else             RGB_LED_Write0();
-        byte <<= 1;
+        if (v & 0x80) ws_bit1(); else ws_bit0();
+        v <<= 1;
     }
 }
 
-static void RGB_LED_Write_24Bits(uint8_t green, uint8_t red, uint8_t blue) {
-    RGB_LED_Write_Byte(green);
-    RGB_LED_Write_Byte(red);
-    RGB_LED_Write_Byte(blue);
+static void ws_send_pixel(uint8_t r, uint8_t g, uint8_t b) {
+    ws_send_byte(g);
+    ws_send_byte(r);
+    ws_send_byte(b);
 }
 
-void rgb_init(void) {
+void rgb_init() {
     __HAL_RCC_GPIOE_CLK_ENABLE();
     GPIO_InitTypeDef gpio = {};
-    gpio.Pin   = RGB_PIN;
+    gpio.Pin   = WS_PIN;
     gpio.Mode  = GPIO_MODE_OUTPUT_PP;
     gpio.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(RGB_PORT, &gpio);
-    RGB_LED_HIGH;
-
-    rgb_clear();
+    HAL_GPIO_Init(WS_PORT, &gpio);
+    WS_LOW;
 }
 
-void rgb_clear(void) {
+void rgb_clear() {
     __disable_irq();
     for (int i = 0; i < 25; i++)
-        RGB_LED_Write_24Bits(0, 0, 0);
-    RGB_LED_Reset();
+        ws_send_pixel(0, 0, 0);
+    ws_reset();
     __enable_irq();
 }
 
 void rgb_set_all(uint8_t r, uint8_t g, uint8_t b) {
     __disable_irq();
     for (int i = 0; i < 25; i++)
-        RGB_LED_Write_24Bits(g, r, b);
-    RGB_LED_Reset();
+        ws_send_pixel(r, g, b);
+    ws_reset();
     __enable_irq();
-}
-
-void rgb_show_all_red(void) {
-    rgb_set_all(0xFF, 0, 0);
-}
-
-void rgb_show_all_green(void) {
-    rgb_set_all(0, 0xFF, 0);
-}
-
-void rgb_show_all_blue(void) {
-    rgb_set_all(0, 0, 0xFF);
 }

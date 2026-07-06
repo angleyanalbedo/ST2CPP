@@ -1,5 +1,6 @@
 #include "rt_runtime.h"
 #include "rt_plc.h"
+#include "ws2812.h"
 
 #if defined(RT_PLATFORM_BARE_METAL)
 
@@ -237,6 +238,10 @@ static void gpio_init() {
 // ═══ 初始化入口 ═══
 
 extern "C" void plc_platform_init() {
+    // 最早期测试: 立即点亮 PB5 (LED1), 确认代码在运行
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    GPIOB->BRR = GPIO_PIN_5;  // PB5 LOW → LED ON
+
     HAL_Init();
     system_clock_init();
     HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq() / 1000);
@@ -244,6 +249,7 @@ extern "C" void plc_platform_init() {
     uart_init();
     gpio_init();
     us_timer_init();
+    rgb_init();
 
     __HAL_RCC_TIM2_CLK_ENABLE();
     PLC_TICK_TIM->PSC  = (SystemCoreClock / 1000000) - 1;
@@ -258,13 +264,18 @@ extern "C" void plc_platform_init() {
 
     PLC_TICK_TIM->CR1 |= TIM_CR1_CEN;
 
-    // 启动快闪 3 次确认 LED 工作
+    // 先确认 LED 工作: 快闪 3 次 (然后再试 WS2812)
     for (int i = 0; i < 3; i++) {
         PLC_LED_PORT->BRR = PLC_LED_PIN;
         for (volatile int w = 0; w < 400000; w++) { __NOP(); }
         PLC_LED_PORT->BSRR = PLC_LED_PIN;
         for (volatile int w = 0; w < 400000; w++) { __NOP(); }
     }
+
+    // WS2812 测试
+    rgb_set_all(0xFF, 0, 0);
+    for (volatile int w = 0; w < 1000000; w++) { __NOP(); }
+    rgb_clear();
 
     rt_plc::platform::logInfo("PLC Puzhong ZET6: %luMHz\n",
                                SystemCoreClock / 1000000);
