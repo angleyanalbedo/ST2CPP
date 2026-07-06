@@ -125,15 +125,15 @@ public class Main {
                 writer.write(debugMap);
             }
 
-            // REPL 变量名表（不进入固件，仅 REPL 调试用）
-            String debugNames = gvlCtx.dumpDebugNameTable();
-            File debugNamesFile = new File(outFile.getParentFile(), "debug_names.gen.cpp");
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(debugNamesFile))) {
-                writer.write(debugNames);
+            // REPL 完整变量表（含名字 + struct 展开，不进入固件）
+            String debugMapGen = gvlCtx.dumpDebugMapGenCpp();
+            File debugMapGenFile = new File(outFile.getParentFile(), "debug_map.gen.cpp");
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(debugMapGenFile))) {
+                writer.write(debugMapGen);
             }
 
             if (cfg.verbose) {
-                System.out.println("[Debug]  Generated debug_table.cpp + debug_map.json + debug_names.gen.cpp");
+                System.out.println("[Debug]  Generated debug_table.cpp + debug_map.json + debug_map.gen.cpp");
             }
         }
 

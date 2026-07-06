@@ -137,17 +137,14 @@ if(RT_BUILD_REPL)
 "#include \"debug/repl_engine.h\"
 
 namespace rt_plc {
-extern const DebugVar st2c_debug_vars[];
-extern const uint32_t st2c_debug_var_count;
-extern const NameEntry st2c_debug_names[];
-extern const uint32_t st2c_debug_name_count;
+extern const DebugMapEntry st2c_debug_map[];
+extern const uint32_t st2c_debug_map_count;
 }
 extern void ${REPL_REGISTER_FUNC}(rt_plc::POURegistry& reg);
 
 int main() {
     rt_plc::ReplEngine repl;
-    repl.begin(rt_plc::st2c_debug_vars, rt_plc::st2c_debug_var_count,
-               rt_plc::st2c_debug_names, rt_plc::st2c_debug_name_count);
+    repl.begin(rt_plc::st2c_debug_map, rt_plc::st2c_debug_map_count);
     ${REPL_REGISTER_FUNC}(repl.registry());
     repl.run();
     return 0;
@@ -160,7 +157,7 @@ int main() {
         ${RT_SRC_DIR}/gvl.cpp
         "${GENERATED_CPP}"
         "${FLAT_OUTPUT_DIR}/debug_table.cpp"
-        "${FLAT_OUTPUT_DIR}/debug_names.gen.cpp"
+        "${FLAT_OUTPUT_DIR}/debug_map.gen.cpp"
     )
 
     target_include_directories(plc_repl PRIVATE
