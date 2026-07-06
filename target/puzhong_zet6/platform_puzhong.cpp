@@ -1,6 +1,5 @@
 #include "rt_runtime.h"
 #include "rt_plc.h"
-#include "ws2812.h"
 
 #if defined(RT_PLATFORM_BARE_METAL)
 
@@ -213,17 +212,6 @@ static void uart_init() {
     PLC_UART->CR1 = USART_CR1_UE | USART_CR1_TE | USART_CR1_RE;
 }
 
-// ═══ 蜂鸣器 ═══
-
-static void beep_on()  { PLC_BEEP_PORT->BSRR = PLC_BEEP_PIN; }
-static void beep_off() { PLC_BEEP_PORT->BRR  = PLC_BEEP_PIN; }
-
-static void beep_beep(int ms) {
-    beep_on();
-    for (volatile int i = 0; i < ms * 1000; i++) { __asm__("nop"); }
-    beep_off();
-}
-
 // ═══ GPIO 初始化 ═══
 
 static void gpio_init() {
@@ -244,67 +232,7 @@ static void gpio_init() {
     HAL_GPIO_WritePin(PLC_BEEP_PORT, PLC_BEEP_PIN, GPIO_PIN_RESET);
 }
 
-// ═══ WS2812 演示 ═══
 
-static uint32_t demo_step = 0;
-
-// 边框跑马灯: 5x5 矩阵边框共 16 个位置
-static const int8_t border[16][2] = {
-    {0,0},{1,0},{2,0},{3,0},{4,0},
-    {4,1},{4,2},{4,3},{4,4},
-    {3,4},{2,4},{1,4},{0,4},
-    {0,3},{0,2},{0,1},
-};
-
-static void demo_startup() {
-    // 逐个点亮 (流水灯)
-    for (int i = 0; i < RGB_NUM_LEDS; i++) {
-        uint32_t hue = (i * 60) % 360;
-        // 简化的 HSV 转 RGB (取色环 6 段)
-        uint32_t color;
-        if (hue < 60)       color = RGB(0xFF, hue * 4, 0);
-        else if (hue < 120) color = RGB((120 - hue) * 4, 0xFF, 0);
-        else if (hue < 180) color = RGB(0, 0xFF, (hue - 120) * 4);
-        else if (hue < 240) color = RGB(0, (240 - hue) * 4, 0xFF);
-        else if (hue < 300) color = RGB((hue - 240) * 4, 0, 0xFF);
-        else                color = RGB(0xFF, 0, (360 - hue) * 4);
-        rgb_set_pixel(i % 5, i / 5, color);
-        rgb_show();
-        for (volatile int w = 0; w < 30000; w++) { __asm__("nop"); }
-    }
-    for (volatile int w = 0; w < 60000; w++) { __asm__("nop"); }
-}
-
-extern "C" void plc_platform_demo_tick() {
-    int ct = plc_tick_count;
-
-    // 每 200ms 更新一次 WS2812
-    if ((ct % 200) != 0) return;
-
-    // 边框跑马灯
-    int pos = (ct / 200) % 16;
-    rgb_clear();
-    for (int i = 0; i < 4; i++) {
-        int p = (pos + i) % 16;
-        uint8_t bright = (4 - i) * 60;
-        rgb_set_pixel(border[p][0], border[p][1], RGB(bright, bright / 2, 0));
-    }
-    // 中心显示运行状态: 每 50 步显示不同颜色
-    uint32_t center = (ct / 1000) % 6;
-    uint32_t ccolor = RGB_WHITE;
-    switch (center) {
-        case 0: ccolor = RGB_RED;    break;
-        case 1: ccolor = RGB_GREEN;  break;
-        case 2: ccolor = RGB_BLUE;   break;
-        case 3: ccolor = RGB_YELLOW; break;
-        case 4: ccolor = RGB_CYAN;   break;
-        case 5: ccolor = RGB_MAGENTA; break;
-    }
-    rgb_set_pixel(2, 2, ccolor);
-    rgb_show();
-
-    demo_step = ct;
-}
 
 // ═══ 初始化入口 ═══
 
@@ -316,7 +244,6 @@ extern "C" void plc_platform_init() {
     uart_init();
     gpio_init();
     us_timer_init();
-    rgb_init();
 
     __HAL_RCC_TIM2_CLK_ENABLE();
     PLC_TICK_TIM->PSC  = (SystemCoreClock / 1000000) - 1;
@@ -331,9 +258,13 @@ extern "C" void plc_platform_init() {
 
     PLC_TICK_TIM->CR1 |= TIM_CR1_CEN;
 
-    // 启动演示
-    beep_beep(80);
-    demo_startup();
+    // 启动快闪 3 次确认 LED 工作
+    for (int i = 0; i < 3; i++) {
+        PLC_LED_PORT->BRR = PLC_LED_PIN;
+        for (volatile int w = 0; w < 400000; w++) { __NOP(); }
+        PLC_LED_PORT->BSRR = PLC_LED_PIN;
+        for (volatile int w = 0; w < 400000; w++) { __NOP(); }
+    }
 
     rt_plc::platform::logInfo("PLC Puzhong ZET6: %luMHz\n",
                                SystemCoreClock / 1000000);

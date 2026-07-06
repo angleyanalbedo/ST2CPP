@@ -69,7 +69,7 @@ LDFLAGS   = $(OPT) $(MCUFLAGS) \
             -lc -lm -lnosys
 
 RT_SRCS   = $(wildcard $(RT_DIR)/src/*.cpp)
-PLAT_SRC  = platform_puzhong.cpp runtime_puzhong.cpp ws2812.cpp
+PLAT_SRC  = platform_puzhong.cpp runtime_puzhong.cpp
 CONFIG_JSON     = config/config.json
 CONFIG_GEN      = $(BUILD)/runtime_config.gen.cpp
 CONFIG_GEN_STUB = $(BUILD)/runtime_config_stub.gen.cpp
@@ -137,19 +137,22 @@ ifneq ("$(wildcard $(TOOLS_DIR)/opencoded/bin/openocd.exe)","")
     OPENOCD := $(TOOLS_DIR)/opencoded/bin/openocd.exe
 endif
 
+# CMSIS-DAP 仿真器配置
+OPENOCD_IF = -c "adapter driver cmsis-dap; adapter speed 1000"
+
 flash: $(BUILD)/$(TARGET).bin
-	$(OPENOCD) -f interface/stlink.cfg -f target/stm32f1x.cfg \
+	$(OPENOCD) $(OPENOCD_IF) -f target/stm32f1x.cfg \
 		-c "program $(BUILD)/$(TARGET).bin 0x08000000 reset exit"
 
 flash-jtag: $(BUILD)/$(TARGET).bin
-	$(OPENOCD) -c "transport select jtag" -f interface/stlink.cfg -f target/stm32f1x.cfg \
+	$(OPENOCD) -c "adapter driver cmsis-dap; transport select jtag; adapter speed 1000" -f target/stm32f1x.cfg \
 		-c "program $(BUILD)/$(TARGET).bin 0x08000000 reset exit"
 
 openocd:
-	$(OPENOCD) -f interface/stlink.cfg -f target/stm32f1x.cfg
+	$(OPENOCD) $(OPENOCD_IF) -f target/stm32f1x.cfg
 
 clean:
-	rm -rf $(BUILD)
+	$(RM) -rf $(BUILD)
 
 $(BUILD):
 	mkdir -p $(BUILD)
