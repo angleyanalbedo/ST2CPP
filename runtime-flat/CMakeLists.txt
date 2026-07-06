@@ -109,8 +109,75 @@ if(RT_BUILD_TESTS)
     message(STATUS "[rt_plc] Tests: fibonacci, multitask_demo, framework_test, runtime_integration_test, unit_test")
 endif()
 
+# ═══ REPL 调试二进制（独立可执行文件） ═══
+option(RT_BUILD_REPL "Build REPL debug binary" OFF)
+
+if(RT_BUILD_REPL)
+    if(NOT FLAT_OUTPUT_DIR)
+        message(FATAL_ERROR "FLAT_OUTPUT_DIR required: -DFLAT_OUTPUT_DIR=<path to compiler output>")
+    endif()
+    if(NOT REPL_GENERATED_SRC)
+        set(REPL_GENERATED_SRC "generated.cpp")
+        message(STATUS "[repl] REPL_GENERATED_SRC default: ${REPL_GENERATED_SRC}")
+    endif()
+    if(NOT REPL_REGISTER_FUNC)
+        set(REPL_REGISTER_FUNC "registerPOU_combined")
+        message(STATUS "[repl] REPL_REGISTER_FUNC default: ${REPL_REGISTER_FUNC}")
+    endif()
+
+    # 验证文件存在
+    set(GENERATED_CPP "${FLAT_OUTPUT_DIR}/${REPL_GENERATED_SRC}")
+    if(NOT EXISTS "${GENERATED_CPP}")
+        message(FATAL_ERROR "Generated source not found: ${GENERATED_CPP}")
+    endif()
+
+    # 生成 repl_main.cpp
+    set(REPL_MAIN_SRC "${CMAKE_CURRENT_BINARY_DIR}/repl_main.cpp")
+    file(WRITE "${REPL_MAIN_SRC}"
+"#include \"debug/repl_engine.h\"
+
+namespace rt_plc {
+extern const DebugVar st2c_debug_vars[];
+extern const uint32_t st2c_debug_var_count;
+extern const NameEntry st2c_debug_names[];
+extern const uint32_t st2c_debug_name_count;
+}
+extern void ${REPL_REGISTER_FUNC}(rt_plc::POURegistry& reg);
+
+int main() {
+    rt_plc::ReplEngine repl;
+    repl.begin(rt_plc::st2c_debug_vars, rt_plc::st2c_debug_var_count,
+               rt_plc::st2c_debug_names, rt_plc::st2c_debug_name_count);
+    ${REPL_REGISTER_FUNC}(repl.registry());
+    repl.run();
+    return 0;
+}
+")
+
+    add_executable(plc_repl
+        "${REPL_MAIN_SRC}"
+        ${RT_SRC_DIR}/repl_engine.cpp
+        ${RT_SRC_DIR}/gvl.cpp
+        "${GENERATED_CPP}"
+        "${FLAT_OUTPUT_DIR}/debug_table.cpp"
+        "${FLAT_OUTPUT_DIR}/debug_names.gen.cpp"
+    )
+
+    target_include_directories(plc_repl PRIVATE
+        ${RT_INCLUDE_DIR}
+        ${FLAT_OUTPUT_DIR}
+    )
+
+    if(MINGW)
+        target_link_options(plc_repl PRIVATE -mconsole)
+    endif()
+
+    message(STATUS "[rt_plc] REPL binary: plc_repl (target: plc_repl)")
+endif()
+
 message(STATUS "══════════════════════════════════════════")
 message(STATUS "  runtime-flat/  — 核心静态库 (rt_core + rt_scheduler)")
 message(STATUS "  平台运行时见 target/<platform>/")
 message(STATUS "  cmake -DRT_BUILD_TESTS=ON  — 启用测试")
+message(STATUS "  cmake -DRT_BUILD_REPL=ON -DFLAT_OUTPUT_DIR=...  — 启用 REPL 调试")
 message(STATUS "══════════════════════════════════════════")
