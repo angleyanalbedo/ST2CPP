@@ -28,8 +28,8 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Build with Maven
-        run: mvn package -DskipTests --file java/pom.xml
+      - name: Build & Test with Maven
+        run: mvn package --file java/pom.xml
 
       - name: Upload JAR
         uses: actions/upload-artifact@v4
@@ -60,14 +60,52 @@ jobs:
         run: >
           cmake -B runtime-flat/build -S runtime-flat
           -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+          -DRT_BUILD_TESTS=ON
 
-      - name: Build
+      - name: Build (libs + tests)
         run: cmake --build runtime-flat/build --parallel
+
+      - name: Run framework_test
+        run: runtime-flat/build/framework_test.exe
+
+      - name: Run runtime_integration_test
+        run: runtime-flat/build/runtime_integration_test.exe
+
+      - name: Run unit_test
+        run: runtime-flat/build/unit_test.exe
+
+  build-repl:
+    name: Build REPL (End-to-End)
+    needs: [build-java]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y g++ cmake
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Download JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: st2c-jar
+          path: java/target/
+
+      - name: Build REPL (full pipeline)
+        run: make
+
+      - name: Verify binary
+        run: file target/repl/plc_repl && ls -lh target/repl/plc_repl
 
   package:
     name: Package Release ZIP
     if: github.event_name != 'pull_request'
-    needs: [build-java, build-runtime]
+    needs: [build-java, build-runtime, build-repl]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -92,6 +130,7 @@ jobs:
           Copy-Item -Recurse target st2c-release/target/
           # Examples
           Copy-Item -Recurse examples st2c-release/examples/
+          Copy-Item Makefile st2c-release/
           Copy-Item README.md st2c-release/
           Compress-Archive -Path st2c-release/* -DestinationPath st2c-build.zip
 
