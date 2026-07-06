@@ -340,6 +340,7 @@ struct MY_POINT {
     INT X;
     INT Y;
 };
+
 #include "gvl_layout.gen.h"
 
 

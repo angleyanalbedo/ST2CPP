@@ -359,6 +359,7 @@ struct MY_TIMER {
 		ET = ELAPSED;
     }
 };
+
 #include "gvl_layout.gen.h"
 
 

@@ -338,7 +338,8 @@ INT FLOOR(REAL X);
 
 INT ADD_TEN(INT X) {
 		return X + 10;
-}#include "gvl_layout.gen.h"
+}
+#include "gvl_layout.gen.h"
 
 
 void PROGRAM_test_P_init(GVL& gvl, ProcessImage& io) {

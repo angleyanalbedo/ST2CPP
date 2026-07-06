@@ -335,6 +335,7 @@ SINT GRAY_TO_BYTE(BYTE IN);
 
 INT FLOOR(REAL X);
 
+
 #include "gvl_layout.gen.h"
 
 
