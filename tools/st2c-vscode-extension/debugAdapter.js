@@ -6,7 +6,15 @@
 
 const { spawn } = require('child_process');
 const path = require('path');
-const rl = require('readline');
+const fs = require('fs');
+
+const logPath = path.join(__dirname, '..', 'debug_adapter.log');
+const logFd = fs.openSync(logPath, 'a');
+function log(msg) {
+    fs.writeSync(logFd, `[${new Date().toISOString()}] ${msg}\n`);
+}
+
+log("--- Debug Adapter Started ---");
 
 // ─── MI2 value parser ──────────────────────────────────────────────────────
 
@@ -132,24 +140,39 @@ class GDBClient {
         this.buffer = '';
         this.pendingResolve = null;
         this.seq = 0;
+        this.cmdQueue = [];
+        this.cmdActive = false;
     }
 
     async start(executable, args) {
+        log(`GDB start: executable=${executable}, args=${JSON.stringify(args)}`);
         this.proc = spawn(this.gdbPath, ['--interpreter=mi2'], {
             stdio: ['pipe', 'pipe', 'pipe'],
             shell: true,
         });
-        this.proc.on('exit', () => {
+        this.proc.on('exit', (code) => {
+            log(`GDB exited with code ${code}`);
             if (this.pendingResolve) { this.pendingResolve({ _class: 'error' }); this.pendingResolve = null; }
+            while(this.cmdQueue.length > 0) {
+                const item = this.cmdQueue.shift();
+                item.reject(new Error('GDB exited'));
+            }
+            if (this.onEvent) this.onEvent({ _class: 'exit', code });
         });
-        this.proc.stdout.on('data', data => this._onData(data.toString()));
-        this.proc.stderr.on('data', data => {});
+        this.proc.stdout.on('data', data => {
+            const str = data.toString();
+            log(`GDB OUT: ${str.trim()}`);
+            this._onData(str);
+        });
+        this.proc.stderr.on('data', data => {
+            log(`GDB ERR: ${data.toString().trim()}`);
+        });
 
         // Discard initial version output
         await this._waitForPrompt(5000);
 
         // Load executable
-        await this.sendCommand(`file-exec-and-symbols "${executable}"`);
+        await this.sendCommand(`-file-exec-and-symbols "${executable}"`);
         if (args) await this.sendCommand(`-exec-arguments ${args.map(a => `"${a}"`).join(' ')}`);
     }
 
@@ -170,10 +193,16 @@ class GDBClient {
             const cat = classifyMILine(line);
             if (cat === 'result') {
                 const r = { _class: line[0] === '^' ? line.slice(1, line.indexOf(',') >= 0 ? line.indexOf(',') : undefined) : 'done', ...parseMIResults(line) };
-                if (this.pendingResolve) { this.pendingResolve(r); this.pendingResolve = null; }
+                if (this.pendingResolve) { 
+                    const resolve = this.pendingResolve;
+                    this.pendingResolve = null; 
+                    this.cmdActive = false;
+                    resolve(r); 
+                    setImmediate(() => this._pump());
+                }
                 else if (this.onEvent) this.onEvent(r);
             } else if (cat === 'exec' || cat === 'notify') {
-                const ev = { _class: line[0], _reason: line.indexOf(',') >= 0 ? line.slice(0, line.indexOf(',')) : line, ...parseMIResults(line) };
+                const ev = { _class: line[0], _reason: line.indexOf(',') >= 0 ? line.slice(1, line.indexOf(',')) : line.slice(1), ...parseMIResults(line) };
                 if (this.onEvent) this.onEvent(ev);
             }
         }
@@ -193,13 +222,27 @@ class GDBClient {
 
     async sendCommand(cmd) {
         return new Promise((resolve, reject) => {
-            if (this.pendingResolve) reject(new Error('Command already pending'));
-            this.pendingResolve = resolve;
-            this.proc.stdin.write(cmd + '\n');
-            setTimeout(() => {
-                if (this.pendingResolve) { this.pendingResolve({ _class: 'error', msg: 'timeout' }); this.pendingResolve = null; }
-            }, 10000);
+            this.cmdQueue.push({ cmd, resolve, reject });
+            this._pump();
         });
+    }
+
+    _pump() {
+        if (this.cmdActive || this.cmdQueue.length === 0) return;
+        this.cmdActive = true;
+        const { cmd, resolve, reject } = this.cmdQueue.shift();
+        this.pendingResolve = resolve;
+        log(`GDB CMD: ${cmd}`);
+        this.proc.stdin.write(cmd + '\n');
+        setTimeout(() => {
+            if (this.pendingResolve === resolve) { 
+                log(`GDB CMD Timeout: ${cmd}`);
+                this.pendingResolve({ _class: 'error', msg: 'timeout' }); 
+                this.pendingResolve = null; 
+                this.cmdActive = false;
+                this._pump();
+            }
+        }, 10000);
     }
 
     async sendCLI(cmd) {
@@ -228,11 +271,18 @@ class ST2CDebugAdapter {
     // ── DAP request dispatch ──
 
     async handleRequest(req) {
+        log(`DAP REQ: ${JSON.stringify(req)}`);
         const { command, arguments: args, seq } = req;
         try {
+            if (typeof this[`_${command}`] !== 'function') {
+                log(`DAP REQ unhandled: ${command}`);
+                this._send({ type: 'response', request_seq: seq, success: false, command, message: `unsupported command: ${command}` });
+                return;
+            }
             const body = await this[`_${command}`](args);
             this._send({ type: 'response', request_seq: seq, success: true, command, body });
         } catch (e) {
+            log(`DAP REQ ERROR: ${e.stack}`);
             this._send({ type: 'response', request_seq: seq, success: false, command, message: e.message });
         }
     }
@@ -261,9 +311,21 @@ class ST2CDebugAdapter {
         // Set breakpoint pending by default
         await this._gdb.sendCLI('set breakpoint pending on');
 
-        if (args.stopAtEntry !== false) {
-            await this._gdb.sendCLI('handle SIGTRAP nostop noprint');
-        }
+        // Removed SIGTRAP ignore rule because it breaks Windows breakpoints
+
+        this._send({ type: 'event', event: 'initialized' });
+    }
+
+    async _threads(args) {
+        return {
+            threads: [
+                { id: 1, name: "Main Thread" }
+            ]
+        };
+    }
+
+    async _setExceptionBreakpoints(args) {
+        return {};
     }
 
     async _setBreakpoints(args) {
@@ -283,11 +345,11 @@ class ST2CDebugAdapter {
             for (const bp of bps) {
                 const line = bp.line;
                 try {
-                    const resp = await this._gdb.sendCommand(`-break-insert -f "${normalized}":${line}`);
+                    const resp = await this._gdb.sendCommand(`-break-insert -f --source "${normalized}" --line ${line}`);
                     const bkpt = resp.bkpt || {};
                     newBps.push({
                         id: parseInt(bkpt.number || 0),
-                        line: parseInt(bkpt.line || line),
+                        line: bp.line,
                         verified: true,
                         source: { path: srcPath },
                     });
@@ -392,7 +454,7 @@ class ST2CDebugAdapter {
     _onGDBevent(ev) {
         if (ev._class === '*') {
             const reason = ev._reason || '';
-            if (reason === 'stopped' || ev._class === '*') {
+            if (reason === 'stopped') {
                 const frame = ev.frame || {};
                 this._send({
                     type: 'event',
@@ -415,6 +477,9 @@ class ST2CDebugAdapter {
             }
         } else if (ev._class === '=' && ev._reason === 'breakpoint-created') {
             // GDB resolved a pending breakpoint
+        } else if (ev._class === 'exit') {
+            this._send({ type: 'event', event: 'terminated' });
+            this._send({ type: 'event', event: 'exited', body: { exitCode: ev.code || 0 } });
         }
     }
 
@@ -424,6 +489,7 @@ class ST2CDebugAdapter {
         msg.type = msg.type || 'event';
         if (msg.type === 'response') msg.seq = ++this._seq;
         const json = JSON.stringify(msg);
+        log(`DAP OUT: ${json}`);
         const header = `Content-Length: ${Buffer.byteLength(json, 'utf-8')}\r\n\r\n`;
         process.stdout.write(header + json);
     }
@@ -451,5 +517,11 @@ class ST2CDebugAdapter {
 // ─── Main ───────────────────────────────────────────────────────────────────
 
 const adapter = new ST2CDebugAdapter();
-process.stdin.on('data', chunk => adapter.feedChunk(chunk.toString()));
-process.stdin.on('end', () => process.exit(0));
+process.stdin.on('data', chunk => {
+    log(`STDIN chunk: ${chunk.length} bytes`);
+    adapter.feedChunk(chunk.toString());
+});
+process.stdin.on('end', () => {
+    log('STDIN ended, exiting');
+    process.exit(0);
+});

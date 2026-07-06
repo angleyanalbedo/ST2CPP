@@ -36,6 +36,8 @@ public:
 
     void run();
 
+    bool isDone() const { return done_; }
+
     int execCommand(const char* line, char* out, size_t out_size);
 
 private:

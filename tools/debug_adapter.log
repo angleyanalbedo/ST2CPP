@@ -1,0 +1,325 @@
+[2026-07-04T13:52:51.462Z] --- Debug Adapter Started ---
+[2026-07-04T13:52:51.463Z] STDIN chunk: 565 bytes
+[2026-07-04T13:52:51.463Z] DAP REQ: {"command":"initialize","arguments":{"clientID":"vscode","clientName":"Visual Studio Code","adapterID":"st2c","pathFormat":"path","linesStartAt1":true,"columnsStartAt1":true,"supportsVariableType":true,"supportsVariablePaging":true,"supportsRunInTerminalRequest":true,"locale":"zh-cn","supportsProgressReporting":true,"supportsInvalidatedEvent":true,"supportsMemoryReferences":true,"supportsArgsCanBeInterpretedByShell":true,"supportsMemoryEvent":true,"supportsStartDebuggingRequest":true,"supportsANSIStyling":true},"type":"request","seq":1}
+[2026-07-04T13:52:51.463Z] DAP OUT: {"type":"response","request_seq":1,"success":true,"command":"initialize","body":{"supportsConfigurationDoneRequest":true,"supportsSetVariable":false,"supportsConditionalBreakpoints":false,"supportsFunctionBreakpoints":false,"supportsEvaluateForHovers":false,"supportTerminateDebuggee":true},"seq":1}
+[2026-07-04T13:52:51.465Z] STDIN chunk: 403 bytes
+[2026-07-04T13:52:51.465Z] DAP REQ: {"command":"launch","arguments":{"type":"st2c","name":"ST2C Debug","request":"launch","program":"d:\\source\\Project\\ST2C-master\\target\\desktop\\build\\plc_runtime_desktop_dbg.exe","args":["--cycle-us","1000"],"cwd":"d:\\source\\Project\\ST2C-master\\examples\\projects","miDebuggerPath":"gdb.exe","__sessionId":"5198c6ee-f7bd-4ebc-8023-e35f2d32e3f2"},"type":"request","seq":2}
+[2026-07-04T13:52:51.465Z] GDB start: executable=d:\source\Project\ST2C-master\target\desktop\build\plc_runtime_desktop_dbg.exe, args=["--cycle-us","1000"]
+[2026-07-04T13:52:51.601Z] GDB OUT: =thread-group-added,id="i1"
+~"GNU gdb (GDB) 16.3\n"
+~"Copyright (C) 2024 Free Software Foundation, Inc.\n"
+~"License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law."
+~"\nType \""
+[2026-07-04T13:52:51.602Z] GDB OUT: ~"show copying\" and \"show warranty\" for details.\n"
+~"This GDB was configured as \"x86_64-w64-mingw32\".\n"
+~"Type \"show configuration\" for configuration details.\n"
+~"For bug reporting instructions, please see:\n"
+~"<https://www.gnu.org/software/gdb/bugs/>.\n"
+~"Find the GDB manual and other documentation resources online at:\n    <"
+~"http://www.gnu.org/software/gdb/documentation/>.\n\n"
+~"For help, type \"help\".\n"
+~"Type \"apropos word\" to search for commands related to \"word\".\n"
+[2026-07-04T13:52:51.608Z] GDB OUT: (gdb)
+[2026-07-04T13:52:56.479Z] GDB CMD: -file-exec-and-symbols "d:\source\Project\ST2C-master\target\desktop\build\plc_runtime_desktop_dbg.exe"
+[2026-07-04T13:52:56.499Z] GDB OUT: ^done
+(gdb)
+[2026-07-04T13:52:56.500Z] GDB CMD: -exec-arguments "--cycle-us" "1000"
+[2026-07-04T13:52:56.510Z] GDB OUT: ^done
+(gdb)
+[2026-07-04T13:52:56.510Z] GDB CMD: -interpreter-exec console "set breakpoint pending on"
+[2026-07-04T13:52:56.526Z] GDB OUT: =cmd-param-changed,param="breakpoint pending",value="on"
+^done
+(gdb)
+[2026-07-04T13:52:56.526Z] GDB CMD: -interpreter-exec console "handle SIGTRAP nostop noprint"
+[2026-07-04T13:52:56.541Z] GDB OUT: ~"SIGTRAP is used by the debugger.\nAre you sure you want to change it? "
+~"(y or n) [answered Y; input not from terminal]\n"
+~"Signal        Stop\tPrint\tPass to program\tDescription\n"
+[2026-07-04T13:52:56.541Z] GDB OUT: ~"SIGTRAP       No\tNo\tNo\t\tTrace/breakpoint trap\n"
+^done
+(gdb)
+[2026-07-04T13:52:56.541Z] DAP OUT: {"type":"event","event":"initialized"}
+[2026-07-04T13:52:56.541Z] DAP OUT: {"type":"response","request_seq":2,"success":true,"command":"launch","seq":2}
+[2026-07-04T13:52:56.542Z] STDIN chunk: 289 bytes
+[2026-07-04T13:52:56.542Z] DAP REQ: {"command":"setBreakpoints","arguments":{"source":{"name":"test_arr_struct.st","path":"d:\\source\\Project\\ST2C-master\\examples\\projects\\syntax_tests\\test_arr_struct.st"},"lines":[17],"breakpoints":[{"line":17}],"sourceModified":false},"type":"request","seq":3}
+[2026-07-04T13:52:56.542Z] GDB CMD: -break-insert -f --source "d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_arr_struct.st" --line 17
+[2026-07-04T13:52:56.543Z] STDIN chunk: 288 bytes
+[2026-07-04T13:52:56.543Z] DAP REQ: {"command":"setBreakpoints","arguments":{"source":{"name":"test_at.st","path":"d:\\source\\Project\\ST2C-master\\examples\\projects\\syntax_tests\\test_at.st"},"lines":[21,24],"breakpoints":[{"line":21},{"line":24}],"sourceModified":false},"type":"request","seq":4}
+[2026-07-04T13:52:56.557Z] GDB OUT: &"No source file named d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_arr_struct.st.\n"
+[2026-07-04T13:52:56.557Z] GDB OUT: ^done,bkpt={number="1",type="breakpoint",disp="keep",enabled="y",addr="<PENDING>",pending="-source d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_arr_struct.st -line 17",times="0",original-location="-source d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_arr_struct.st -line 17"}
+(gdb)
+[2026-07-04T13:52:56.557Z] DAP OUT: {"type":"response","request_seq":3,"success":true,"command":"setBreakpoints","body":{"breakpoints":[{"id":1,"line":17,"verified":true,"source":{"path":"d:\\source\\Project\\ST2C-master\\examples\\projects\\syntax_tests\\test_arr_struct.st"}}]},"seq":3}
+[2026-07-04T13:52:56.557Z] GDB CMD: -break-insert -f --source "d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_at.st" --line 21
+[2026-07-04T13:52:56.573Z] GDB OUT: ^done,bkpt={number="2",type="breakpoint",disp="keep",enabled="y",addr="0x0000000140004460",file="d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_at.st",fullname="d:\\source\\Project\\ST2C-master\\examples\\projects\\syntax_tests\\test_at.st",line="28",thread-groups=["i1"],times="0",original-location="-source d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_at.st -line 21"}
+(gdb)
+[2026-07-04T13:52:56.573Z] GDB CMD: -break-insert -f --source "d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_at.st" --line 24
+[2026-07-04T13:52:56.587Z] GDB OUT: ^done,bkpt={number="3",type="breakpoint",disp="keep",enabled="y",addr="0x0000000140004460",file="d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_at.st",fullname="d:\\source\\Project\\ST2C-master\\examples\\projects\\syntax_tests\\test_at.st",line="28",thread-groups=["i1"],times="0",original-location="-source d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_at.st -line 24"}
+(gdb)
+[2026-07-04T13:52:56.587Z] DAP OUT: {"type":"response","request_seq":4,"success":true,"command":"setBreakpoints","body":{"breakpoints":[{"id":2,"line":28,"verified":true,"source":{"path":"d:\\source\\Project\\ST2C-master\\examples\\projects\\syntax_tests\\test_at.st"}},{"id":3,"line":28,"verified":true,"source":{"path":"d:\\source\\Project\\ST2C-master\\examples\\projects\\syntax_tests\\test_at.st"}}]},"seq":4}
+[2026-07-04T13:52:56.588Z] STDIN chunk: 78 bytes
+[2026-07-04T13:52:56.588Z] DAP REQ: {"command":"configurationDone","type":"request","seq":5}
+[2026-07-04T13:52:56.588Z] GDB CMD: -exec-run
+[2026-07-04T13:52:56.615Z] GDB OUT: =thread-group-started,id="i1",pid="27748"
+[2026-07-04T13:52:56.615Z] GDB OUT: =thread-created,id="1",group-id="i1"
+[2026-07-04T13:52:56.618Z] GDB OUT: =thread-created,id="2",group-id="i1"
+~"[New Thread 27748.0x5eac]\n"
+[2026-07-04T13:52:56.618Z] GDB OUT: =thread-created,id="3",group-id="i1"
+~"[New Thread 27748.0x40f0]\n"
+[2026-07-04T13:52:56.618Z] GDB OUT: =thread-created,id="4",group-id="i1"
+~"[New Thread 27748.0xec0]\n"
+[2026-07-04T13:52:56.621Z] GDB OUT: =breakpoint-modified,bkpt={number="2",type="breakpoint",disp="keep",enabled="y",addr="0x00007ff62e364460",file="d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_at.st",fullname="d:\\source\\Project\\ST2C-master\\examples\\projects\\syntax_tests\\test_at.st",line="28",thread-groups=["i1"],times="0",original-location="-source d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_at.st -line 21"}
+[2026-07-04T13:52:56.621Z] GDB OUT: =breakpoint-modified,bkpt={number="3",type="breakpoint",disp="keep",enabled="y",addr="0x00007ff62e364460",file="d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_at.st",fullname="d:\\source\\Project\\ST2C-master\\examples\\projects\\syntax_tests\\test_at.st",line="28",thread-groups=["i1"],times="0",original-location="-source d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_at.st -line 24"}
+[2026-07-04T13:52:56.623Z] GDB OUT: =library-loaded,id="C:\\windows\\SYSTEM32\\ntdll.dll",target-name="C:\\windows\\SYSTEM32\\ntdll.dll",host-name="C:\\windows\\SYSTEM32\\ntdll.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff981ec1000",to="0x00007ff982125810"}]
+[2026-07-04T13:52:56.623Z] GDB OUT: =library-loaded,id="C:\\windows\\System32\\kernel32.dll",target-name="C:\\windows\\System32\\kernel32.dll",host-name="C:\\windows\\System32\\kernel32.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff981111000",to="0x00007ff9811d8640"}]
+[2026-07-04T13:52:56.624Z] GDB OUT: =library-loaded,id="C:\\windows\\System32\\KernelBase.dll",target-name="C:\\windows\\System32\\KernelBase.dll",host-name="C:\\windows\\System32\\KernelBase.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff97f2f1000",to="0x00007ff97f6e9154"}]
+[2026-07-04T13:52:56.624Z] GDB OUT: =library-loaded,id="C:\\windows\\System32\\ucrtbase.dll",target-name="C:\\windows\\System32\\ucrtbase.dll",host-name="C:\\windows\\System32\\ucrtbase.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff97f831000",to="0x00007ff97f97bec0"}]
+[2026-07-04T13:52:56.624Z] GDB OUT: =library-loaded,id="C:\\windows\\System32\\ws2_32.dll",target-name="C:\\windows\\System32\\ws2_32.dll",host-name="C:\\windows\\System32\\ws2_32.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff980491000",to="0x00007ff98050f210"}]
+[2026-07-04T13:52:56.624Z] GDB OUT: =library-loaded,id="C:\\Users\\33298\\scoop\\apps\\mingw\\current\\opt\\bin\\libgcc_s_seh-1.dll",target-name="C:\\Users\\33298\\scoop\\apps\\mingw\\current\\opt\\bin\\libgcc_s_seh-1.dll",host-name="C:\\Users\\33298\\scoop\\apps\\mingw\\current\\opt\\bin\\libgcc_s_seh-1.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff93c751000",to="0x00007ff93c778044"}]
+[2026-07-04T13:52:56.624Z] GDB OUT: =library-loaded,id="C:\\windows\\System32\\rpcrt4.dll",target-name="C:\\windows\\System32\\rpcrt4.dll",host-name="C:\\windows\\System32\\rpcrt4.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff980cc1000",to="0x00007ff980dd7844"}]
+[2026-07-04T13:52:56.624Z] GDB OUT: =library-loaded,id="C:\\Users\\33298\\scoop\\apps\\mingw\\current\\opt\\bin\\libwinpthread-1.dll",target-name="C:\\Users\\33298\\scoop\\apps\\mingw\\current\\opt\\bin\\libwinpthread-1.dll",host-name="C:\\Users\\33298\\scoop\\apps\\mingw\\current\\opt\\bin\\libwinpthread-1.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff9558f1000",to="0x00007ff955906084"}]
+[2026-07-04T13:52:56.624Z] GDB OUT: =library-loaded,id="C:\\Users\\33298\\scoop\\apps\\mingw\\current\\bin\\libstdc++-6.dll",target-name="C:\\Users\\33298\\scoop\\apps\\mingw\\current\\bin\\libstdc++-6.dll",host-name="C:\\Users\\33298\\scoop\\apps\\mingw\\current\\bin\\libstdc++-6.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff8ee1d1000",to="0x00007ff8ee40b054"}]
+[2026-07-04T13:52:56.656Z] GDB OUT: ^running
+*running,thread-id="all"
+(gdb)
+[2026-07-04T13:52:56.656Z] DAP OUT: {"type":"response","request_seq":5,"success":true,"command":"configurationDone","seq":5}
+[2026-07-04T13:52:56.657Z] GDB OUT: === ST2C++ Flat Runtime ===
+[2026-07-04T13:52:56.657Z] GDB OUT: PLC Runtime: cycle=
+[2026-07-04T13:52:56.657Z] GDB OUT: 1000us
+[2026-07-04T13:52:56.657Z] GDB OUT: =thread-created,id="5",group-id="i1"
+~"[New Thread 27748.0x8ac8]\n"
+[2026-07-04T13:52:56.657Z] GDB OUT: [Debug] TCP server
+[2026-07-04T13:52:56.657Z] GDB OUT: on 127.0.0.1:9090
+[2026-07-04T13:52:56.657Z] STDIN chunk: 68 bytes
+[2026-07-04T13:52:56.657Z] DAP REQ: {"command":"threads","type":"request","seq":6}
+[2026-07-04T13:52:56.657Z] DAP OUT: {"type":"response","request_seq":6,"success":true,"command":"threads","body":{"threads":[{"id":1,"name":"Main Thread"}]},"seq":6}
+[2026-07-04T13:52:56.658Z] GDB OUT: =library-loaded,id="C:\\windows\\SYSTEM32\\kernel.appcore.dll",target-name="C:\\windows\\SYSTEM32\\kernel.appcore.dll",host-name="C:\\windows\\SYSTEM32\\kernel.appcore.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff97e001000",to="0x00007ff97e01a150"}]
+[2026-07-04T13:52:56.660Z] GDB OUT: =library-loaded,id="C:\\windows\\System32\\msvcrt.dll",target-name="C:\\windows\\System32\\msvcrt.dll",host-name="C:\\windows\\System32\\msvcrt.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff9817a1000",to="0x00007ff9818485f4"}]
+[2026-07-04T13:52:56.664Z] GDB OUT: =library-loaded,id="C:\\windows\\system32\\mswsock.dll",target-name="C:\\windows\\system32\\mswsock.dll",host-name="C:\\windows\\system32\\mswsock.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff97e571000",to="0x00007ff97e5db1c4"}]
+[2026-07-04T13:52:56.666Z] GDB OUT: [DebugServer] liste
+[2026-07-04T13:52:56.666Z] GDB OUT: ning on 127.0.0.1:9090
+[2026-07-04T13:53:01.658Z] GDB OUT: [DIAG] ticks=706  [JI
+[2026-07-04T13:53:01.658Z] GDB OUT: TTER] min=-999 max=29433 avg=6070 stddev=7820 (samples=705)
+[2026-07-04T13:53:06.673Z] GDB OUT: [DIAG] ticks=1426  [JITTER] min=-999 max=3048
+[2026-07-04T13:53:06.673Z] GDB OUT: 7 avg=6017 stddev=7867 (samples=1425)
+[2026-07-04T13:53:11.684Z] GDB OUT: [DIAG] ticks=2128  [JITTE
+[2026-07-04T13:53:11.684Z] GDB OUT: R] min=-999 max=30487 avg=6057 stddev=7979 (samples=2127)
+[2026-07-04T13:53:16.688Z] GDB OUT: [DIAG] ticks=2796  [JIT
+[2026-07-04T13:53:16.689Z] GDB OUT: TER] min=-999 max=31863 avg=6161 stddev=8079 (samples=2795)
+[2026-07-04T13:53:21.689Z] GDB OUT: [DIAG] ticks=3426  [JITT
+[2026-07-04T13:53:21.689Z] GDB OUT: ER] min=-999 max=31863 avg=6304 stddev=8162 (samples=3425)
+[2026-07-04T13:53:26.696Z] GDB OUT: [DIAG] ticks=4080  [JITTER] min=
+[2026-07-04T13:53:26.696Z] GDB OUT: -999 max=31863 avg=6360 stddev=8167 (samples=4079)
+[2026-07-04T13:53:31.698Z] GDB OUT: [DIAG] ticks=4771  [JITTER] min=-999 max=3
+[2026-07-04T13:53:31.699Z] GDB OUT: 1863 avg=6343 stddev=8133 (samples=4770)
+[2026-07-04T13:53:36.701Z] GDB OUT: [DIAG] ticks=5457  [
+[2026-07-04T13:53:36.702Z] GDB OUT: JITTER] min=-999 max=31863 avg=6336 stddev=8153 (samples=5456)
+[2026-07-04T13:53:41.710Z] GDB OUT: [DIAG] ticks=6113  [JITTER] min=-9
+[2026-07-04T13:53:41.710Z] GDB OUT: 99 max=31863 avg=6368 stddev=8190 (samples=6112)
+[2026-07-04T13:53:46.718Z] GDB OUT: [DIAG] ticks=6755  [JITTE
+[2026-07-04T13:53:46.719Z] GDB OUT: R] min=-999 max=31863 avg=6409 stddev=8206 (samples=6754)
+[2026-07-04T13:53:51.730Z] GDB OUT: [DIAG] ticks=7392  [JITTER] min=
+[2026-07-04T13:53:51.730Z] GDB OUT: -999 max=32471 avg=6449 stddev=8220 (samples=7391)
+[2026-07-04T13:53:56.620Z] GDB OUT: ~"[Thread 27748.0xec0 exited with code 0]\n"
+=thread-exited,id="4",group-id="i1"
+[2026-07-04T13:53:56.620Z] GDB OUT: ~"[Thread 27748.0x5eac exited with code 0]\n"
+=thread-exited,id="2",group-id="i1"
+[2026-07-04T13:53:56.620Z] GDB OUT: ~"[Thread 27748.0x40f0 exited with code 0]\n"
+=thread-exited,id="3",group-id="i1"
+[2026-07-04T13:53:56.739Z] GDB OUT: [DIAG] ticks=8058  [JITTER
+[2026-07-04T13:53:56.739Z] GDB OUT: ] min=-999 max=32471 avg=6454 stddev=8229 (samples=8057)
+[2026-07-04T13:54:01.746Z] GDB OUT: [DIAG] ticks=8707
+[2026-07-04T13:54:01.746Z] GDB OUT: [JITTER] min=-999 max=32471 avg=6474 stddev=8250 (samples=8706)
+[2026-07-04T13:54:06.754Z] GDB OUT: [DIAG] ticks=9349  [JITTER
+[2026-07-04T13:54:06.754Z] GDB OUT: ] min=-999 max=32471 avg=6496 stddev=8254 (samples=9348)
+[2026-07-04T13:54:11.767Z] GDB OUT: [DIAG] ticks=10002  [JITTER] min=-999 max
+[2026-07-04T13:54:11.767Z] GDB OUT: =32471 avg=6508 stddev=8256 (samples=10001)
+[2026-07-04T13:54:16.776Z] GDB OUT: [DIAG] ticks=10636  [JITTER]
+[2026-07-04T13:54:16.776Z] GDB OUT: min=-999 max=32471 avg=6531 stddev=8266 (samples=10635)
+[2026-07-04T13:54:21.784Z] GDB OUT: [DIAG] ticks=11270  [JITTER] min=
+[2026-07-04T13:54:21.784Z] GDB OUT: -999 max=32471 avg=6552 stddev=8273 (samples=11269)
+[2026-07-04T13:54:26.795Z] GDB OUT: [DIAG] ticks=11897  [JITTER] min=-999 max=34
+[2026-07-04T13:54:26.795Z] GDB OUT: 046 avg=6575 stddev=8284 (samples=11896)
+[2026-07-04T13:54:31.804Z] GDB OUT: [DIAG] ticks=12549  [JI
+[2026-07-04T13:54:31.804Z] GDB OUT: TTER] min=-999 max=34046 avg=6581 stddev=8283 (samples=12548)
+[2026-07-04T13:54:36.814Z] GDB OUT: [DIAG] ticks=13183  [JITTER] min
+[2026-07-04T13:54:36.814Z] GDB OUT: =-999 max=34046 avg=6596 stddev=8287 (samples=13182)
+[2026-07-04T13:54:41.823Z] GDB OUT: [DIAG] ticks=13827  [JITTER
+[2026-07-04T13:54:41.823Z] GDB OUT: ] min=-999 max=34046 avg=6605 stddev=8296 (samples=13826)
+[2026-07-04T13:54:46.833Z] GDB OUT: [DIAG] ticks=14467  [J
+[2026-07-04T13:54:46.833Z] GDB OUT: ITTER] min=-999 max=34046 avg=6615 stddev=8299 (samples=14466)
+[2026-07-04T13:54:51.844Z] GDB OUT: [DIAG] ticks=15117  [JITT
+[2026-07-04T13:54:51.844Z] GDB OUT: ER] min=-999 max=34046 avg=6618 stddev=8302 (samples=15116)
+[2026-07-04T13:54:56.854Z] GDB OUT: [DIAG] ticks=15758  [JITTE
+[2026-07-04T13:54:56.854Z] GDB OUT: R] min=-999 max=34046 avg=6626 stddev=8305 (samples=15757)
+[2026-07-04T13:55:01.863Z] GDB OUT: [DIAG] ticks=16393  [JITTE
+[2026-07-04T13:55:01.863Z] GDB OUT: R] min=-999 max=34046 avg=6637 stddev=8307 (samples=16392)
+[2026-07-04T13:55:06.871Z] GDB OUT: [DIAG] ticks=17036  [JITTER]
+[2026-07-04T13:55:06.872Z] GDB OUT: min=-999 max=34046 avg=6642 stddev=8309 (samples=17035)
+[2026-07-04T13:55:11.881Z] GDB OUT: [DIAG] ticks=17687  [JITTER] min=-999
+[2026-07-04T13:55:11.881Z] GDB OUT: max=34046 avg=6644 stddev=8306 (samples=17686)
+[2026-07-04T13:55:16.890Z] GDB OUT: [DIAG] ticks=18330  [JITT
+[2026-07-04T13:55:16.890Z] GDB OUT: ER] min=-999 max=34046 avg=6650 stddev=8304 (samples=18329)
+[2026-07-04T13:55:21.897Z] GDB OUT: [DIAG] ticks=18962  [JITTER] mi
+[2026-07-04T13:55:21.897Z] GDB OUT: n=-999 max=34220 avg=6659 stddev=8307 (samples=18961)
+[2026-07-04T13:55:26.908Z] GDB OUT: [DIAG] ticks=19610  [JITT
+[2026-07-04T13:55:26.909Z] GDB OUT: ER] min=-999 max=34220 avg=6661 stddev=8308 (samples=19609)
+[2026-07-04T13:55:31.919Z] GDB OUT: [DIAG] ticks=20250  [JITTER] min=-999 max=34220 avg=6
+[2026-07-04T13:55:31.919Z] GDB OUT: 666 stddev=8309 (samples=20249)
+[2026-07-04T13:55:36.928Z] GDB OUT: [DIAG] ticks=20902  [JITTER]
+[2026-07-04T13:55:36.928Z] GDB OUT: min=-999 max=34220 avg=6667 stddev=8313 (samples=20901)
+[2026-07-04T13:55:41.933Z] GDB OUT: [DIAG] ticks=21547  [JITTER] min=-999 max=
+[2026-07-04T13:55:41.933Z] GDB OUT: 34220 avg=6670 stddev=8313 (samples=21546)
+[2026-07-04T13:55:46.945Z] GDB OUT: [DIAG] ticks=22199  [JITTER] min=-999 max=34220 avg=6670 stddev=8315 (samples=22198)
+[2026-07-04T13:55:51.956Z] GDB OUT: [DIAG] ticks=22845  [JITTER] min=-999 max=34220 avg=6673 stddev=8317 (samples=22844)
+[2026-07-04T13:55:56.961Z] GDB OUT: [DIAG] ticks=23487  [JITTER] m
+[2026-07-04T13:55:56.962Z] GDB OUT: in=-999 max=34220 avg=6676 stddev=8317 (samples=23486)
+[2026-07-04T13:56:01.967Z] GDB OUT: [DIAG] ticks=24135  [JITTER
+[2026-07-04T13:56:01.967Z] GDB OUT: ] min=-999 max=34220 avg=6677 stddev=8319 (samples=24134)
+[2026-07-04T13:56:06.968Z] GDB OUT: [DIAG] ticks=24784  [JITTER] min=-999 max=34220 avg=6678 stddev
+[2026-07-04T13:56:06.969Z] GDB OUT: =8321 (samples=24783)
+[2026-07-04T13:56:11.978Z] GDB OUT: [DIAG] ticks=25423  [JITTER] min=-999 max=34220 a
+[2026-07-04T13:56:11.979Z] GDB OUT: vg=6682 stddev=8322 (samples=25422)
+[2026-07-04T13:56:16.988Z] GDB OUT: [DIAG] ticks=26102
+[2026-07-04T13:56:16.988Z] GDB OUT: [JITTER] min=-999 max=34220 avg=6674 stddev=8318 (samples=26101)
+[2026-07-04T13:56:21.997Z] GDB OUT: [DIAG] ticks=26740  [JITTER] min=-999 ma
+[2026-07-04T13:56:21.997Z] GDB OUT: x=34220 avg=6678 stddev=8323 (samples=26739)
+[2026-07-04T13:56:27.006Z] GDB OUT: [DIAG] ticks=27388  [JITTER] min=-99
+[2026-07-04T13:56:27.006Z] GDB OUT: 9 max=34220 avg=6680 stddev=8322 (samples=27387)
+[2026-07-04T13:56:32.010Z] GDB OUT: [DIAG] ticks=28049  [JITTER] min=-999 max
+[2026-07-04T13:56:32.010Z] GDB OUT: =36373 avg=6677 stddev=8325 (samples=28048)
+[2026-07-04T13:56:37.010Z] GDB OUT: [DIAG] ticks=28705  [JITTER]
+[2026-07-04T13:56:37.010Z] GDB OUT: min=-999 max=36373 avg=6676 stddev=8325 (samples=28704)
+[2026-07-04T13:56:42.018Z] GDB OUT: [DIAG] ticks=29365  [JITTER] min=-99
+[2026-07-04T13:56:42.018Z] GDB OUT: 9 max=36373 avg=6674 stddev=8330 (samples=29364)
+[2026-07-04T13:56:47.026Z] GDB OUT: [DIAG] ticks=30018  [JIT
+[2026-07-04T13:56:47.026Z] GDB OUT: TER] min=-999 max=36373 avg=6674 stddev=8332 (samples=30017)
+[2026-07-04T13:56:52.035Z] GDB OUT: [DIAG] ticks=30671  [JITTER] min=-
+[2026-07-04T13:56:52.036Z] GDB OUT: 999 max=36373 avg=6674 stddev=8330 (samples=30670)
+[2026-07-04T13:56:57.048Z] GDB OUT: [DIAG] ticks=31335  [JIT
+[2026-07-04T13:56:57.048Z] GDB OUT: TER] min=-999 max=36373 avg=6671 stddev=8332 (samples=31334)
+[2026-07-04T13:57:02.050Z] GDB OUT: [DIAG] ticks=31991  [J
+[2026-07-04T13:57:02.050Z] GDB OUT: ITTER] min=-999 max=36373 avg=6670 stddev=8334 (samples=31990)
+[2026-07-04T13:57:07.062Z] GDB OUT: [DIAG] ticks=32633  [JITT
+[2026-07-04T13:57:07.062Z] GDB OUT: ER] min=-999 max=37693 avg=6672 stddev=8336 (samples=32632)
+[2026-07-04T13:57:12.070Z] GDB OUT: [DIAG] ticks=33279  [JITTER]
+[2026-07-04T13:57:12.070Z] GDB OUT: min=-999 max=37693 avg=6674 stddev=8337 (samples=33278)
+[2026-07-04T13:57:17.084Z] GDB OUT: [DIAG] ticks=33933  [JI
+[2026-07-04T13:57:17.084Z] GDB OUT: TTER] min=-999 max=37693 avg=6674 stddev=8338 (samples=33932)
+[2026-07-04T13:57:22.094Z] GDB OUT: [DIAG] ticks=34582  [JITTER] min=-9
+[2026-07-04T13:57:22.094Z] GDB OUT: 99 max=37693 avg=6675 stddev=8338 (samples=34581)
+[2026-07-04T13:57:27.103Z] GDB OUT: [DIAG] ticks=35232  [JITTER] min=-999 max=37693 avg=6675 stddev=8339 (samples=35231)
+[2026-07-04T13:57:32.113Z] GDB OUT: [DIAG] ticks=35881  [JITTER] min=-999 max=38409 avg=66
+[2026-07-04T13:57:32.113Z] GDB OUT: 76 stddev=8342 (samples=35880)
+[2026-07-04T13:57:37.123Z] GDB OUT: [DIAG] ticks=36547  [JITTER] min=-999
+[2026-07-04T13:57:37.123Z] GDB OUT: max=38409 avg=6673 stddev=8342 (samples=36546)
+[2026-07-04T13:57:42.131Z] GDB OUT: [DIAG] ticks=37200  [JITT
+[2026-07-04T13:57:42.131Z] GDB OUT: ER] min=-999 max=38409 avg=6673 stddev=8343 (samples=37199)
+[2026-07-04T13:57:45.534Z] STDIN chunk: 127 bytes
+[2026-07-04T13:57:45.534Z] DAP REQ: {"command":"disconnect","arguments":{"restart":false,"terminateDebuggee":true},"type":"request","seq":7}
+[2026-07-04T13:57:45.534Z] GDB CMD: -interpreter-exec console "quit"
+[2026-07-04T13:57:47.142Z] GDB OUT: [DIAG] ticks=37892  [JITTER]
+[2026-07-04T13:57:47.142Z] GDB OUT: min=-999 max=38409 avg=6665 stddev=8337 (samples=37891)
+[2026-07-04T13:57:47.756Z] GDB OUT: ~"[Thread 27748.0x8ac8 exited with code 1]\n"
+=thread-exited,id="5",group-id="i1"
+[2026-07-05T06:10:38.254Z] --- Debug Adapter Started ---
+[2026-07-05T06:10:38.260Z] STDIN chunk: 565 bytes
+[2026-07-05T06:10:38.260Z] DAP REQ: {"command":"initialize","arguments":{"clientID":"vscode","clientName":"Visual Studio Code","adapterID":"st2c","pathFormat":"path","linesStartAt1":true,"columnsStartAt1":true,"supportsVariableType":true,"supportsVariablePaging":true,"supportsRunInTerminalRequest":true,"locale":"zh-cn","supportsProgressReporting":true,"supportsInvalidatedEvent":true,"supportsMemoryReferences":true,"supportsArgsCanBeInterpretedByShell":true,"supportsMemoryEvent":true,"supportsStartDebuggingRequest":true,"supportsANSIStyling":true},"type":"request","seq":1}
+[2026-07-05T06:10:38.260Z] DAP OUT: {"type":"response","request_seq":1,"success":true,"command":"initialize","body":{"supportsConfigurationDoneRequest":true,"supportsSetVariable":false,"supportsConditionalBreakpoints":false,"supportsFunctionBreakpoints":false,"supportsEvaluateForHovers":false,"supportTerminateDebuggee":true},"seq":1}
+[2026-07-05T06:10:38.262Z] STDIN chunk: 403 bytes
+[2026-07-05T06:10:38.262Z] DAP REQ: {"command":"launch","arguments":{"type":"st2c","name":"ST2C Debug","request":"launch","program":"d:\\source\\Project\\ST2C-master\\target\\desktop\\build\\plc_runtime_desktop_dbg.exe","args":["--cycle-us","1000"],"cwd":"d:\\source\\Project\\ST2C-master\\examples\\projects","miDebuggerPath":"gdb.exe","__sessionId":"536ace80-8b74-489a-bbcd-6ffe9ddf911d"},"type":"request","seq":2}
+[2026-07-05T06:10:38.263Z] GDB start: executable=d:\source\Project\ST2C-master\target\desktop\build\plc_runtime_desktop_dbg.exe, args=["--cycle-us","1000"]
+[2026-07-05T06:10:39.264Z] GDB OUT: =thread-group-added,id="i1"
+~"GNU gdb (GDB) 16.3\n"
+~"Copyright (C) 2024 Free Software Foundation, Inc.\n"
+~"License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law."
+~"\nType \""
+~"show copying\" and \"show warranty\" for details.\n"
+[2026-07-05T06:10:39.264Z] GDB OUT: ~"This GDB was configured as \"x86_64-w64-mingw32\".\n"
+~"Type \"show configuration\" for configuration details.\n"
+~"For bug reporting instructions, please see:\n"
+~"<https://www.gnu.org/software/gdb/bugs/>.\n"
+~"Find the GDB manual and other documentation resources online at:\n    <"
+~"http://www.gnu.org/software/gdb/documentation/>.\n\n"
+~"For help, type \"help\".\n"
+~"Type \"apropos word\" to search for commands related to \"word\".\n"
+[2026-07-05T06:10:39.272Z] GDB OUT: (gdb)
+[2026-07-05T06:10:43.279Z] GDB CMD: -file-exec-and-symbols "d:\source\Project\ST2C-master\target\desktop\build\plc_runtime_desktop_dbg.exe"
+[2026-07-05T06:10:43.295Z] GDB OUT: ^done
+(gdb)
+[2026-07-05T06:10:43.295Z] GDB CMD: -exec-arguments "--cycle-us" "1000"
+[2026-07-05T06:10:43.320Z] GDB OUT: ^done
+(gdb)
+[2026-07-05T06:10:43.320Z] GDB CMD: -interpreter-exec console "set breakpoint pending on"
+[2026-07-05T06:10:43.336Z] GDB OUT: =cmd-param-changed,param="breakpoint pending",value="on"
+^done
+(gdb)
+[2026-07-05T06:10:43.336Z] DAP OUT: {"type":"event","event":"initialized"}
+[2026-07-05T06:10:43.336Z] DAP OUT: {"type":"response","request_seq":2,"success":true,"command":"launch","seq":2}
+[2026-07-05T06:10:43.338Z] STDIN chunk: 289 bytes
+[2026-07-05T06:10:43.338Z] DAP REQ: {"command":"setBreakpoints","arguments":{"source":{"name":"test_arr_struct.st","path":"d:\\source\\Project\\ST2C-master\\examples\\projects\\syntax_tests\\test_arr_struct.st"},"lines":[17],"breakpoints":[{"line":17}],"sourceModified":false},"type":"request","seq":3}
+[2026-07-05T06:10:43.338Z] GDB CMD: -break-insert -f --source "d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_arr_struct.st" --line 17
+[2026-07-05T06:10:43.338Z] STDIN chunk: 288 bytes
+[2026-07-05T06:10:43.338Z] DAP REQ: {"command":"setBreakpoints","arguments":{"source":{"name":"test_at.st","path":"d:\\source\\Project\\ST2C-master\\examples\\projects\\syntax_tests\\test_at.st"},"lines":[21,24],"breakpoints":[{"line":21},{"line":24}],"sourceModified":false},"type":"request","seq":4}
+[2026-07-05T06:10:43.352Z] GDB OUT: &"No source file named d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_arr_struct.st.\n"
+[2026-07-05T06:10:43.352Z] GDB OUT: ^done,bkpt={number="1",type="breakpoint",disp="keep",enabled="y",addr="<PENDING>",pending="-source d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_arr_struct.st -line 17",times="0",original-location="-source d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_arr_struct.st -line 17"}
+(gdb)
+[2026-07-05T06:10:43.352Z] DAP OUT: {"type":"response","request_seq":3,"success":true,"command":"setBreakpoints","body":{"breakpoints":[{"id":1,"line":17,"verified":true,"source":{"path":"d:\\source\\Project\\ST2C-master\\examples\\projects\\syntax_tests\\test_arr_struct.st"}}]},"seq":3}
+[2026-07-05T06:10:43.352Z] GDB CMD: -break-insert -f --source "d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_at.st" --line 21
+[2026-07-05T06:10:43.369Z] GDB OUT: ^done,bkpt={number="2",type="breakpoint",disp="keep",enabled="y",addr="0x0000000140004460",file="d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_at.st",fullname="d:\\source\\Project\\ST2C-master\\examples\\projects\\syntax_tests\\test_at.st",line="28",thread-groups=["i1"],times="0",original-location="-source d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_at.st -line 21"}
+(gdb)
+[2026-07-05T06:10:43.369Z] GDB CMD: -break-insert -f --source "d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_at.st" --line 24
+[2026-07-05T06:10:43.383Z] GDB OUT: ^done,bkpt={number="3",type="breakpoint",disp="keep",enabled="y",addr="0x0000000140004460",file="d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_at.st",fullname="d:\\source\\Project\\ST2C-master\\examples\\projects\\syntax_tests\\test_at.st",line="28",thread-groups=["i1"],times="0",original-location="-source d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_at.st -line 24"}
+(gdb)
+[2026-07-05T06:10:43.383Z] DAP OUT: {"type":"response","request_seq":4,"success":true,"command":"setBreakpoints","body":{"breakpoints":[{"id":2,"line":21,"verified":true,"source":{"path":"d:\\source\\Project\\ST2C-master\\examples\\projects\\syntax_tests\\test_at.st"}},{"id":3,"line":24,"verified":true,"source":{"path":"d:\\source\\Project\\ST2C-master\\examples\\projects\\syntax_tests\\test_at.st"}}]},"seq":4}
+[2026-07-05T06:10:43.404Z] STDIN chunk: 78 bytes
+[2026-07-05T06:10:43.404Z] DAP REQ: {"command":"configurationDone","type":"request","seq":5}
+[2026-07-05T06:10:43.404Z] GDB CMD: -exec-run
+[2026-07-05T06:10:43.429Z] GDB OUT: =thread-group-started,id="i1",pid="16088"
+[2026-07-05T06:10:43.430Z] GDB OUT: =thread-created,id="1",group-id="i1"
+[2026-07-05T06:10:43.441Z] GDB OUT: =thread-created,id="2",group-id="i1"
+~"[New Thread 16088.0x9ff0]\n"
+[2026-07-05T06:10:43.442Z] GDB OUT: =thread-created,id="3",group-id="i1"
+~"[New Thread 16088.0x2ed8]\n"
+[2026-07-05T06:10:43.442Z] GDB OUT: =thread-created,id="4",group-id="i1"
+~"[New Thread 16088.0x9884]\n"
+[2026-07-05T06:10:43.448Z] GDB OUT: =breakpoint-modified,bkpt={number="2",type="breakpoint",disp="keep",enabled="y",addr="0x00007ff60ab24460",file="d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_at.st",fullname="d:\\source\\Project\\ST2C-master\\examples\\projects\\syntax_tests\\test_at.st",line="28",thread-groups=["i1"],times="0",original-location="-source d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_at.st -line 21"}
+[2026-07-05T06:10:43.448Z] GDB OUT: =breakpoint-modified,bkpt={number="3",type="breakpoint",disp="keep",enabled="y",addr="0x00007ff60ab24460",file="d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_at.st",fullname="d:\\source\\Project\\ST2C-master\\examples\\projects\\syntax_tests\\test_at.st",line="28",thread-groups=["i1"],times="0",original-location="-source d:/source/Project/ST2C-master/examples/projects/syntax_tests/test_at.st -line 24"}
+[2026-07-05T06:10:43.450Z] GDB OUT: =library-loaded,id="C:\\windows\\SYSTEM32\\ntdll.dll",target-name="C:\\windows\\SYSTEM32\\ntdll.dll",host-name="C:\\windows\\SYSTEM32\\ntdll.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff981ec1000",to="0x00007ff982125810"}]
+[2026-07-05T06:10:43.450Z] GDB OUT: =library-loaded,id="C:\\windows\\System32\\kernel32.dll",target-name="C:\\windows\\System32\\kernel32.dll",host-name="C:\\windows\\System32\\kernel32.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff981111000",to="0x00007ff9811d8640"}]
+[2026-07-05T06:10:43.451Z] GDB OUT: =library-loaded,id="C:\\windows\\System32\\KernelBase.dll",target-name="C:\\windows\\System32\\KernelBase.dll",host-name="C:\\windows\\System32\\KernelBase.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff97f2f1000",to="0x00007ff97f6e9154"}]
+[2026-07-05T06:10:43.451Z] GDB OUT: =library-loaded,id="C:\\windows\\SYSTEM32\\apphelp.dll",target-name="C:\\windows\\SYSTEM32\\apphelp.dll",host-name="C:\\windows\\SYSTEM32\\apphelp.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff979301000",to="0x00007ff97939f780"}]
+[2026-07-05T06:10:43.452Z] GDB OUT: =library-loaded,id="C:\\windows\\System32\\ucrtbase.dll",target-name="C:\\windows\\System32\\ucrtbase.dll",host-name="C:\\windows\\System32\\ucrtbase.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff97f831000",to="0x00007ff97f97bec0"}]
+[2026-07-05T06:10:43.452Z] GDB OUT: =library-loaded,id="C:\\windows\\System32\\ws2_32.dll",target-name="C:\\windows\\System32\\ws2_32.dll",host-name="C:\\windows\\System32\\ws2_32.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff980491000",to="0x00007ff98050f210"}]
+[2026-07-05T06:10:43.456Z] GDB OUT: =library-loaded,id="C:\\windows\\System32\\rpcrt4.dll",target-name="C:\\windows\\System32\\rpcrt4.dll",host-name="C:\\windows\\System32\\rpcrt4.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff980cc1000",to="0x00007ff980dd7844"}]
+=library-loaded,id="C:\\Users\\33298\\scoop\\apps\\mingw\\current\\bin\\libstdc++-6.dll",target-name="C:\\Users\\33298\\scoop\\apps\\mingw\\current\\bin\\libstdc++-6.dll",host-name="C:\\Users\\33298\\scoop\\apps\\mingw\\current\\bin\\libstdc++-6.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff878f41000",to="0x00007ff87917b054"}]
+=library-loaded,id="C:\\Users\\33298\\scoop\\apps\\mingw\\current\\opt\\bin\\libwinpthread-1.dll",target-name="C:\\Users\\33298\\scoop\\apps\\mingw\\current\\opt\\bin\\libwinpthread-1.dll",host-name="C:\\Users\\33298\\scoop\\apps\\mingw\\current\\opt\\bin\\libwinpthread-1.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff8c8681000",to="0x00007ff8c8696084"}]
+=library-loaded,id="C:\\Users\\33298\\scoop\\apps\\mingw\\current\\opt\\bin\\libgcc_s_seh-1.dll",target-name="C:\\Users\\33298\\scoop\\apps\\mingw\\current\\opt\\bin\\libgcc_s_seh-1.dll",host-name="C:\\Users\\33298\\scoop\\apps\\mingw\\current\\opt\\bin\\libgcc_s_seh-1.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff8cdb21000",to="0x00007ff8cdb48044"}]
+[2026-07-05T06:10:43.494Z] GDB OUT: ^running
+*running,thread-id="all"
+(gdb)
+[2026-07-05T06:10:43.494Z] DAP OUT: {"type":"response","request_seq":5,"success":true,"command":"configurationDone","seq":5}
+[2026-07-05T06:10:43.495Z] GDB OUT: === ST2C++ Flat Runtime ===
+[2026-07-05T06:10:43.495Z] GDB OUT: PLC Runtime: cycle=1
+[2026-07-05T06:10:43.495Z] GDB OUT: 000us
+[2026-07-05T06:10:43.495Z] GDB OUT: =thread-created,id="5",group-id="i1"
+~"[New Thread 16088.0x484]\n"
+[2026-07-05T06:10:43.496Z] GDB OUT: [Debug] TCP serve
+[2026-07-05T06:10:43.496Z] STDIN chunk: 68 bytes
+[2026-07-05T06:10:43.496Z] DAP REQ: {"command":"threads","type":"request","seq":6}
+[2026-07-05T06:10:43.496Z] DAP OUT: {"type":"response","request_seq":6,"success":true,"command":"threads","body":{"threads":[{"id":1,"name":"Main Thread"}]},"seq":6}
+[2026-07-05T06:10:43.496Z] GDB OUT: r on 127.0.0.1:9090
+[2026-07-05T06:10:43.497Z] GDB OUT: =library-loaded,id="C:\\windows\\SYSTEM32\\kernel.appcore.dll",target-name="C:\\windows\\SYSTEM32\\kernel.appcore.dll",host-name="C:\\windows\\SYSTEM32\\kernel.appcore.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff97e001000",to="0x00007ff97e01a150"}]
+[2026-07-05T06:10:43.499Z] GDB OUT: =library-loaded,id="C:\\windows\\System32\\msvcrt.dll",target-name="C:\\windows\\System32\\msvcrt.dll",host-name="C:\\windows\\System32\\msvcrt.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff9817a1000",to="0x00007ff9818485f4"}]
+[2026-07-05T06:10:43.505Z] GDB OUT: =library-loaded,id="C:\\windows\\system32\\mswsock.dll",target-name="C:\\windows\\system32\\mswsock.dll",host-name="C:\\windows\\system32\\mswsock.dll",symbols-loaded="0",thread-group="i1",ranges=[{from="0x00007ff97e571000",to="0x00007ff97e5db1c4"}]
+[2026-07-05T06:10:43.506Z] GDB OUT: [DebugServer] listen
+[2026-07-05T06:10:43.507Z] GDB OUT: ing on 127.0.0.1:9090
+[2026-07-05T06:10:46.066Z] STDIN chunk: 127 bytes
+[2026-07-05T06:10:46.066Z] DAP REQ: {"command":"disconnect","arguments":{"restart":false,"terminateDebuggee":true},"type":"request","seq":7}
+[2026-07-05T06:10:46.066Z] GDB CMD: -interpreter-exec console "quit"
+[2026-07-05T06:10:48.478Z] GDB OUT: ~"[Thread 16088.0x484 exited with code 1]\n"
+=thread-exited,id="5",group-id="i1"
+[2026-07-05T06:10:48.478Z] GDB OUT: ~"[Thread 16088.0x2f60 exited with code 1]\n"
+=thread-exited,id="1",group-id="i1"
+~"[Thread 16088.0x9884 exited with code 1]\n"
+=thread-exited,id="4",group-id="i1"
+~"[Thread 16088.0x9ff0 exited with code 1]\n"
+=thread-exited,id="2",group-id="i1"
