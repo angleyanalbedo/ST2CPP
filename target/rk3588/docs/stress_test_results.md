@@ -144,58 +144,79 @@ POU 执行增加了 ~800ns 抖动，但仍在 1ms 周期的 2% 以内。
 
 对比 timerfd Load=35 @ 2ms：同样零丢步，但 Alchemy 抖动更小（-3/+10µs vs -259/+259µs）。
 
-### Alchemy 推荐配置
+### 补充测试：Alchemy 全压测（2026-07-07）
+
+| 测试 | 周期 | Load | Min | Max | Avg | Std | Overrun | 判定 |
+|:----:|:----:|:----:|:---:|:---:|:---:|:---:|:-------:|:----:|
+| 空载 | 1ms | 0 | -1.8µs | +17.7µs | -0.2µs | 1.5µs | 0 | ✅ 基准基线 |
+| POU 负载 | 1ms | 5 | -5.2µs | +9.1µs | -4.1µs | 1.0µs | 0 | ✅ 更优<sup>1</sup> |
+| POU 负载 | 1ms | 20 | -2.3µs | +11.3µs | -1.2µs | 0.9µs | 0 | ✅ 亚微秒 std |
+| POU 负载 | 2ms | 30 | -2.3µs | +14.0µs | -1.2µs | 1.2µs | 0 | ✅ 2ms 同样稳定 |
+| POU 负载 | 500µs | 5 | -2.8µs | +36.0µs | +3.3µs | 5.5µs | 0 | ⚠ 抖动变大但仍零丢步 |
+
+<sup>1</sup> POU 执行填充了空闲时间，减少定时器噪声窗口
+
+关键发现：
+- **std 始终 < 2µs**（500µs 除外），Alchemy 定时器精度远超 timerfd
+- avg 在 500µs 下从负偏移变成正偏移（+3.3µs），说明短周期开始出现系统性的定时器滞后
+- **overrun=0 在所有测试中保持**，调度器从未脱靶
+
+### Alchemy 推荐配置（更新）
 
 | 周期 | timerfd 安全上限 | **Alchemy 安全上限** | 改善 |
 |:----:|:----------------:|:--------------------:|:----:|
-| 1000us | Load=5 | **≥Load=20** | 4× |
-| 2000us | Load=20 | **≥Load=35** | >1.75× |
-| 500us | Load=3~5 | 待测 | — |
+| 500µs | Load=3~5 | **Load=5**（std 5.5µs，零丢步）| 可用但抖动偏大 |
+| **1000µs** | **Load=5** | **≥Load=20**（std < 1µs）| **4× 工作量，亚微秒抖动** |
+| 2000µs | Load=20 | **≥Load=35**（std 1.2µs）| >1.75× |
 
-**结论**：RK3588 上始终使用 Alchemy `rt_task_set_periodic + rt_task_wait_period` 替代 timerfd。`clock_nanosleep(Cobalt POSIX wrap)` 在此内核配置下有缺陷，不可用于生产。
+**结论**：RK3588 始终使用 Alchemy `rt_task_set_periodic + rt_task_wait_period`。
+`clock_nanosleep(Cobalt POSIX wrap)` 在此内核配置下有 67ms 偶发脱靶，不可用于生产。
 
 ---
 
-## GPIO TCI 集成测试
+## GPIO TCI 集成
 
-### 问题：Linux cdev ioctl 在 Xenomai 实时上下文中不可用
+### 问题：Linux cdev ioctl 与 Xenomai Alchemy 不兼容
 
-当 PLC 运行时通过 GPIO cdev 接口（`/dev/gpiochipN` + ioctl）在 Alchemy 实时任务中做周期 I/O 时，每次 ioctl 调用都会导致 **Xenomai primary→secondary 域切换**：
+在 Alchemy 实时任务中调用 GPIO cdev ioctl（无论是直接调用还是通过 Linux 域扫描线程间接调用）导致 **系统完全崩溃**：
 
+| 尝试方案 | 现象 | Max jitter | Overrun | SSH |
+|:---------|:----|:----------:|:-------:|:---:|
+| cdev 直接调用（RT 任务内） | 系统 10s 内不可响应，需断电 | 崩溃 | — | ❌ |
+| cdev + 独立扫描线程（usleep 1ms） | 同左 | 崩溃 | — | ❌ |
+| cdev + 独立扫描线程（spin loop, FIFO 1） | 同左 | 崩溃 | — | ❌ |
+| cdev + GpioScanDaemon（SCHED_OTHER, 100µs sleep） | 抖动 4 秒，overrun 堆积 | **+4.1s** | **50+** | ❌ |
+
+即使将 cdev ioctl 完全隔离到 Linux 域的低优先级线程（不同 CPU），系统仍然崩溃。
+
+### 最终方案：`/dev/mem` 寄存器直读
+
+通过 `/dev/mem` mmap 映射 gpio4 寄存器物理地址（0xFEC50000），`EXT_PORT` 寄存器位于偏移 **0x08**。
+
+```cpp
+// syncInputs() — 一条 load 指令，零 syscall
+uint32_t ext = m_gpioRegs[0x08 / 4];   // 读取 32 位引脚状态
+int raw = (ext >> bitOffset) & 1;       // 提取目标位
+int val = activeLow ? !raw : raw;       // active_low 映射
+img.writeInputBit(byteOffset, bitIndex, val != 0);
 ```
-Alchemy task (primary mode)
-  → syncInputs() 调用 ioctl(GPIOHANDLE_GET_LINE_VALUES_IOCTL)  → 陷入 Linux 内核
-  → 域切换回 primary
-  → syncOutputs() 调用 ioctl(GPIOHANDLE_SET_LINE_VALUES_IOCTL) → 再次陷入 Linux
-  → 域切换回 primary
-```
 
-每次切换的实际观测代价：
+结果对比（Alchemy STRESS_LOAD=5 @ 1ms）：
 
-| 指标 | 无 GPIO（纯 Alchemy） | 含 GPIO cdev |
-|:----:|:---------------------:|:------------:|
-| Min jitter | -2.3µs | -2µs |
-| Max jitter | +15.5µs | **+851ms** |
-| Std | ~1500ns | 无效 |
-| Overrun | 0 | **50** |
+| 指标 | **`/dev/mem` 直读** | GPIO cdev 扫描线程 |
+|:----:|:-------------------:|:-------------------:|
+| Max jitter | **+10.3µs** | +4.1 **秒** |
+| Std | **1.0µs** | 无效 |
+| Overrun | **0** | 50+ |
+| syscall/cycle | **0** | 1-2 (ioctl) |
+| SSH 存活 | ✅ | ❌ 需断电 |
 
-Root cause：ARM64 GICv3 + IRQPIPE 下 primary→secondary 域切换依赖 IPI + Linux 调度器抢占耗时约 5-800ms，且不可预测。1ms cycle 每周期切换 2 次导致系统被域切换完全淹没，最终整个系统（含 SSHD）不可响应，需要物理断电重启。
+### 限制
 
-### 可用的 GPIO 替代方案
+- **输出写不可用**：pinctrl 驱动拦截 `/dev/mem` 对 DDR/DR 寄存器的写入
+- **只支持 gpio4**（引脚 128-159），gpio140/141/139 可用
+- `gpio-keys` 驱动占用 gpio140/141，需 `echo "gpio-keys" > /sys/bus/platform/drivers/gpio-keys/unbind` 释放
 
-| 方案 | 实时 | 复杂性 | 状态 |
-|:----|:----:|:------:|:----:|
-| GPIO cdev ioctl | ❌ 域切换 ~500ms | 低 | **废弃** |
-| /dev/mem mmap 直读 | ✅ 无 syscall | 中 | 可读但写被 pinctrl 拦截 |
-| **RTDM GPIO 驱动** | ✅ 纯 primary mode | **高** | **待实现** |
-| gpio-keys 输入事件 | ❌ 非确定性 | 低 | /dev/input/event 也不可用 |
+### 下一步：RTDM GPIO 驱动
 
-### MatriBox 硬件约束
-
-- gpio140/141（plc_run/plc_stop）被 `gpio-keys` 驱动以 ACTIVE LOW 模式消费，运行时需 `echo "gpio-keys" > /sys/bus/platform/drivers/gpio-keys/unbind` 释放
-- gpio130（reset）被 `reset` 消费（gpio-hog），释放方法同上
-- 解绑后可通过 cdev V1/V2 接口正常访问，但 **不能在 Alchemy 实时任务中调用 ioctl**
-
-### 下一步
-
-编写 RK3588 GPIO RTDM 驱动，在 Xenomai primary mode 下通过 mmap + 直接寄存器读写实现实时安全 GPIO I/O，或寻找其他无需 domain switch 的地址映射方法。
+唯一能同时满足输入/输出且 RT-safe 的方案。在内核模块中通过 RTDM API 暴露 GPIO 寄存器，Alchemy 任务可直接调用 `rtdm_ioctl()` 或 mmap 寄存器页，全程不离开 primary mode。
