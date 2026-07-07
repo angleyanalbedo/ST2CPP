@@ -1,33 +1,34 @@
 /**
- * gpio_scan.cpp — RK3588 GPIO 非实时扫描线程实现
+ * gpio_scan.cpp — RK3588 GPIO 非实时扫描守护线程实现
  */
 
 #include "gpio_scan.h"
 #include <cstdio>
 #include <cstring>
 #include <cerrno>
-#include <unistd.h>
+#include <time.h>
 
 #define TAG "[GPIO_SCAN]"
 
-GpioScanThread::GpioScanThread() {
+GpioScanDaemon::GpioScanDaemon() {
     for (int i = 0; i < RK_GPIO_SCAN_MAX_PINS; i++) {
-        inputValues[i] = 0;
-        outputValues[i] = -1;
+        m_inputValues[i].store(0, std::memory_order_relaxed);
+        m_outputValues[i].store(-1, std::memory_order_relaxed);
     }
 }
 
-GpioScanThread::~GpioScanThread() {
+GpioScanDaemon::~GpioScanDaemon() {
     stop();
 }
 
-int GpioScanThread::start(const rk_gpio_pin_t* pins, int count) {
-    if (m_running) return 0;
+int GpioScanDaemon::start(const rk_gpio_pin_t* pins, int count, int scanPeriodUs) {
+    if (m_running.load(std::memory_order_relaxed)) return 0;
     if (!pins || count <= 0 || count > RK_GPIO_SCAN_MAX_PINS)
         return -1;
 
     m_pins = pins;
     m_pinCount = count;
+    m_scanPeriodUs = scanPeriodUs > 0 ? scanPeriodUs : 100;
 
     /* 初始化 GPIO HAL（打开 cdev handle） */
     if (rk_gpio_hal_init(pins, count) != 0) {
@@ -42,30 +43,30 @@ int GpioScanThread::start(const rk_gpio_pin_t* pins, int count) {
         m_localOutput[i] = -1;
     for (int i = 0; i < count; i++) {
         if (pins[i].direction == RK_GPIO_DIR_OUT)
-            m_localOutput[i] = 0;  /* 输出默认低电平 */
+            m_localOutput[i] = 0;
     }
 
-    /* 先做一次初始同步，让输出生效 */
+    /* 初始同步 */
     rk_gpio_write_all(m_localOutput);
     rk_gpio_read_all(m_localInput);
     for (int i = 0; i < count; i++)
-        inputValues[i] = m_localInput[i];
+        m_inputValues[i].store(m_localInput[i], std::memory_order_relaxed);
 
-    /* 启动扫描线程 */
-    m_running = true;
+    /* 启动守护线程 */
+    m_running.store(true, std::memory_order_relaxed);
     if (pthread_create(&m_thread, nullptr, scanLoop, this) != 0) {
         fprintf(stderr, TAG " pthread_create failed: %s\n", strerror(errno));
-        m_running = false;
+        m_running.store(false, std::memory_order_relaxed);
         return -1;
     }
 
-    fprintf(stdout, TAG " started: %d pins (spin loop, no usleep)\n", count);
+    fprintf(stdout, TAG " started: %d pins, period=%dus\n", count, m_scanPeriodUs);
     return 0;
 }
 
-void GpioScanThread::stop() {
-    if (!m_running) return;
-    m_running = false;
+void GpioScanDaemon::stop() {
+    if (!m_running.load(std::memory_order_relaxed)) return;
+    m_running.store(false, std::memory_order_relaxed);
     if (m_thread) {
         pthread_join(m_thread, nullptr);
         m_thread = 0;
@@ -77,35 +78,45 @@ void GpioScanThread::stop() {
     fprintf(stdout, TAG " stopped\n");
 }
 
-void* GpioScanThread::scanLoop(void* arg) {
-    GpioScanThread* self = static_cast<GpioScanThread*>(arg);
+void* GpioScanDaemon::scanLoop(void* arg) {
+    GpioScanDaemon* self = static_cast<GpioScanDaemon*>(arg);
     self->loop();
     return nullptr;
 }
 
-void GpioScanThread::loop() {
-    /* 线程名称：方便调试 */
+void GpioScanDaemon::sleepUntilNextScan(struct timespec& next) {
+    clock_gettime(CLOCK_MONOTONIC, &next);
+    next.tv_nsec += m_scanPeriodUs * 1000;
+    while (next.tv_nsec >= 1000000000) {
+        next.tv_nsec -= 1000000000;
+        next.tv_sec++;
+    }
+    clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, nullptr);
+}
+
+void GpioScanDaemon::loop() {
     pthread_setname_np(pthread_self(), "gpio-scan");
 
-    /* 设置极低实时优先级（低于 PLC 任务），保证被 RT 任务随时抢占 */
-    struct sched_param sp = {};
-    sp.sched_priority = 1;
-    pthread_setschedparam(pthread_self(), SCHED_FIFO, &sp);
+    struct timespec next;
+    clock_gettime(CLOCK_MONOTONIC, &next);
+    next.tv_nsec += m_scanPeriodUs * 1000;
+    while (next.tv_nsec >= 1000000000) {
+        next.tv_nsec -= 1000000000;
+        next.tv_sec++;
+    }
 
-    /* 不用 usleep — 让 RT 任务自然抢占。RT 任务阻塞时 CPU 自动让给我们 */
-    while (m_running) {
-        /* ── 1. 读 GPIO → 写入共享输入缓冲区 ── */
+    while (m_running.load(std::memory_order_relaxed)) {
+        /* 读 GPIO → 写入共享输入缓冲区 */
         if (rk_gpio_read_all(m_localInput) == 0) {
             for (int i = 0; i < m_pinCount; i++)
-                inputValues[i] = m_localInput[i];
+                m_inputValues[i].store(m_localInput[i], std::memory_order_relaxed);
         }
 
-        /* ── 2. 读共享输出缓冲区 → 写 GPIO ── */
-        for (int i = 0; i < m_pinCount; i++) {
-            int val = (int)outputValues[i];
-            if (val >= 0)
-                m_localOutput[i] = val;
-        }
+        /* 读共享输出缓冲区 → 写 GPIO */
+        for (int i = 0; i < m_pinCount; i++)
+            m_localOutput[i] = m_outputValues[i].load(std::memory_order_relaxed);
         rk_gpio_write_all(m_localOutput);
+
+        sleepUntilNextScan(next);
     }
 }

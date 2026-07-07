@@ -25,7 +25,7 @@ CONFIG_GEN_STUB = build/runtime_config_stub.gen.cpp
 TCI_DIR  = ../lib/tci
 TCI_SRCS = $(TCI_DIR)/network_tci.cpp $(TCI_DIR)/tcp_tci.cpp
 HAL_DIR  = hal
-HAL_SRCS = $(HAL_DIR)/gpio_hal.cpp $(HAL_DIR)/gpio_tci.cpp $(HAL_DIR)/gpio_scan.cpp
+HAL_SRCS = $(HAL_DIR)/gpio_tci.cpp
 
 OPT      ?= -O2
 CXXFLAGS  = $(OPT) -std=c++17 -D_GNU_SOURCE \
@@ -98,7 +98,7 @@ remote-rt-build:
 			stress_test_pou.cpp \
 			build/runtime_config_stress.gen.cpp \
 			$(RK_DIR)/target/lib/tci/*.cpp \
-			$(HAL_DIR)/gpio_hal.cpp $(HAL_DIR)/gpio_tci.cpp \
+			$(HAL_DIR)/gpio_tci.cpp \
 			\$$(/usr/xenomai/bin/xeno-config --ldflags --cobalt) \
 			-o plc_runtime_rk3588_rt_stress 2>&1"
 
@@ -126,7 +126,7 @@ remote-alchemy-build:
 			stress_test_pou.cpp \
 			build/runtime_config_stress.gen.cpp \
 			$(RK_DIR)/target/lib/tci/*.cpp \
-			$(HAL_DIR)/gpio_hal.cpp $(HAL_DIR)/gpio_tci.cpp \
+			$(HAL_DIR)/gpio_tci.cpp \
 			\$$(/usr/xenomai/bin/xeno-config --ldflags --alchemy) \
 			-o $(ALCHEMY_TARGET) 2>&1"
 
