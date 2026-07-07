@@ -798,7 +798,10 @@ public class GvlContext {
             }
 
             int parentId = 0;
-            String mangledName = getMangledName(varName);
+            String prog = varProgramMap.get(varName);
+            String displayName = (prog != null && !prog.isEmpty())
+                ? prog + "." + varName
+                : varName;
 
             // struct 类型展开字段
             StructLayout layout = structLayoutMap.get(type);
@@ -806,14 +809,14 @@ public class GvlContext {
 
             // 顶层 struct 占位
             if (isStruct) {
-                sb.append("    {").append(id).append(", \"").append(escapeCppString(mangledName))
+                sb.append("    {").append(id).append(", \"").append(escapeCppString(displayName))
                   .append("\", DebugStorage::GVL, 0xFF, DebugType::INT, DebugAccess::READ_WRITE, ")
                   .append(offset).append(", ").append(size).append(", 1, 0},\n");
                 int structVarId = id;
                 id++;
                 for (StructField field : layout.fields) {
                     String fieldType = toNativeType(field.type);
-                    String fieldName = mangledName + "." + field.name;
+                    String fieldName = displayName + "." + field.name;
                     int fieldSize = getTypeSize(field.type);
                     int fieldAbsOffset = offset + field.offset;
                     sb.append("    {").append(id).append(", \"").append(escapeCppString(fieldName))
@@ -824,7 +827,7 @@ public class GvlContext {
                     id++;
                 }
             } else {
-                sb.append("    {").append(id).append(", \"").append(escapeCppString(mangledName))
+                sb.append("    {").append(id).append(", \"").append(escapeCppString(displayName))
                   .append("\", DebugStorage::GVL, 0xFF, ")
                   .append(toDebugType(type)).append(", DebugAccess::READ_WRITE, ")
                   .append(offset).append(", ").append(size).append(", ").append(count).append(", 0},\n");

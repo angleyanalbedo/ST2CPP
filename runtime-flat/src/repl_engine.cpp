@@ -9,6 +9,7 @@ void ReplEngine::begin(const DebugMapEntry* map, uint32_t map_count) {
     map_ = map;
     map_count_ = map_count;
     watch_count_ = 0;
+    force_count_ = 0;
     cycle_count_ = 0;
     done_ = false;
 }
@@ -29,6 +30,7 @@ void ReplEngine::tickAll(TIME cycleTimeUs) {
             entry.cbs.cyclic(gvl_, image_, cycleTimeUs);
         }
     }
+    applyForces();
 }
 
 const DebugMapEntry* ReplEngine::findEntryById(uint32_t id) const {
@@ -53,6 +55,111 @@ int ReplEngine::findChildren(uint32_t parentId, const DebugMapEntry** out, int m
         }
     }
     return n;
+}
+
+const DebugMapEntry* ReplEngine::findEntry(const char* name_or_id) const {
+    if (name_or_id[0] >= '0' && name_or_id[0] <= '9')
+        if (const auto* e = findEntryById((uint32_t)atoi(name_or_id)))
+            return e;
+    return findEntryByName(name_or_id);
+}
+
+int ReplEngine::findEntries(const char* name, const DebugMapEntry** out, int max) const {
+    for (uint32_t i = 0; i < map_count_; i++) {
+        if (strcmp(map_[i].name, name) == 0) {
+            out[0] = &map_[i];
+            return 1;
+        }
+    }
+    int n = 0;
+    size_t len = strlen(name);
+    for (uint32_t i = 0; i < map_count_ && n < max; i++) {
+        size_t nlen = strlen(map_[i].name);
+        if (nlen > len && map_[i].name[nlen - len - 1] == '.'
+            && strcmp(map_[i].name + nlen - len, name) == 0) {
+            out[n++] = &map_[i];
+        }
+    }
+    return n;
+}
+
+const DebugMapEntry* ReplEngine::resolveEntry(const char* name, char* out, size_t out_size) const {
+    const DebugMapEntry* ents[8];
+    int n = findEntries(name, ents, 8);
+    if (n == 0) {
+        snprintf(out, out_size, "Error: unknown '%s'\n", name);
+        return nullptr;
+    }
+    if (n > 1) {
+        size_t pos = snprintf(out, out_size, "Ambiguous '%s' matches:\n", name);
+        for (int i = 0; i < n && pos < out_size; i++) {
+            int r = snprintf(out + pos, out_size - pos, "  %s\n", ents[i]->name);
+            if (r > 0) pos += r;
+        }
+        return nullptr;
+    }
+    return ents[0];
+}
+
+bool ReplEngine::isForced(uint32_t id) const {
+    for (int i = 0; i < force_count_; i++)
+        if (force_ids_[i] == id) return true;
+    return false;
+}
+
+int ReplEngine::doForce(const DebugMapEntry* ent, const char* val_str) {
+    uint8_t buf[8] = {};
+    size_t total = (size_t)ent->size * ent->count;
+    if (total > sizeof(buf)) return -1;
+
+    if (ent->bitOffset != 0xFF) {
+        uint8_t byte_val = 0;
+        readVar(ent, &byte_val, 1);
+        uint8_t bit_val = (strcmp(val_str, "TRUE") == 0 || strcmp(val_str, "true") == 0 ||
+                           strcmp(val_str, "1") == 0) ? 1 : 0;
+        if (bit_val) byte_val |= (1 << ent->bitOffset);
+        else byte_val &= ~(1 << ent->bitOffset);
+        writeVar(ent, &byte_val, 1);
+        buf[0] = byte_val;
+    } else {
+        if (!writeVarFromString(ent, val_str)) return -1;
+        if (!readVar(ent, buf, total)) return -1;
+    }
+
+    for (int i = 0; i < force_count_; i++) {
+        if (force_ids_[i] == ent->id) {
+            memcpy(force_vals_[i], buf, total);
+            return 0;
+        }
+    }
+    if (force_count_ < MAX_FORCE) {
+        force_ids_[force_count_] = ent->id;
+        memcpy(force_vals_[force_count_], buf, total);
+        force_count_++;
+        return 0;
+    }
+    return -2;
+}
+
+int ReplEngine::doUnforce(const DebugMapEntry* ent) {
+    for (int i = 0; i < force_count_; i++) {
+        if (force_ids_[i] == ent->id) {
+            force_ids_[i] = force_ids_[force_count_ - 1];
+            memcpy(force_vals_[i], force_vals_[force_count_ - 1], 8);
+            force_count_--;
+            return 0;
+        }
+    }
+    return -1;
+}
+
+void ReplEngine::applyForces() {
+    for (int i = 0; i < force_count_; i++) {
+        const DebugMapEntry* ent = findEntryById(force_ids_[i]);
+        if (ent) {
+            writeVar(ent, force_vals_[i], (size_t)ent->size * ent->count);
+        }
+    }
 }
 
 bool ReplEngine::readVar(const DebugMapEntry* ent, uint8_t* buf, size_t buf_size) const {
@@ -225,7 +332,8 @@ void ReplEngine::printEntry(char* out, size_t out_size, const DebugMapEntry* ent
         uint8_t byte_val = 0;
         if (readVar(ent, &byte_val, 1)) {
             uint8_t bit = (byte_val >> ent->bitOffset) & 1;
-            snprintf(out, out_size, "  %s = %s\n", ent->name, bit ? "TRUE" : "FALSE");
+            const char* forced = isForced(ent->id) ? " [FORCED]" : "";
+            snprintf(out, out_size, "  %s = %s%s\n", ent->name, bit ? "TRUE" : "FALSE", forced);
         } else {
             snprintf(out, out_size, "  %s = (read error)\n", ent->name);
         }
@@ -257,10 +365,12 @@ void ReplEngine::printEntry(char* out, size_t out_size, const DebugMapEntry* ent
 
     formatValue(ent->type, buf, val_str, sizeof(val_str));
 
+    const char* forced = isForced(ent->id) ? " [FORCED]" : "";
+
     if (ent->count > 1) {
-        snprintf(out, out_size, "  %s[%u] = %s\n", ent->name, ent->count, val_str);
+        snprintf(out, out_size, "  %s[%u] = %s%s\n", ent->name, ent->count, val_str, forced);
     } else {
-        snprintf(out, out_size, "  %s = %s\n", ent->name, val_str);
+        snprintf(out, out_size, "  %s = %s%s\n", ent->name, val_str, forced);
     }
 }
 
@@ -319,6 +429,39 @@ void ReplEngine::printWatched(char* out, size_t out_size) {
     out[pos] = '\0';
 }
 
+void ReplEngine::printForces(char* out, size_t out_size) {
+    if (force_count_ == 0) {
+        snprintf(out, out_size, "  (no forced variables)\n");
+        return;
+    }
+    size_t pos = 0;
+    for (int i = 0; i < force_count_ && pos < out_size; i++) {
+        const DebugMapEntry* ent = findEntryById(force_ids_[i]);
+        if (!ent) continue;
+        char line[128];
+        printEntry(line, sizeof(line), ent);
+        size_t len = strlen(line);
+        if (pos + len < out_size) {
+            memcpy(out + pos, line, len);
+            pos += len;
+        }
+    }
+    out[pos] = '\0';
+}
+
+void ReplEngine::printPrograms(char* out, size_t out_size) {
+    size_t pos = 0;
+    int n = reg_.count();
+    for (int i = 0; i < n && pos < out_size; i++) {
+        const auto& e = reg_.entries()[i];
+        int r = snprintf(out + pos, out_size - pos, "  %s\n", e.name);
+        if (r > 0) pos += r;
+    }
+    if (pos == 0) {
+        snprintf(out, out_size, "  (no programs registered)\n");
+    }
+}
+
 int ReplEngine::execCommand(const char* line, char* out, size_t out_size) {
     if (out == nullptr || out_size == 0) return -1;
     out[0] = '\0';
@@ -334,15 +477,20 @@ int ReplEngine::execCommand(const char* line, char* out, size_t out_size) {
     if (strcmp(cmd, "help") == 0 || strcmp(cmd, "h") == 0) {
         snprintf(out, out_size,
             "Commands:\n"
-            "  help                  Show this help\n"
-            "  list                  List all variables (top-level + struct fields)\n"
+            "  help / h              Show this help\n"
+            "  list / ls             List all variables\n"
+            "  programs              List registered POU programs\n"
             "  get <name/id>         Read a variable\n"
-            "  set <name/id> <val>   Write a variable\n"
-            "  run [N]               Execute N cycles\n"
-            "  step                  Execute 1 cycle\n"
+            "  set <name/id> <val>   Write a variable (one cycle)\n"
+            "  run [N]               Execute N scan cycles\n"
+            "  step                  Execute 1 scan cycle\n"
             "  watch <name>          Add variable to watch list\n"
+            "  watch list            Show watch list\n"
             "  watch clear           Clear watch list\n"
-            "  quit                  Exit\n");
+            "  force <name> <val>    Force a variable (persists across cycles)\n"
+            "  unforce <name>        Remove force from a variable\n"
+            "  forces                List all forced variables\n"
+            "  quit / exit / q       Exit\n");
         return 0;
     }
 
@@ -375,14 +523,16 @@ int ReplEngine::execCommand(const char* line, char* out, size_t out_size) {
         return execCommand("run 1", out, out_size);
     }
 
+    if (strcmp(cmd, "programs") == 0 || strcmp(cmd, "prog") == 0) {
+        printPrograms(out, out_size);
+        return 0;
+    }
+
     if (strcmp(cmd, "get") == 0) {
         if (parsed < 2) { snprintf(out, out_size, "Usage: get <name/id>\n"); return -1; }
 
-        const DebugMapEntry* ent = nullptr;
-        if (arg1[0] >= '0' && arg1[0] <= '9')
-            ent = findEntryById((uint32_t)atoi(arg1));
-        if (!ent) ent = findEntryByName(arg1);
-        if (!ent) { snprintf(out, out_size, "Error: unknown '%s'\n", arg1); return -1; }
+        const DebugMapEntry* ent = findEntry(arg1);
+        if (!ent) { ent = resolveEntry(arg1, out, out_size); if (!ent) return -1; }
 
         printEntry(out, out_size, ent);
 
@@ -403,11 +553,8 @@ int ReplEngine::execCommand(const char* line, char* out, size_t out_size) {
     if (strcmp(cmd, "set") == 0) {
         if (parsed < 3) { snprintf(out, out_size, "Usage: set <name/id> <value>\n"); return -1; }
 
-        const DebugMapEntry* ent = nullptr;
-        if (arg1[0] >= '0' && arg1[0] <= '9')
-            ent = findEntryById((uint32_t)atoi(arg1));
-        if (!ent) ent = findEntryByName(arg1);
-        if (!ent) { snprintf(out, out_size, "Error: unknown '%s'\n", arg1); return -1; }
+        const DebugMapEntry* ent = findEntry(arg1);
+        if (!ent) { ent = resolveEntry(arg1, out, out_size); if (!ent) return -1; }
 
         if (ent->bitOffset != 0xFF) {
             uint8_t byte_val = 0;
@@ -448,8 +595,8 @@ int ReplEngine::execCommand(const char* line, char* out, size_t out_size) {
             }
             return 0;
         }
-        const DebugMapEntry* ent = findEntryByName(arg1);
-        if (!ent) { snprintf(out, out_size, "Error: unknown '%s'\n", arg1); return -1; }
+        const DebugMapEntry* ent = findEntry(arg1);
+        if (!ent) { ent = resolveEntry(arg1, out, out_size); if (!ent) return -1; }
         for (int i = 0; i < watch_count_; i++) {
             if (watch_ids_[i] == ent->id) {
                 snprintf(out, out_size, "Already watching\n");
@@ -462,6 +609,39 @@ int ReplEngine::execCommand(const char* line, char* out, size_t out_size) {
         } else {
             snprintf(out, out_size, "Watch list full (%d max)\n", MAX_WATCH);
         }
+        return 0;
+    }
+
+    if (strcmp(cmd, "force") == 0) {
+        if (parsed < 3) { snprintf(out, out_size, "Usage: force <name> <value>\n"); return -1; }
+        const DebugMapEntry* ent = findEntry(arg1);
+        if (!ent) { ent = resolveEntry(arg1, out, out_size); if (!ent) return -1; }
+        int ret = doForce(ent, arg2);
+        if (ret == 0) {
+            snprintf(out, out_size, "Forced ");
+            printEntry(out + strlen(out), out_size - strlen(out), ent);
+        } else if (ret == -2) {
+            snprintf(out, out_size, "Error: force table full\n");
+        } else {
+            snprintf(out, out_size, "Error: failed to force\n");
+        }
+        return 0;
+    }
+
+    if (strcmp(cmd, "unforce") == 0) {
+        if (parsed < 2) { snprintf(out, out_size, "Usage: unforce <name>\n"); return -1; }
+        const DebugMapEntry* ent = findEntry(arg1);
+        if (!ent) { ent = resolveEntry(arg1, out, out_size); if (!ent) return -1; }
+        if (doUnforce(ent) == 0) {
+            snprintf(out, out_size, "Unforced %s\n", ent->name);
+        } else {
+            snprintf(out, out_size, "%s is not forced\n", ent->name);
+        }
+        return 0;
+    }
+
+    if (strcmp(cmd, "forces") == 0) {
+        printForces(out, out_size);
         return 0;
     }
 

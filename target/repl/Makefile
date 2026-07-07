@@ -40,20 +40,25 @@ RT_SRCS  = \
 	$(RT_DIR)/src/repl_engine.cpp
 
 # 编译器生成的 POU + debug table
-GEN_SRCS = \
-	$(FLAT_DIR)/generated.cpp \
-	$(FLAT_DIR)/debug_table.cpp \
-	$(FLAT_DIR)/debug_map.gen.cpp
+GEN_CPP  = generated.cpp debug_table.cpp debug_map.gen.cpp
+GEN_SRCS = $(addprefix $(FLAT_DIR)/, $(GEN_CPP))
+# 生成文件的 .o 放本地 build/，避免绝对路径冒号问题
+BLD_DIR := build
+GEN_OBJS = $(addprefix $(BLD_DIR)/, $(GEN_CPP:.cpp=.o))
 
 REPL_SRC = repl_main.cpp
+REPL_OBJ = $(REPL_SRC:.cpp=.o)
 IC_SRC   = third_party/isocline_src/isocline.c
-
-RT_OBJS  = $(RT_SRCS:.cpp=.o) $(GEN_SRCS:.cpp=.o) $(REPL_SRC:.cpp=.o)
 IC_OBJ   = third_party/isocline_src/isocline.o
+
+RT_OBJS  = $(RT_SRCS:.cpp=.o)
 
 .PHONY: all clean run
 
-all: $(TARGET)
+all: $(BLD_DIR) $(TARGET)
+
+$(BLD_DIR):
+	mkdir -p $(BLD_DIR)
 
 $(IC_OBJ): $(IC_SRC)
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -61,7 +66,10 @@ $(IC_OBJ): $(IC_SRC)
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(TARGET): $(RT_OBJS) $(IC_OBJ)
+$(BLD_DIR)/%.o: $(FLAT_DIR)/%.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(TARGET): $(RT_OBJS) $(GEN_OBJS) $(REPL_OBJ) $(IC_OBJ)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 	@echo "=== Build: $@ ==="
 
@@ -69,4 +77,5 @@ run: $(TARGET)
 	./$(TARGET)
 
 clean:
-	rm -f $(TARGET) $(RT_OBJS) $(IC_OBJ) third_party/isocline.o
+	rm -f $(TARGET) $(RT_OBJS) $(GEN_OBJS) $(REPL_OBJ) $(IC_OBJ) third_party/isocline.o
+	rm -rf $(BLD_DIR)
