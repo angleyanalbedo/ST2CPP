@@ -1,6 +1,7 @@
 package com.st2c.lsp.analyzers;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -226,22 +227,15 @@ public class DiagnosticAnalyzer {
 
     private String getDirFromUri(String uri) {
         try {
-            String decoded = java.net.URLDecoder.decode(uri, "UTF-8");
-            String path = decoded.startsWith("file:///") ? decoded.substring(8).replace('/', '\\')
-                     : decoded.startsWith("file:/") ? decoded.substring(6).replace('/', '\\')
-                     : decoded;
-            Path parent = Paths.get(path).getParent();
+            Path path = Paths.get(new URI(uri));
+            Path parent = path.getParent();
             return parent != null ? parent.toString() : "";
         } catch (Exception e) { return ""; }
     }
 
     public String getPathFromUri(String uri) {
         try {
-            String decoded = java.net.URLDecoder.decode(uri, "UTF-8");
-            String path = decoded.startsWith("file:///") ? decoded.substring(8).replace('/', '\\')
-                     : decoded.startsWith("file:/") ? decoded.substring(6).replace('/', '\\')
-                     : decoded;
-            return Paths.get(path).normalize().toString();
+            return Paths.get(new URI(uri)).normalize().toString();
         } catch (Exception e) { return ""; }
     }
 
